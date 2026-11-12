@@ -12,6 +12,19 @@ const BAKE = /bake/.test(location.hash);
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[(Math.random() * a.length) | 0];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// LGA profiles: the same Lagos street, but the posting changes how crowded, chaotic and expensive service life is.
+// Numbers are game tuning, not official NYSC figures.
+const POSTINGS = [
+  { id: 'ikeja', short: 'Ikeja', density: 'High', w: 4, blurb: 'State capital. Huge CDS groups, long clearance queues, and a group chat that never sleeps.', queue: 16, rumour: 0.6, cdsOff: 0.2, rent: 15000, food: 1800, fx: 1, hustle: 1, crowd: 1 },
+  { id: 'alimosho', short: 'Alimosho', density: 'Very high', w: 2, blurb: 'The biggest LGA in Lagos. Everything is a crowd, including the crowd.', queue: 22, rumour: 0.75, cdsOff: 0.25, rent: 10000, food: 1500, fx: 1.15, hustle: 1.1, crowd: 1 },
+  { id: 'etiosa', short: 'Eti-Osa', density: 'Medium', w: 2, blurb: 'Lekki and VI. Big money all around you. Small money in your account.', queue: 10, rumour: 0.4, cdsOff: 0.15, rent: 30000, food: 3000, fx: 1.6, hustle: 1.8, crowd: 0.8 },
+  { id: 'surulere', short: 'Surulere', density: 'High', w: 2, blurb: 'Stadium, bukas, and an owambe every Saturday.', queue: 13, rumour: 0.5, cdsOff: 0.2, rent: 12000, food: 1700, fx: 1, hustle: 1.1, crowd: 0.9 },
+  { id: 'epe', short: 'Epe', density: 'Low', w: 2, blurb: 'Lagoon breeze, fish market, short queues. Fewer gigs, less wahala.', queue: 5, rumour: 0.2, cdsOff: 0.1, rent: 7000, food: 1200, fx: 0.8, hustle: 0.7, crowd: 0.45 },
+];
+const PF = () => POSTINGS.find(p => ST.post && p.id === ST.post.id) || POSTINGS[0];
+const LGN = () => PF().short;
+const GRP = () => LGN() + ' LGA Corpers';
+const fareOf = n => Math.max(50, Math.round(n * PF().fx / 50) * 50);
 const naira = n => (n < 0 ? '−₦' : '₦') + Math.round(Math.abs(n)).toLocaleString('en-NG');
 window.__G = {}; // test/debug handle
 
@@ -893,7 +906,7 @@ function toast(t, ms = 2600) { try { speakToast(t); } catch (e) { } const e = $(
 function setObj(t) { ST.obj = t; $('objt').textContent = t; }
 function hudSync() {
   if (PH.cash === null) PH.cash = ST.cash; else if (ST.cash !== PH.cash) { const d = ST.cash - PH.cash; PH.ledger.unshift({ d, label: ST.txn || (d > 0 ? 'Transfer received' : 'POS / cash payment'), t: ($('dayn').textContent || '') + ' · ' + ($('clock').textContent || '') }); ST.txn = null; PH.cash = ST.cash; if (PH.screen === 'bank' && $('phone').classList.contains('on')) renderBank(); }
-  { const hc = $('phclock'); if (hc) { hc.textContent = $('pclock').textContent; $('phdate').textContent = $('dayn').textContent + ' · ' + (ST.area === 'camp' ? 'Orientation camp' : 'Ikeja, Lagos'); } }
+  { const hc = $('phclock'); if (hc) { hc.textContent = $('pclock').textContent; $('phdate').textContent = $('dayn').textContent + ' · ' + (ST.area === 'camp' ? 'Orientation camp' : LGN() + ', Lagos'); } }
   $('cash').textContent = naira(ST.cash);
   const h = Math.floor(ST.mins / 60), m = Math.floor(ST.mins % 60), ap = h >= 12 ? 'PM' : 'AM', hh = ((h + 11) % 12) + 1;
   $('clock').textContent = `${hh}:${String(m).padStart(2, '0')} ${ap}`; $('pclock').textContent = `${hh}:${String(m).padStart(2, '0')}`;
@@ -945,7 +958,7 @@ function phShow(s) {
   $('phome').hidden = s !== 'home'; $('pchats').hidden = s !== 'chats'; $('msgs').hidden = s !== 'thread'; $('pacts').hidden = s !== 'thread' || PH.thread !== g || !PH.acts.length; $('pmap').hidden = s !== 'map'; $('pbank').hidden = s !== 'bank'; $('pid').hidden = s !== 'id';
   $('pback').hidden = s === 'home'; $('pmapbtn').textContent = s === 'map' ? '💬' : '🗺️';
   $('phd').style.background = { bank: '#0b3d91', map: '#1a73e8', id: '#8a5a00', home: '#12161b' }[s] || '#1a9d52';
-  $('phdr').textContent = { home: (ST.name ? ST.name + '’s' : 'Your') + ' phone', chats: '💬 Corper Connect', thread: (thr(PH.thread).kind === 'sms' ? '✉️ ' : '💬 ') + PH.thread, map: '🗺️ Maps · ' + (ST.area === 'camp' ? 'Orientation camp' : 'Ikeja'), bank: '🏦 Naija Trust Bank', id: '🪪 My NYSC' }[s];
+  $('phdr').textContent = { home: (ST.name ? ST.name + '’s' : 'Your') + ' phone', chats: '💬 Corper Connect', thread: (thr(PH.thread).kind === 'sms' ? '✉️ ' : '💬 ') + PH.thread, map: '🗺️ Maps · ' + (ST.area === 'camp' ? 'Orientation camp' : LGN()), bank: '🏦 Naija Trust Bank', id: '🪪 My NYSC' }[s];
   if (s === 'thread') { thr(PH.thread).unread = 0; badge(); renderThread(); }
   if (s === 'chats') renderChats(); if (s === 'bank') renderBank(); if (s === 'id') renderID();
   if (s === 'map') { MAPV.follow = true; MAPV.R = ST.area === 'camp' ? 62 : 70; MAPV.sel = null; $('pmapsheet').hidden = true; mapList(); mapT = 0; }
@@ -1106,7 +1119,7 @@ function interactables() {
   for (const v of vendorSpots) L.push({ x: v.x, z: v.z, label: 'Buy ' + v.label, act: () => buy(v.label) });
   for (const n of NPC) if (n.talk && n.area !== 'camp') L.push({ x: n.o.position.x, z: n.o.position.z, label: n.talk.label, act: n.talk.act, npc: n });
   const bus = traffic.find(v => v.kind === 'danfo' && v.stop > 0 && v.lane === 0 && Math.abs(v.x - BUSSTOP_X) < 4);
-  if (bus && !ST.riding) L.push({ x: bus.x, z: 6.8, label: `Board danfo to Secretariat (${naira(300)})`, act: () => board(bus) });
+  if (bus && !ST.riding) L.push({ x: bus.x, z: 6.8, label: `Board danfo to Secretariat (${naira(fareOf(300))})`, act: () => board(bus) });
   if (ST.ch === 3) return L.concat(yInteractables());
   if (ST.ch === 2) return cdsInteractables();
   if (ST.done) L.push(...ppaInteractables());
@@ -1121,7 +1134,7 @@ function buy(what) {
 }
 function board(bus) {
   if (ST.cash < 300) { toast('Conductor: "Who no get change make e come down!"'); return; }
-  ST.txn = 'Danfo fare'; ST.cash -= 300; hudSync(); ST.riding = bus; bus.passenger = true; bus.stop = 0.6; player.o.visible = false;
+  ST.txn = 'Danfo fare'; ST.cash -= fareOf(300); hudSync(); ST.riding = bus; bus.passenger = true; bus.stop = 0.6; player.o.visible = false;
   toast('You squeeze in. Conductor: "Shift! Shift! Four four for back!"', 3200); horn(4);
 }
 function alight(bus) {
@@ -1131,7 +1144,7 @@ function alight(bus) {
 /* ---------------- getting around: walk, keke, ride-hailing car, danfo ---------------- */
 function travelGo(mode, dest, name) {
   if (mode === 'walk') { ST.target = { x: dest.x, z: dest.z, label: name }; $('arrow').style.display = 'block'; phone(false); toast(ST.area === 'street' ? `Trekking to ${name}. Follow the blue line. Small exercise no kill anybody.` : `Directions set: ${name}.`, 2600); return; }
-  const fare = { keke: 200, car: 1500, own: 300 }[mode];
+  const fare = fareOf({ keke: 200, car: 1500, own: 300 }[mode]);
   if (ST.cash < fare) return toast(mode === 'keke' ? 'Keke man: "No money, no movement."' : mode === 'own' ? 'Fuel gauge is on E and your account is on E. Trek.' : 'Ride app: "Payment declined." Your account is shy.');
   ST.txn = mode === 'keke' ? 'Keke fare' : mode === 'own' ? 'Fuel · filling station' : 'Ride app trip'; ST.cash -= fare; if (mode === 'car') ST.stress = clamp(ST.stress - 3, 0, 100); hudSync(); phone(false);
   ST.target = { x: dest.x, z: dest.z, label: name }; rideTo(dest, mode, name);
@@ -1143,9 +1156,9 @@ function travelMenu(dest, label) {
   phone(false);
   ask('How are you getting to ' + name + '?', `It is about ${Math.round(d)} m away. Lagos sun is not smiling today.`, [
     [`🚶🏾 Trek (free · about ${walkMin} min)`, () => travelGo('walk', dest, name)],
-    [`🛺 Keke (${naira(200)})`, () => travelGo('keke', dest, name)],
-    ST.bg === 'car' ? [`🚙 Drive your own car (fuel ${naira(300)})`, () => travelGo('own', dest, name)] : [`🚗 Ride app car (${naira(1500)} · AC dey)`, () => travelGo('car', dest, name)],
-    ['🚌 Danfo (₦300, from the bus stop)', () => { ST.target = { x: BUSSTOP_X, z: 9, label: 'Corper Close bus stop' }; $('arrow').style.display = 'block'; toast('Danfos stop at Corper Close bus stop and go towards the Secretariat. Okada? LASTMA banned them on this road.', 4200); }],
+    [`🛺 Keke (${naira(fareOf(200))})`, () => travelGo('keke', dest, name)],
+    ST.bg === 'car' ? [`🚙 Drive your own car (fuel ${naira(fareOf(300))})`, () => travelGo('own', dest, name)] : [`🚗 Ride app car (${naira(fareOf(1500))} · AC dey)`, () => travelGo('car', dest, name)],
+    [`🚌 Danfo (${naira(fareOf(300))}, from the bus stop)`, () => { ST.target = { x: BUSSTOP_X, z: 9, label: 'Corper Close bus stop' }; $('arrow').style.display = 'block'; toast('Danfos stop at Corper Close bus stop and go towards the Secretariat. Okada? LASTMA banned them on this road.', 4200); }],
   ]);
 }
 function rideTo(dest, kind, label) {
@@ -1165,7 +1178,7 @@ function rideArrive(v) {
   }, 700).then(() => toast(v.kind === 'keke' ? 'Keke man: "We don reach. Change dey?"' : v.kind === 'own' ? 'You park, lock the car twice, and check the door again.' : 'Driver: "Please rate me five stars, corper."', 2600));
 }
 function clearance() {
-  if (!ST.queue) { ST.queue = 23; toast('A man with a file: "You are number 23. Don\'t go far o."', 3200); setObj('Queue position 23 — stay around the Secretariat'); chat('Ikeja LGA Corpers', 'LGI said nobody should leave the premises. Names will be called ONCE.', 'off'); return; }
+  if (!ST.queue) { ST.queue = PF().queue + 7; toast(`A man with a file: "You are number ${ST.queue}. Don't go far o."`, 3200); setObj(`Queue position ${ST.queue} — stay around the Secretariat`); chat(GRP(), 'LGI said nobody should leave the premises. Names will be called ONCE.', 'off'); return; }
   toast(`Still ${ST.queue} people before you. Check the group or buy pure water.`);
 }
 function interact() {
@@ -1262,7 +1275,7 @@ function campInteractables() {
 }
 function gateCheck() {
   ask('Soldier at the gate', '"Corper! Where is your call-up letter?"', [
-    ['Hand over the call-up letter', () => ask('Soldier at the gate', '"Hmm. Ikeja… Lagos. Okay. Open that bag. Let me see what you carry."', [
+    ['Hand over the call-up letter', () => ask('Soldier at the gate', '"Hmm. Lagos State. Okay. Open that bag. Let me see what you carry."', [
       ['Open the bag', () => ask('Soldier at the gate', '"Iron? Kettle? Ah, you want to cook inside hostel? I will pretend I did not see. Enter. Run to registration!"', [['"Thank you, sir!"', () => { ST.rep += 1; campGo(1); }]])],
       ['"Oga, abeg, ₦500 for pure water?"', () => { ST.stress = clamp(ST.stress + 10, 0, 100); ST.gateBribe = true; ask('Soldier at the gate', '"Are you trying to bribe me?! Frog jump to registration! Go!"', [['Frog jump away, quickly', () => campGo(1)]]); }],
     ])],
@@ -1373,14 +1386,22 @@ function endDrill() {
   setTimeout(() => cine('DAY 19 · 2:00 PM', 'Three weeks of drills, SAED lectures and mammy market. Then, the list.', () => { setTOD('Afternoon'); ST.mins = 14 * 60; ST.day = 19; campGo(6); }, 2600).then(() => { chat('Platoon 5 · Camp Gist', 'POSTINGS ARE OUT!!! Go and check the notice board now 😱'); chat('Emeka', 'Abeg who has seen Lagos? I don\'t want to go far'); }), 3400);
 }
 function posting() {
-  ST.post = { lga: 'Ikeja LGA', state: 'Lagos', ppa: 'Corper Close Model School' };
-  ask('Posting list', `${esc(ST.name || 'Your name')}, ${ST.code || 'LA/26C/----'}: <b>${ST.post.lga}, ${ST.post.state}</b>. PPA: ${ST.post.ppa}. Clearance is monthly at the LGA Secretariat.`, [
-    ['"God, thank you!" 🙏🏾', () => { ST.stress = clamp(ST.stress - 6, 0, 100); dress('khaki'); toast('Swearing-in done, khaki on. The bus to your LGA is outside the gate.', 4000); campGo(7); }],
-    ['Try to redeploy (₦…?)', () => { toast('A man whispers "I know somebody". You walk away. Ikeja it is.', 3800); dress('khaki'); campGo(7); }],
-  ], SAY('Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.'));
+  // weighted draw; Ikeja is the most common in this build
+  let r = Math.random() * POSTINGS.reduce((n, p) => n + p.w, 0), P = POSTINGS[0]; for (const p of POSTINGS) { if ((r -= p.w) < 0) { P = p; break; } }
+  if (window.__posting) P = POSTINGS.find(p => p.id === window.__posting) || P;
+  ST.post = { id: P.id, lga: P.short + ' LGA', state: 'Lagos', ppa: 'Corper Close Model School' };
+  const done = () => { dress('khaki'); toast('Swearing-in done, khaki on. The bus to ' + P.short + ' is outside the gate.', 4000); campGo(7); };
+  ask('Posting list', `${esc(ST.name || 'Your name')}, ${ST.code || 'LA/26C/----'}: <b>${P.short} LGA, Lagos</b> · ${P.density} density.<br>${P.blurb}<br><small>PPA: ${ST.post.ppa} · Clearance monthly at the LGA Secretariat · Rent about ${naira(P.rent)} a month</small>`, [
+    ['"God, thank you!" 🙏🏾', () => { ST.stress = clamp(ST.stress - (P.density === 'Low' ? 10 : 6), 0, 100); done(); }],
+    ['Ask about redeployment', () => ask('Redeployment desk', '"Redeployment is for marriage, health or security reasons, with documents. Do you have any of those?"', [
+      ['"No, I just don\'t like the place"', () => { toast('"Then go and serve your fatherland, corper." ' + P.short + ' it is.', 3600); done(); }],
+      ['"Abeg, I know somebody…"', () => { ST.rep -= 2; ST.stress = clamp(ST.stress + 6, 0, 100); toast('The officer looks at you for a long time. You decide ' + P.short + ' is actually lovely.', 3800); done(); }],
+    ])],
+  ], P.id === 'ikeja' ? SAY('Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.') : undefined);
+  chat('Platoon 5 · Camp Gist', `Who else got ${P.short}?? 🙋🏾`); setTimeout(() => chat('Emeka', pick(['They posted me to Epe 😭 is it far?', 'Alimosho! Na there my uncle dey', 'Eti-Osa! Lekki life, here I come 😎', 'Ikeja for me. The queue don already dey pain me.'])), 2200);
 }
 function leaveCamp() {
-  cine('FOUR WEEKS LATER', 'Ikeja, Lagos · Monthly clearance day', () => { enterStreet(); saveGame('street'); }, 3000);
+  cine('FOUR WEEKS LATER', LGN() + ', Lagos · Monthly clearance day', () => { enterStreet(); saveGame('street'); }, 3000);
 }
 function enterStreet() {
   {
@@ -1389,7 +1410,7 @@ function enterStreet() {
     if (CAMP.ring) CAMP.ring.visible = false;
     for (const v of traffic) v.g.visible = true;
     player.o.position.set(BUSSTOP_X - 3, 0.18, 9.0); player.o.rotation.y = Math.PI / 2; cam.yaw = -Math.PI / 2; camLook.copy(player.o.position);
-    setGroup('Ikeja LGA Corpers');
+    setGroup(GRP());
     setObj('Check your phone'); ST.target = null; $('arrow').style.display = 'none';
     for (const p of CAMP.hostelNight || []) p.hidden = true;
     if (ST.bg === 'family' && !ST.famSent) { ST.famSent = true; setTimeout(() => { ST.txn = 'MUMMY'; ST.cash += 15000; chat('Mummy ❤️', 'I sent you something small for upkeep. Eat well o. Don\'t tell your daddy.'); chat('Naija Trust Bank', 'Credit alert: ₦15,000.00 from MRS ' + (ST.name || 'CORPER').toUpperCase() + ' SNR. Bal: ' + naira(ST.cash), 'off'); hudSync(); }, 45000); }
@@ -1404,7 +1425,7 @@ function resumeFrom(d) {
   for (const p of people) if (p.area === 'camp') p.hidden = true;
   if (d.cp === 'ch2') { ST.done = true; ST.ppa = 5; enterStreet(); startChapter2(); }
   else if (d.cp === 'year') { ST.done = true; ST.ppa = 5; enterStreet(); if (d.y) Object.assign(Y, d.y); startYear(!!d.y); }
-  else cine('WELCOME BACK', 'Ikeja, Lagos · Monthly clearance day', () => enterStreet(), 2200);
+  else cine('WELCOME BACK', LGN() + ', Lagos · Monthly clearance day', () => enterStreet(), 2200);
 }
 window.__camp = { dress, campGo, drillAnswer, gateCheck, register, kit, bunk, socialNight, sleepNight, startDrill, posting, leaveCamp, choose, CAMP, CSTEP, setTOD };
 
@@ -1508,9 +1529,9 @@ function showSummary(ch = 1) {
   const [t, d] = ch === 3 ? yearType() : corperType(), el = $('summary');
   el.innerHTML = `<small>${esc((ST.name || 'CORPER').toUpperCase())} · ${ST.code || 'NO STATE CODE'} · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
   <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch === 2 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div>${ch === 3 ? `<div><dt>PPA days</dt><dd>${Y.ppaDays} present · ${Y.ppaMiss} missed · ${Y.lates} late</dd></div><div><dt>CDS</dt><dd>${Y.cdsDays} attended · ${Y.cdsMiss} missed</dd></div><div><dt>Clearance</dt><dd>${Y.cleared || 0} of ${Y.MONTHS - 1} cleared</dd></div><div><dt>Earned</dt><dd>${naira(Y.earned)}</dd></div><div><dt>Spent</dt><dd>${naira(Y.spent)}</dd></div><div><dt>Sent home</dt><dd>${naira(Y.sent)}</dd></div><div><dt>Balance at POP</dt><dd>${naira(ST.cash)}</dd></div>` : ''}</dl>
-  <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring Ikeja'}</button><button class="btn" id="sumagain">Start again</button></div>`;
+  <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring ' + LGN()}</button><button class="btn" id="sumagain">Start again</button></div>`;
   if (ch === 1) saveGame('ch2'); if (ch === 2) { ST.ch = 3; saveGame('year'); ST.ch = 2; }
-  el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); else if (ch === 2) startYear(); else if (ch === 3) { Y.on = false; setObj('Ex-corper. Explore Ikeja as long as you like.'); } }; $('sumagain').onclick = () => location.reload();
+  el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); else if (ch === 2) startYear(); else if (ch === 3) { Y.on = false; setObj('Ex-corper. Explore ' + LGN() + ' as long as you like.'); } }; $('sumagain').onclick = () => location.reload();
   bugle();
 }
 $('arrow').onclick = () => { if (ST.target && ST.area === 'street' && !ST.riding && !DLG) travelMenu(ST.target, ST.target.label); };
@@ -1549,9 +1570,9 @@ function startChapter2() {
     setTOD('Evening'); ST.mins = 18 * 60 + 40; ST.area = 'street'; ST.target = null;
     player.o.position.set(-43.4, 0.2, 13.4); player.o.rotation.y = 0; cam.yaw = Math.PI; cam.pitch = 0.32; cam.tdist = 4.2; camLook.copy(player.o.position);
   }, 3000);
-  setGroup('Ikeja LGA Corpers');
+  setGroup(GRP());
   setObj('Is there CDS tomorrow? Find out, then rest at your lodge'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Corper lodge' }; $('arrow').style.display = 'block';
-  const lines = [[1.5, 'Emeka', 'Guys is there CDS tomorrow?'], [4, 'Bisi', 'They said no CDS because of the LG election thing'], [7, 'Seyi', 'Who said?? Abeg post proof'], [10, 'Ikeja LGA Corpers', 'My cousin\'s friend works at the Secretariat, he said no CDS 💯'], [13.5, 'Kunle', 'Wait for official announcement before una go dey shout'], [17, 'Bisi', 'I\'m sleeping in tomorrow sha 😴']];
+  const lines = [[1.5, 'Emeka', 'Guys is there CDS tomorrow?'], [4, 'Bisi', 'They said no CDS because of the LG election thing'], [7, 'Seyi', 'Who said?? Abeg post proof'], [10, GRP(), 'My cousin\'s friend works at the Secretariat, he said no CDS 💯'], [13.5, 'Kunle', 'Wait for official announcement before una go dey shout'], [17, 'Bisi', 'I\'m sleeping in tomorrow sha 😴']];
   for (const [t, w, m] of lines) setTimeout(() => chat(w, m), (t + 5) * 1000);
   phoneActs([
     ['DM Tolu', () => { openThread('Tolu', 'dm'); chat('You', 'Tolu abeg, is there CDS tomorrow?', 'me', 'Tolu'); phoneActs(cdsActs()); setTimeout(() => { const right = Math.random() < 0.8; CDS.hint = right ? CDS.truth : !CDS.truth; chat('Tolu', CDS.hint ? 'Yes o. Our CDS exec said nothing was cancelled. 9AM.' : 'I heard it was cancelled. I\'m not going 🤷🏾‍♀️', '', 'Tolu'); }, 2500); }],
@@ -1628,24 +1649,24 @@ window.__cds = { startChapter2, lodgeSleep, nightToMorning, cdsArrive, pickTrash
 // Compressed calendar: each month is two weeks of Monday (PPA), Thursday (CDS) and Saturday (free), then clearance. Three months, then POP.
 const YDAYS = ['Mon', 'Thu', 'Sat'], YNAME = { Mon: 'MONDAY', Thu: 'THURSDAY', Sat: 'SATURDAY', Clr: 'CLEARANCE DAY', Pop: 'PASSING OUT DAY' };
 const Y = { on: false, month: 1, week: 1, di: 0, kind: 'Mon', task: null, done: false, ppaDays: 0, ppaMiss: 0, cdsDays: 0, cdsMiss: 0, clrMiss: 0, lates: 0, sent: 0, earned: 0, spent: 0, events: [], debt: 0, cdsOff: false, hustled: 0, aso: 0, MONTHS: 3, WEEKS: 2 };
-const RENT = 15000, FOOD = 1800;
+
 function yDayLabel() { return Y.kind === 'Clr' ? `CLEARANCE · END OF MONTH ${Y.month}` : Y.kind === 'Pop' ? 'PASSING OUT PARADE' : `${YNAME[Y.kind]} · MONTH ${Y.month}, WEEK ${Y.week}`; }
 function startYear(resume) {
-  ST.ch = 3; Y.on = true; CDS.step = 0; spawnStreet(); setGroup('Ikeja LGA Corpers');
+  ST.ch = 3; Y.on = true; CDS.step = 0; spawnStreet(); setGroup(GRP());
   if (!resume) { Object.assign(Y, { month: 1, week: 1, di: 0, kind: 'Mon' }); chat('LGI (Official)', 'Corps members are reminded: PPA daily, CDS every Thursday, clearance at the end of every month. No clearance, no allowance.', 'off'); }
   for (const s of SCH.students) s.hidden = true;
   yMorning();
 }
 function yKindFor() { return Y.di >= YDAYS.length * Y.WEEKS ? (Y.month >= Y.MONTHS ? 'Pop' : 'Clr') : YDAYS[Y.di % YDAYS.length]; }
 function yMorning() {
-  Y.kind = yKindFor(); Y.week = Math.min(Y.WEEKS, Math.floor(Y.di / YDAYS.length) + 1); Y.done = false; Y.task = null; Y.cdsOff = false; Y.signed = false; Y.late = false; Y.dusk = false;
+  Y.kind = yKindFor(); Y.week = Math.min(Y.WEEKS, Math.floor(Y.di / YDAYS.length) + 1); Y.jobs = Object.keys(PPA_JOBS).sort(() => Math.random() - .5).slice(0, 3); Y.done = false; Y.task = null; Y.cdsOff = false; Y.signed = false; Y.late = false; Y.dusk = false;
   const sub = { Mon: 'PPA day. Mr. Adebayo opens the gate at 7:30 and counts who is late.', Thu: 'CDS day. Khaki, CDS card, and whatever the group chat is saying.', Sat: 'No PPA, no CDS. Your money, your energy, your choice.', Clr: 'Last working day of the month. Thumbprint at the LGA, then the alert.', Pop: 'Twelve weeks compressed into one game. Today you pass out.' }[Y.kind];
   cine(yDayLabel(), sub, () => {
     setTOD('Morning'); ST.mins = 6 * 60 + 45; ST.area = 'street'; ST.target = null; $('arrow').style.display = 'none';
     player.o.position.set(-44.2, 0.2, 14.2); player.o.rotation.y = Math.PI; cam.yaw = 0; cam.pitch = 0.3; cam.tdist = 4.2; camLook.copy(player.o.position);
     dress(Y.kind === 'Sat' ? 'mufti' : 'khaki');
     // the cost of being alive
-    ST.txn = 'Food · Mama Tolani + pure water'; ST.cash -= FOOD; Y.spent += FOOD; hudSync();
+    ST.txn = 'Food · Mama Tolani + pure water'; ST.cash -= PF().food; Y.spent += PF().food; hudSync();
     ST.energy = clamp(ST.energy + 26, 0, 100); ST.stress = clamp(ST.stress - 5, 0, 100);
     if (ST.cash < 0 && !Y.loan) { Y.loan = true; setTimeout(() => { ST.txn = 'Transfer from TOLU (loan)'; ST.cash += 10000; Y.debt += 10000; hudSync(); chat('Tolu', 'I don send you ₦10k. Pay me back when alert land o 😒', '', 'Tolu'); }, 3200); }
     saveGame('year');
@@ -1654,13 +1675,13 @@ function yMorning() {
 function ySetDay() {
   if (Y.kind === 'Mon') { setObj('Get to Model School before 8:00 AM and sign the attendance book'); ST.target = { x: SCH.gate.x, z: -9.6, label: 'Model School (PPA)' }; }
   if (Y.kind === 'Thu') {
-    Y.cdsOff = Math.random() < 0.22; const rumour = Math.random() < 0.45;
+    Y.cdsOff = Math.random() < PF().cdsOff; const rumour = Math.random() < PF().rumour;
     if (rumour) { const says = Y.cdsOff ? 'no CDS today' : 'no CDS today'; setTimeout(() => chat(pick(['Bisi', 'Emeka', 'Kunle']), `Guys they said ${says} 👀`), 1500); setTimeout(() => chat(pick(['Seyi', 'Tolu']), 'Who said? Abeg post proof'), 4200); }
     setTimeout(() => chat('LGI (Official)', Y.cdsOff ? 'CDS will not hold today due to the LG budget meeting at the Secretariat.' : 'CDS holds today. Absentees will be queried.', 'off'), rumour ? 9000 : 3500);
     setObj('CDS day: get to the CDS ground at the Secretariat by 10:00 AM'); ST.target = { x: LGA.x + 9, z: -14, label: 'CDS ground' };
   }
   if (Y.kind === 'Sat') { setObj('Free day: hustle, rest, or show face at an owambe. Sleep at your lodge to end the day.'); ST.target = null; ySaturday(); }
-  if (Y.kind === 'Clr') { Y.queue = ST.post && /Ikeja/.test(ST.post.lga || 'Ikeja') ? 14 : 8; Y.inQ = false; setObj('Monthly clearance: get to the LGA Secretariat'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; setTimeout(() => chat('Ikeja LGA Corpers', 'Clearance don start o. The queue is already long 😩'), 2500); }
+  if (Y.kind === 'Clr') { Y.queue = PF().queue; Y.inQ = false; setObj('Monthly clearance: get to the LGA Secretariat'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; setTimeout(() => chat(GRP(), 'Clearance don start o. The queue is already long 😩'), 2500); }
   if (Y.kind === 'Pop') { setObj('Passing Out Parade at the LGA Secretariat'); ST.target = { x: LGA.x, z: LGA.z, label: 'POP venue' }; chat('LGI (Official)', 'POP holds at the LGA Secretariat ground. Corps members must be in full kit.', 'off'); }
   $('arrow').style.display = ST.target ? 'block' : 'none';
 }
@@ -1670,7 +1691,7 @@ const YEVENTS = [
   () => { toast('NEPA took light all night. You slept in heat. Energy −12', 3200); ST.energy = clamp(ST.energy - 12, 0, 100); },
   () => ask('Your phone', 'The screen cracked when it fell from the bed. The phone man at Computer Village says ₦8,000.', [['Fix it (₦8,000)', () => ySpend(8000, 'Phone repair · Computer Village')], ['Manage it like that', () => { ST.stress = clamp(ST.stress + 5, 0, 100); }]]),
   () => ask('Tolu', '"Babe/guy, my birthday is Saturday. Just come with a gift o, nothing much 😌"', [['Send ₦3,000 gift', () => ySpend(3000, 'Transfer to TOLU', () => { ST.rep += 2; })], ['"I go come with prayers"', () => { ST.rep -= 1; }]]),
-  () => { if (ST.bg === 'car') ask('Your Corolla', 'The check-engine light is on again. Mechanic says ₦12,000.', [['Fix it', () => ySpend(12000, 'Mechanic · Ikeja')], ['Ignore the light', () => { ST.stress = clamp(ST.stress + 6, 0, 100); }]]); else ask('Your phone', 'Data finished in the middle of the group chat drama. ₦1,000 for 1.5GB?', [['Buy data', () => ySpend(1000, 'Airtime & data')], ['Beg for hotspot at PPA', () => { ST.rep -= 1; }]]); },
+  () => { if (ST.bg === 'car') ask('Your Corolla', 'The check-engine light is on again. Mechanic says ₦12,000.', [['Fix it', () => ySpend(12000, 'Mechanic · ' + LGN())], ['Ignore the light', () => { ST.stress = clamp(ST.stress + 6, 0, 100); }]]); else ask('Your phone', 'Data finished in the middle of the group chat drama. ₦1,000 for 1.5GB?', [['Buy data', () => ySpend(1000, 'Airtime & data')], ['Beg for hotspot at PPA', () => { ST.rep -= 1; }]]); },
   () => { chat('Landlord (Baba Lodge)', 'Good morning corper. Remember light bill is ₦2,500 this month. Thank you.', '', 'Baba Lodge'); ySpend(2500, 'Light bill · Corper Lodge', null, true); },
   () => { chat('Chioma (CDS Sec)', 'Hello! We are contributing ₦1,000 each for the CDS project (borehole signage). Pay before Thursday 🙏🏾', '', 'Chioma (CDS Sec)'); ask('CDS contribution', 'Pay ₦1,000 now? Some people are asking where last month\'s money went.', [['Pay', () => ySpend(1000, 'CDS project contribution', () => { ST.rep += 1; })], ['"Abeg show us the receipt first"', () => { ST.infoPlug = (ST.infoPlug || 0) + 1; ST.rep -= 1; }]]); },
   () => { toast('Aunty Kemi sent you a voice note: "Corper, come and teach my son Maths on Saturday, I go pay."', 3600); Y.tutor = true; },
@@ -1682,11 +1703,11 @@ function ySpend(n, label, then, force) {
 }
 function ySaturday() {
   const opts = [
-    ['Tutor Aunty Kemi\'s son (+₦5,000, −20 energy)', () => { if (ST.energy < 20) return toast('You are too tired. Rest first.'); ST.txn = 'AUNTY KEMI · lesson'; ST.cash += 5000; Y.earned += 5000; Y.hustled++; ST.energy = clamp(ST.energy - 20, 0, 100); hudSync(); toast('Two hours of fractions. The boy finally gets it. +₦5,000', 3200); }],
+    [`Tutor Aunty Kemi's son (+${naira(Math.round(5000 * PF().hustle / 500) * 500)}, −20 energy)`, () => { if (ST.energy < 20) return toast('You are too tired. Rest first.'); const pay = Math.round(5000 * PF().hustle / 500) * 500; ST.txn = 'AUNTY KEMI · lesson'; ST.cash += pay; Y.earned += pay; Y.hustled++; ST.energy = clamp(ST.energy - 20, 0, 100); hudSync(); toast('Two hours of fractions. The boy finally gets it. +' + naira(pay), 3200); }],
     ['Buy aso-ebi for Seyi\'s sister\'s wedding (₦15,000)', () => ySpend(15000, 'Aso-ebi · Balogun', () => { Y.aso++; ST.rep += 3; ST.stress = clamp(ST.stress - 8, 0, 100); toast('You danced, you sprayed, you ate jollof. Worth it. Mostly.', 3200); })],
     ['Rest at home all day (+energy, −stress)', () => { ST.energy = clamp(ST.energy + 25, 0, 100); ST.stress = clamp(ST.stress - 10, 0, 100); toast('You slept till 1 PM. No regrets.', 2600); }],
   ];
-  if (ST.bg === 'hustler') opts.unshift(['Run your POS stand at the bus stop (+₦3,000–₦7,000)', () => { const a = pick([3000, 4500, 7000]); ST.txn = 'POS charges · Corper Close'; ST.cash += a; Y.earned += a; Y.hustled++; ST.energy = clamp(ST.energy - 15, 0, 100); hudSync(); toast(`Busy day at the POS stand. +${naira(a)}`, 2800); }]);
+  if (ST.bg === 'hustler') opts.unshift(['Run your POS stand at the bus stop (+₦3,000–₦7,000)', () => { const a = Math.round(pick([3000, 4500, 7000]) * PF().hustle / 500) * 500; ST.txn = 'POS charges · Corper Close'; ST.cash += a; Y.earned += a; Y.hustled++; ST.energy = clamp(ST.energy - 15, 0, 100); hudSync(); toast(`Busy day at the POS stand. +${naira(a)}`, 2800); }]);
   const tok = Y.month * 100 + Y.di;
   setTimeout(() => Y.month * 100 + Y.di === tok && Y.kind === 'Sat' && !Y.done && ask('Saturday', 'What are you doing with your day?', opts.map(([l, f]) => [l, () => { if (Y.month * 100 + Y.di !== tok) return; f(); Y.done = true; setObj('Sleep at your lodge to end the day'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block'; }])), 5200);
 }
@@ -1694,21 +1715,53 @@ function yInteractables() {
   const L = [], P = player.o.position;
   L.push({ x: LODGE.x, z: LODGE.z, label: Y.kind === 'Pop' ? 'Your room (POP is today!)' : Y.done ? 'Sleep (end the day)' : 'Sleep early (skip the day)', act: ySleep });
   if (Y.kind === 'Mon' && !Y.signed) L.push({ x: SCH.x + 15, z: -24, label: 'Sign the staff attendance book', act: ySignPPA });
-  if (Y.kind === 'Mon' && Y.signed && !Y.done) {
-    L.push({ x: SCH.spots.board.x, z: SCH.spots.board.z, label: 'Teach JSS 2A (3 questions)', act: () => { for (const s of SCH.students) s.hidden = false; startLesson(ok => yPPADone(ok >= 2 ? 3 : 0, ok >= 2 ? 'The class went well.' : 'Rough class. Tomorrow is another day.'), 3); } });
-    L.push({ x: SCH.x + 12.6, z: -26.9, label: 'Mark JSS 1 exercise books', act: yMarking });
-    L.push({ x: SCH.spots.principal.x, z: SCH.spots.principal.z, label: 'See Mr. Adebayo about the printer', act: yPrinter });
-  }
+  if (Y.kind === 'Mon' && Y.signed && !Y.done) for (const j of (Y.jobs || [])) { const J = PPA_JOBS[j]; L.push({ x: J.at().x, z: J.at().z, label: J.label, act: J.act }); }
   if (Y.kind === 'Thu' && !Y.signed && Math.hypot(P.x - (LGA.x + 9), P.z + 14) < 12) L.push({ x: LGA.x + 9, z: -12.4, label: Y.cdsOff ? 'Ask the security man about CDS' : 'Sign the CDS register', act: ySignCDS });
   if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, label: Y.inQ ? `Wait for your name (${Y.queue} before you)` : 'Join the clearance queue', act: yClearance });
   if (Y.kind === 'Pop' && !Y.done && Math.hypot(P.x - LGA.x, P.z - LGA.z) < 20) L.push({ x: LGA.x, z: -12.4, label: 'Take your place at the parade', act: yPOP });
   return L;
 }
+// PPA jobs: three are on offer each Monday
+const ENGQ = [
+  ['Choose the correct sentence.', ['He doesn\'t know the answer.', 'He don\'t know the answer.', 'He doesn\'t knows the answer.']],
+  ['Which word is spelt correctly?', ['Accommodation', 'Acommodation', 'Accomodation']],
+  ['The plural of "furniture" is…', ['furniture', 'furnitures', 'furnitur']],
+  ['Pick the correct one: "Each of the boys ___ a book."', ['has', 'have', 'are having']],
+  ['Opposite of "generous"?', ['stingy', 'kind', 'rich']],
+  ['"I have been waiting since two hours" is wrong. The correct word is…', ['for', 'from', 'by']],
+];
+function engLesson() {
+  for (const s of SCH.students) s.hidden = false; let i = 0, ok = 0; const qs = ENGQ.slice().sort(() => Math.random() - .5).slice(0, 3);
+  player.o.position.set(SCH.spots.board.x + 1.2, 0.14, SCH.spots.board.z); player.o.rotation.y = 0; cam.yaw = 0.35; cam.pitch = 0.28; cam.tdist = 8;
+  const next = () => {
+    if (i >= qs.length) return yPPADone(ok >= 2 ? 3 : 0, ok >= 2 ? 'English class went well. Nobody said "I don\'t know it" today.' : 'The pupils taught you some new pidgin instead.');
+    const [q, opts] = qs[i]; drawBoard([`Q${i + 1}. ${q}`.slice(0, 44), ''], `JSS 2 · English · ${ok} of ${i} correct`);
+    ask(`English · Question ${i + 1} of 3`, q + ' A boy at the back shouts an answer. Which one do you write on the board?', opts.map(o => [o, () => o]).sort(() => Math.random() - .5).map(([o]) => [o, () => { const good = o === opts[0]; if (good) ok++; for (const s of SCH.students) { play(s, good ? 'agree' : 'argue'); setTimeout(() => play(s, 'sit'), 1600); } toast(good ? 'Correct. The class copies it down.' : `Hmm. The answer was "${opts[0]}".`, 1800); i++; setTimeout(next, 1700); }]));
+  };
+  next();
+}
+const PPA_JOBS = {
+  maths: { label: 'Teach JSS 2A Maths (3 questions)', at: () => SCH.spots.board, act: () => { for (const s of SCH.students) s.hidden = false; startLesson(ok => yPPADone(ok >= 2 ? 3 : 0, ok >= 2 ? 'The class went well.' : 'Rough class. Next week is another chance.'), 3); } },
+  english: { label: 'Teach JSS 2A English (3 questions)', at: () => SCH.spots.board, act: engLesson },
+  marking: { label: 'Mark JSS 1 exercise books', at: () => ({ x: SCH.x + 12.6, z: -26.9 }), act: () => yMarking() },
+  printer: { label: 'See Mr. Adebayo about the printer', at: () => SCH.spots.principal, act: () => yPrinter() },
+  invigilate: { label: 'Invigilate the SS 2 test (Block B)', at: () => ({ x: SCH.x + 11.5, z: -32.6 }), act: () => ask('SS 2 · Biology test', 'Twenty minutes in, you notice a boy with tiny notes folded inside his calculator cover. His friend is whispering answers.', [
+    ['Seize the notes quietly, let him continue', () => yPPADone(3, 'Fair and calm. Mrs. Okon nods at you from the corridor.')],
+    ['Shout and send both of them out', () => yPPADone(1, 'The class is now terrified of you. Order restored, sort of.')],
+    ['Pretend you did not see', () => yPPADone(-1, 'Half the class now has the same answers. The teacher will notice.')],
+  ]) },
+  assembly: { label: 'Lead morning assembly (flagpole)', at: () => ({ x: SCH.x + 4, z: -16.8 }), act: () => ask('Morning assembly', 'The pupils line up under the sun, JSS 1 in front, SS 3 pretending not to be there. Mr. Adebayo hands you the microphone. "Corper, talk to them small."', [
+    ['Talk about punctuality and respect', () => yPPADone(2, 'Short, clear, done. The principal looks proud.')],
+    ['Tell them about your camp days and frog jumps', () => yPPADone(3, 'The pupils laugh and clap. Now everybody calls you "Corper Frog".')],
+    ['Read the anthem lyrics slowly with them', () => yPPADone(2, 'Loud anthem, straight lines. The flag looks happy.')],
+  ]) },
+};
 function ySignPPA() {
   Y.signed = true; Y.late = ST.mins > 8 * 60; if (Y.late) Y.lates++;
-  ask('Mrs. Okon', Y.late ? '"Corper, it is past eight. Mr. Adebayo has drawn the red line under your name."' : '"Good morning! You are early today. Sign there."', [['"Good morning ma."', () => { if (Y.late) { ST.rep -= 1; ST.stress = clamp(ST.stress + 4, 0, 100); } setObj('PPA: pick one job for today (classroom, staff room, or principal\'s office)'); ST.target = null; $('arrow').style.display = 'none'; }]]);
+  ask('Mrs. Okon', Y.late ? '"Corper, it is past eight. Mr. Adebayo has drawn the red line under your name."' : '"Good morning! You are early today. Sign there."', [['"Good morning ma."', () => { if (Y.late) { ST.rep -= 1; ST.stress = clamp(ST.stress + 4, 0, 100); } setObj('PPA jobs today: ' + Y.jobs.map(j => PPA_JOBS[j].label.split(' (')[0]).join(' · ')); ST.target = null; $('arrow').style.display = 'none'; }]]);
 }
 function yPPADone(rep, msg) {
+  for (const s of SCH.students) s.hidden = true;
   Y.done = true; Y.ppaDays++; ST.rep += rep; ST.energy = clamp(ST.energy - 12, 0, 100); ST.mins = Math.max(ST.mins, 14 * 60); setTOD('Afternoon');
   toast(msg + ' PPA day done ✅', 3000); setObj('Go home and rest at your lodge'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
 }
@@ -1719,7 +1772,7 @@ function yMarking() {
 function yPrinter() {
   ask('Mr. Adebayo', '"Corper, this printer is not printing the exam questions. You young people know these things."', [
     ['Check the cable and paper tray', () => yPPADone(2, 'The paper was jammed. You are now the school\'s IT department.')],
-    ['"Sir, it needs a new cartridge (₦6,000)"', () => { ask('Mr. Adebayo', '"Ehn… pay for it, the school will refund you." (It will not.)', [['Pay ₦6,000', () => ySpend(6000, 'Printer cartridge · Ikeja', () => yPPADone(3, 'The printer works. The refund will come "next month".'))], ['"Sir, I don\'t have money"', () => yPPADone(0, 'He sighs and calls the bursar.')]]); }],
+    ['"Sir, it needs a new cartridge (₦6,000)"', () => { ask('Mr. Adebayo', '"Ehn… pay for it, the school will refund you." (It will not.)', [['Pay ₦6,000', () => ySpend(6000, 'Printer cartridge · ' + LGN(), () => yPPADone(3, 'The printer works. The refund will come "next month".'))], ['"Sir, I don\'t have money"', () => yPPADone(0, 'He sighs and calls the bursar.')]]); }],
   ]);
 }
 function ySignCDS() {
@@ -1727,7 +1780,7 @@ function ySignCDS() {
   const late = ST.mins > 10 * 60;
   if (late) { Y.signed = true; Y.done = true; Y.cdsMiss++; ST.rep -= 2; ask('DFQC CDS President', '"Register closed at 10. I will mark you absent."', [['"Ah, traffic…"', () => { setObj('Go home'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block'; }]]); return; }
   Y.signed = true; Y.done = true; Y.cdsDays++; ST.rep += 2; ST.energy = clamp(ST.energy - 8, 0, 100); ST.mins = Math.max(ST.mins, 12 * 60);
-  toast(pick(['Sensitisation at Ikeja Grammar School. You talked about drug abuse to 200 teenagers.', 'Sanitation round the Secretariat. Thumbprint, register, done.', 'Group meeting. Forty minutes about the CDS project budget. Register signed.']) + ' ✅', 4200);
+  toast(pick(['Sensitisation at a junior secondary school. You talked about drug abuse to 200 teenagers.', 'Sanitation round the Secretariat. Thumbprint, register, done.', 'Group meeting. Forty minutes about the CDS project budget. Register signed.']) + ' ✅', 4200);
   setObj('Go home and rest'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
 }
 function yClearance() {
@@ -1743,7 +1796,7 @@ function yUpdate(dt) {
       if (!near) { Y.queue = 3; toast('They called your name while you were away! Back of the line!', 3200); ST.stress = clamp(ST.stress + 6, 0, 100); return; }
       Y.done = true; Y.cleared = (Y.cleared || 0) + 1; ST.txn = 'NYSC allowance · FGN'; ST.cash += 77000; Y.earned += 77000; ST.stress = clamp(ST.stress - 10, 0, 100); hudSync();
       chat('Naija Trust Bank', `Credit alert: ₦77,000.00 · NYSC allowance. Bal: ${naira(ST.cash)}`, 'off');
-      setTimeout(() => { ySpend(RENT, 'Rent · Corper Lodge (Baba Lodge)', null, true); chat('Landlord (Baba Lodge)', `Thank you corper. I have collected this month's rent ${naira(RENT)}. God bless.`, '', 'Baba Lodge'); }, 3500);
+      setTimeout(() => { ySpend(PF().rent, 'Rent · Corper Lodge (Baba Lodge)', null, true); chat('Landlord (Baba Lodge)', `Thank you corper. I have collected this month's rent ${naira(PF().rent)}. God bless.`, '', 'Baba Lodge'); }, 3500);
       toast('Thumbprint. Cleared ✅ +₦77,000', 4200); setObj('Go home'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
     }
   }
@@ -1877,7 +1930,7 @@ function spawnStreet(T = TEX) {
   if (streetSpawned) return; streetSpawned = true;
   // pedestrians walking the sidewalks
   const civ = ['lCiv1', 'mCiv1', 'lCiv3', 'civF1', 'civF2', 'mSuit', 'civF3', 'lCorper2', 'mCiv2', 'civF1', 'lCiv4', 'corperF', 'mCorper'];
-  for (let i = 0; i < (TOUCH ? 12 : 26); i++) {
+  for (let i = 0; i < Math.round((TOUCH ? 12 : 26) * PF().crowd); i++) {
     const tk = civ[i % civ.length], f = /F/.test(tk), m2r = tk[0] === 'm';
     const p = makePerson(f ? 'fem' : m2r ? 'man2' : 'lewis', { tex: m2r ? undefined : T[tk], parts: m2r ? { tex: T[tk], hide: tk === 'mSuit' ? [] : ['Coat'] } : undefined, h: f ? rnd(1.58, 1.72) : rnd(1.7, 1.86), anim: 'walk' });
     const side = Math.random() < .5 ? -1 : 1;
@@ -1885,7 +1938,7 @@ function spawnStreet(T = TEX) {
     p.o.position.set(rnd(-PLAY, PLAY), 0.18, p.lineZ); p.o.rotation.y = p.dir > 0 ? Math.PI / 2 : -Math.PI / 2;
     p.acts.walk.time = rnd(0, 1); people.push(p);
   }
-  N('lewis', T.lCiv1, BUSSTOP_X + 3.2, 8.2, -Math.PI / 2, { anim: 'talk', bubble: ['Secretariat! Secretariat!', 'Enter with your change o!', 'Ojota, Ikeja, Secretariat!', 'One chance remain!'], conductor: true });
+  N('lewis', T.lCiv1, BUSSTOP_X + 3.2, 8.2, -Math.PI / 2, { anim: 'talk', bubble: ['Secretariat! Secretariat!', 'Enter with your change o!', 'Secretariat! Secretariat! Enter quick!', 'One chance remain!'], conductor: true });
   N('fem', T.corperF, -36, 9.6, Math.PI / 2, {
     name: 'Tolu', talk: {
       label: 'Talk to Tolu (fellow corper)', act() {
@@ -1898,7 +1951,7 @@ function spawnStreet(T = TEX) {
   for (const dx of [-2.4, 2.4]) N('lewis', T.police, LGA.x + dx, -10.6, 0, {});
   NPC[NPC.length - 1].talk = { label: 'Ask the security man', act() { toast('Security: "Corper, clearance is inside, Hall B. Join the queue, no dulling."', 3600); } };
   // queue of corpers at the secretariat
-  for (let i = 0; i < (TOUCH ? 8 : 14); i++) { const f = i % 3 === 0, m2r = i % 3 === 2; const p = N(f ? 'fem' : m2r ? 'man2' : 'lewis', f ? T.corperF : m2r ? (i % 2 ? T.mCorper : T.mCorper2) : [T.lCorper, T.lCorper2, T.lCorper3][i % 3], LGA.x - 7 + (i % 7) * 1.0, -16.5 - Math.floor(i / 7) * 1.1 + rnd(-.15, .15), Math.PI + rnd(-.3, .3), {}); p.acts.idle.time = rnd(0, 2); if (i % 2 === 1) { play(p, 'text', 0); p.acts.text.time = rnd(0, 20); } }
+  for (let i = 0; i < Math.max(3, Math.round((TOUCH ? 8 : 14) * (PF().queue / 16))); i++) { const f = i % 3 === 0, m2r = i % 3 === 2; const p = N(f ? 'fem' : m2r ? 'man2' : 'lewis', f ? T.corperF : m2r ? (i % 2 ? T.mCorper : T.mCorper2) : [T.lCorper, T.lCorper2, T.lCorper3][i % 3], LGA.x - 7 + (i % 7) * 1.0, -16.5 - Math.floor(i / 7) * 1.1 + rnd(-.15, .15), Math.PI + rnd(-.3, .3), {}); p.acts.idle.time = rnd(0, 2); if (i % 2 === 1) { play(p, 'text', 0); p.acts.text.time = rnd(0, 20); } }
   // two corpers arguing about the rumour, by the gate
   N('man2', T.mCorper2, LGA.x - 8, -9.4, Math.PI / 2, { anim: 'argue', bubble: ['Who said no clearance without CDS card?!', 'Na rumour! LGI never talk am!', 'Abeg show me the official post!'] });
   const a2 = N('lewis', T.lCorper3, LGA.x - 6.8, -9.4, -Math.PI / 2, { anim: 'argue' }); a2.acts.argue.time = 6;
@@ -2161,10 +2214,10 @@ function updateStory(dt) {
   yUpdate(dt);
   chatT += dt;
   const script = [
-    [3, () => chat('Ikeja LGA Corpers', 'Guys clearance has started at the Secretariat 🏃🏾‍♂️🏃🏾‍♀️')],
+    [3, () => chat(GRP(), 'Guys clearance has started at the Secretariat 🏃🏾‍♂️🏃🏾‍♀️')],
     [9, () => chat('Emeka', 'Is it true? Who has confirmed?')],
     [15, () => chat('Bisi', 'They said bring two passport photographs')],
-    [22, () => chat('Ikeja LGA Corpers', 'Omo I am already on the queue. Number 31 😩')],
+    [22, () => chat(GRP(), 'Omo I am already on the queue. Number 31 😩')],
     [34, () => chat('Seyi', 'They said no clearance without CDS card. Abeg is it true??')],
     [47, () => chat('LGI (Official)', 'Clearance is ongoing at Hall B till 2pm. Come with your ID card only. Ignore rumours.', 'off')],
   ];
