@@ -12,7 +12,7 @@ const BAKE = /bake/.test(location.hash);
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[(Math.random() * a.length) | 0];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const naira = n => '₦' + Math.round(n).toLocaleString('en-NG');
+const naira = n => (n < 0 ? '−₦' : '₦') + Math.round(Math.abs(n)).toLocaleString('en-NG');
 window.__G = {}; // test/debug handle
 
 /* ---------------- renderer / scene ---------------- */
@@ -897,7 +897,7 @@ function hudSync() {
   $('cash').textContent = naira(ST.cash);
   const h = Math.floor(ST.mins / 60), m = Math.floor(ST.mins % 60), ap = h >= 12 ? 'PM' : 'AM', hh = ((h + 11) % 12) + 1;
   $('clock').textContent = `${hh}:${String(m).padStart(2, '0')} ${ap}`; $('pclock').textContent = `${hh}:${String(m).padStart(2, '0')}`;
-  $('dayn').textContent = ST.area === 'camp' ? 'Camp day ' + (ST.day || 1) : (ST.ch === 2 ? (ST.seg === 'Evening' ? 'Wednesday' : 'Thursday') : 'Monday'); $('nrg').textContent = '⚡ ' + Math.round(ST.energy); $('strs').textContent = '😤 ' + Math.round(ST.stress);
+  $('dayn').textContent = ST.area === 'camp' ? 'Camp day ' + (ST.day || 1) : ST.ch === 3 ? ({ Mon: 'Monday', Thu: 'Thursday', Sat: 'Saturday', Clr: 'Clearance day', Pop: 'POP day' }[Y.kind] + ' · Month ' + Y.month) : (ST.ch === 2 ? (ST.seg === 'Evening' ? 'Wednesday' : 'Thursday') : 'Monday'); $('nrg').textContent = '⚡ ' + Math.round(ST.energy); $('strs').textContent = '😤 ' + Math.round(ST.stress);
 }
 
 /* ---------------- phone / Corper Connect ---------------- */
@@ -936,7 +936,7 @@ function renderBank() {
 function renderID() {
   const bgl = (BACKGROUNDS.find(b => b[0] === ST.bg) || [0, 'Allowance-only'])[1], bar = (v, c) => `<div class="bar"><i style="width:${clamp(v, 0, 100)}%;background:${c}"></i></div>`;
   $('pid').innerHTML = `<div class="idc"><small>CORPS MEMBER · FICTIONAL ID</small><b>${ST.name || 'Corper'}</b><span>${ST.code || 'State code: not yet registered'}</span></div>
-  <dl><div><dt>Platoon</dt><dd>${ST.code ? '5' : '—'}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga + ', ' + ST.post.state : '—'}</dd></div><div><dt>PPA</dt><dd>${ST.post ? ST.post.ppa : '—'}</dd></div><div><dt>Background</dt><dd>${bgl}</dd></div><div><dt>Reputation</dt><dd>${ST.rep}</dd></div></dl>
+  <dl>${ST.ch === 3 ? `<div><dt>Service</dt><dd>Month ${Y.month} of ${Y.MONTHS} · ${{ Mon: 'PPA day', Thu: 'CDS day', Sat: 'Free day', Clr: 'Clearance', Pop: 'POP' }[Y.kind]}</dd></div><div><dt>Attendance</dt><dd>PPA ${Y.ppaDays}/${Y.ppaDays + Y.ppaMiss} · CDS ${Y.cdsDays}/${Y.cdsDays + Y.cdsMiss}</dd></div>` : ''}<div><dt>Platoon</dt><dd>${ST.code ? '5' : '—'}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga + ', ' + ST.post.state : '—'}</dd></div><div><dt>PPA</dt><dd>${ST.post ? ST.post.ppa : '—'}</dd></div><div><dt>Background</dt><dd>${bgl}</dd></div><div><dt>Reputation</dt><dd>${ST.rep}</dd></div></dl>
   <label>Energy ${Math.round(ST.energy)}</label>${bar(ST.energy, '#1a9d52')}<label>Stress ${Math.round(ST.stress)}</label>${bar(ST.stress, '#d93025')}
   <div class="vibe"><small>YOUR VIBE SO FAR</small><b>${corperType()[0]}</b></div>`;
 }
@@ -1107,6 +1107,7 @@ function interactables() {
   for (const n of NPC) if (n.talk && n.area !== 'camp') L.push({ x: n.o.position.x, z: n.o.position.z, label: n.talk.label, act: n.talk.act, npc: n });
   const bus = traffic.find(v => v.kind === 'danfo' && v.stop > 0 && v.lane === 0 && Math.abs(v.x - BUSSTOP_X) < 4);
   if (bus && !ST.riding) L.push({ x: bus.x, z: 6.8, label: `Board danfo to Secretariat (${naira(300)})`, act: () => board(bus) });
+  if (ST.ch === 3) return L.concat(yInteractables());
   if (ST.ch === 2) return cdsInteractables();
   if (ST.done) L.push(...ppaInteractables());
   if (ST.phase >= 1 && !ST.done) L.push({ x: LGA.x, z: -12.4, label: ST.queue ? 'Wait for your name (queue)' : 'Join the clearance queue', act: clearance });
@@ -1395,13 +1396,14 @@ function enterStreet() {
   }
 }
 /* ---------------- save / continue (this browser only) ---------------- */
-const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles'];
-function saveGame(cp) { try { const d = { cp, g: ST.g, at: Date.now(), st: {} }; for (const k of SAVE_FIELDS) if (ST[k] !== undefined) d.st[k] = ST[k]; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { } }
+const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles', 'queried', 'cdsDone'];
+function saveGame(cp) { try { const d = { cp, g: ST.g, at: Date.now(), st: {}, y: cp === 'year' ? Object.fromEntries(Object.entries(Y).filter(([k, v]) => typeof v !== 'function' && typeof v !== 'object')) : null }; for (const k of SAVE_FIELDS) if (ST[k] !== undefined) d.st[k] = ST[k]; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { } }
 function loadSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.cp && d.g ? d : null; } catch (e) { return null; } }
 function resumeFrom(d) {
   Object.assign(ST, d.st); PH.cash = null; ST.cstep = 99; CAMP.exodus = true;
   for (const p of people) if (p.area === 'camp') p.hidden = true;
   if (d.cp === 'ch2') { ST.done = true; ST.ppa = 5; enterStreet(); startChapter2(); }
+  else if (d.cp === 'year') { ST.done = true; ST.ppa = 5; enterStreet(); if (d.y) Object.assign(Y, d.y); startYear(!!d.y); }
   else cine('WELCOME BACK', 'Ikeja, Lagos · Monthly clearance day', () => enterStreet(), 2200);
 }
 window.__camp = { dress, campGo, drillAnswer, gateCheck, register, kit, bunk, socialNight, sleepNight, startDrill, posting, leaveCamp, choose, CAMP, CSTEP, setTOD };
@@ -1452,8 +1454,8 @@ function makeQ(i) {
   ];
   return pool[i % pool.length]();
 }
-function startLesson() {
-  ST.lesson = { i: 0, ok: 0, qs: [0, 1, 2, 3, 4].map(makeQ) }; player.o.position.set(SCH.spots.board.x + 1.2, 0.14, SCH.spots.board.z); player.o.rotation.y = 0; cam.yaw = 0.35; cam.pitch = 0.28; cam.tdist = 8;
+function startLesson(done, n = 5) {
+  const off = (Math.random() * 6) | 0; ST.lesson = { i: 0, ok: 0, done: typeof done === 'function' ? done : null, qs: Array.from({ length: n }, (_, i) => makeQ(i + (done ? off : 0))) }; player.o.position.set(SCH.spots.board.x + 1.2, 0.14, SCH.spots.board.z); player.o.rotation.y = 0; cam.yaw = 0.35; cam.pitch = 0.28; cam.tdist = 8;
   for (const s of SCH.students) s.hidden = false; nextQ();
 }
 function nextQ() {
@@ -1470,10 +1472,10 @@ function answerQ(good, ans) {
   L.i++; setTimeout(nextQ, 1900);
 }
 function endLesson() {
-  const L = ST.lesson; ST.ppaScore = L.ok; ST.lesson = null; ST.rep += L.ok >= 4 ? 4 : L.ok >= 3 ? 2 : 0; ST.stress = clamp(ST.stress + (L.ok >= 3 ? -4 : 6), 0, 100); ST.energy = clamp(ST.energy - 10, 0, 100);
+  const L = ST.lesson; if (!L.done) ST.ppaScore = L.ok; ST.lesson = null; ST.rep += L.ok >= 4 ? 4 : L.ok >= 3 ? 2 : 0; ST.stress = clamp(ST.stress + (L.ok >= 3 ? -4 : 6), 0, 100); ST.energy = clamp(ST.energy - 10, 0, 100);
   drawBoard([`Today: ${L.ok} of ${L.qs.length} correct`, L.ok >= 4 ? 'Excellent class!' : 'Homework: page 42'], 'JSS 2 · Mathematics');
   card(L.ok >= 4 ? 'CLASS: EXCELLENT' : L.ok >= 3 ? 'CLASS: GOOD' : 'CLASS: ROUGH', L.ok >= 4 ? 'The pupils ask if you can teach them every day.' : L.ok >= 3 ? 'Most of them got it. A few are drawing danfos.' : 'Half the class is confused. So are you.', 3200);
-  setTimeout(() => ppaGo(3), 1200);
+  setTimeout(() => L.done ? L.done(L.ok) : ppaGo(3), 1200);
 }
 function staffRoom() {
   ask('Mrs. Okon (Vice Principal)', '"Corper, compile JSS2 scores. Ah, and a parent called. Her son scored 38. She said you should make it 50 and she will \'appreciate you\'."', [
@@ -1503,12 +1505,12 @@ function corperType() {
   return ['THE "I JUST WANT POP" CORPER', 'Head down, attendance up, no wahala. POP is the only destination.'];
 }
 function showSummary(ch = 1) {
-  const [t, d] = corperType(), el = $('summary');
+  const [t, d] = ch === 3 ? yearType() : corperType(), el = $('summary');
   el.innerHTML = `<small>${esc((ST.name || 'CORPER').toUpperCase())} · ${ST.code || 'NO STATE CODE'} · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
-  <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch > 1 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div></dl>
-  <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : 'Keep exploring'}</button><button class="btn" id="sumagain">Start again</button></div>`;
-  if (ch === 1) saveGame('ch2');
-  el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); }; $('sumagain').onclick = () => location.reload();
+  <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch === 2 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div>${ch === 3 ? `<div><dt>PPA days</dt><dd>${Y.ppaDays} present · ${Y.ppaMiss} missed · ${Y.lates} late</dd></div><div><dt>CDS</dt><dd>${Y.cdsDays} attended · ${Y.cdsMiss} missed</dd></div><div><dt>Clearance</dt><dd>${Y.cleared || 0} of ${Y.MONTHS - 1} cleared</dd></div><div><dt>Earned</dt><dd>${naira(Y.earned)}</dd></div><div><dt>Spent</dt><dd>${naira(Y.spent)}</dd></div><div><dt>Sent home</dt><dd>${naira(Y.sent)}</dd></div><div><dt>Balance at POP</dt><dd>${naira(ST.cash)}</dd></div>` : ''}</dl>
+  <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring Ikeja'}</button><button class="btn" id="sumagain">Start again</button></div>`;
+  if (ch === 1) saveGame('ch2'); if (ch === 2) { ST.ch = 3; saveGame('year'); ST.ch = 2; }
+  el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); else if (ch === 2) startYear(); else if (ch === 3) { Y.on = false; setObj('Ex-corper. Explore Ikeja as long as you like.'); } }; $('sumagain').onclick = () => location.reload();
   bugle();
 }
 $('arrow').onclick = () => { if (ST.target && ST.area === 'street' && !ST.riding && !DLG) travelMenu(ST.target, ST.target.label); };
@@ -1621,6 +1623,167 @@ function endChapter2() {
   setTimeout(() => showSummary(2), 3800);
 }
 window.__cds = { startChapter2, lodgeSleep, nightToMorning, cdsArrive, pickTrash, signRegister, officialVerdict, CDS, LODGE };
+
+/* ---------------- Chapter 3: the service year (days, weekly CDS, monthly clearance, money, events, POP) ---------------- */
+// Compressed calendar: each month is two weeks of Monday (PPA), Thursday (CDS) and Saturday (free), then clearance. Three months, then POP.
+const YDAYS = ['Mon', 'Thu', 'Sat'], YNAME = { Mon: 'MONDAY', Thu: 'THURSDAY', Sat: 'SATURDAY', Clr: 'CLEARANCE DAY', Pop: 'PASSING OUT DAY' };
+const Y = { on: false, month: 1, week: 1, di: 0, kind: 'Mon', task: null, done: false, ppaDays: 0, ppaMiss: 0, cdsDays: 0, cdsMiss: 0, clrMiss: 0, lates: 0, sent: 0, earned: 0, spent: 0, events: [], debt: 0, cdsOff: false, hustled: 0, aso: 0, MONTHS: 3, WEEKS: 2 };
+const RENT = 15000, FOOD = 1800;
+function yDayLabel() { return Y.kind === 'Clr' ? `CLEARANCE · END OF MONTH ${Y.month}` : Y.kind === 'Pop' ? 'PASSING OUT PARADE' : `${YNAME[Y.kind]} · MONTH ${Y.month}, WEEK ${Y.week}`; }
+function startYear(resume) {
+  ST.ch = 3; Y.on = true; CDS.step = 0; spawnStreet(); setGroup('Ikeja LGA Corpers');
+  if (!resume) { Object.assign(Y, { month: 1, week: 1, di: 0, kind: 'Mon' }); chat('LGI (Official)', 'Corps members are reminded: PPA daily, CDS every Thursday, clearance at the end of every month. No clearance, no allowance.', 'off'); }
+  for (const s of SCH.students) s.hidden = true;
+  yMorning();
+}
+function yKindFor() { return Y.di >= YDAYS.length * Y.WEEKS ? (Y.month >= Y.MONTHS ? 'Pop' : 'Clr') : YDAYS[Y.di % YDAYS.length]; }
+function yMorning() {
+  Y.kind = yKindFor(); Y.week = Math.min(Y.WEEKS, Math.floor(Y.di / YDAYS.length) + 1); Y.done = false; Y.task = null; Y.cdsOff = false; Y.signed = false; Y.late = false; Y.dusk = false;
+  const sub = { Mon: 'PPA day. Mr. Adebayo opens the gate at 7:30 and counts who is late.', Thu: 'CDS day. Khaki, CDS card, and whatever the group chat is saying.', Sat: 'No PPA, no CDS. Your money, your energy, your choice.', Clr: 'Last working day of the month. Thumbprint at the LGA, then the alert.', Pop: 'Twelve weeks compressed into one game. Today you pass out.' }[Y.kind];
+  cine(yDayLabel(), sub, () => {
+    setTOD('Morning'); ST.mins = 6 * 60 + 45; ST.area = 'street'; ST.target = null; $('arrow').style.display = 'none';
+    player.o.position.set(-44.2, 0.2, 14.2); player.o.rotation.y = Math.PI; cam.yaw = 0; cam.pitch = 0.3; cam.tdist = 4.2; camLook.copy(player.o.position);
+    dress(Y.kind === 'Sat' ? 'mufti' : 'khaki');
+    // the cost of being alive
+    ST.txn = 'Food · Mama Tolani + pure water'; ST.cash -= FOOD; Y.spent += FOOD; hudSync();
+    ST.energy = clamp(ST.energy + 26, 0, 100); ST.stress = clamp(ST.stress - 5, 0, 100);
+    if (ST.cash < 0 && !Y.loan) { Y.loan = true; setTimeout(() => { ST.txn = 'Transfer from TOLU (loan)'; ST.cash += 10000; Y.debt += 10000; hudSync(); chat('Tolu', 'I don send you ₦10k. Pay me back when alert land o 😒', '', 'Tolu'); }, 3200); }
+    saveGame('year');
+  }, 2800).then(() => { ySetDay(); setTimeout(yEvent, 2200); });
+}
+function ySetDay() {
+  if (Y.kind === 'Mon') { setObj('Get to Model School before 8:00 AM and sign the attendance book'); ST.target = { x: SCH.gate.x, z: -9.6, label: 'Model School (PPA)' }; }
+  if (Y.kind === 'Thu') {
+    Y.cdsOff = Math.random() < 0.22; const rumour = Math.random() < 0.45;
+    if (rumour) { const says = Y.cdsOff ? 'no CDS today' : 'no CDS today'; setTimeout(() => chat(pick(['Bisi', 'Emeka', 'Kunle']), `Guys they said ${says} 👀`), 1500); setTimeout(() => chat(pick(['Seyi', 'Tolu']), 'Who said? Abeg post proof'), 4200); }
+    setTimeout(() => chat('LGI (Official)', Y.cdsOff ? 'CDS will not hold today due to the LG budget meeting at the Secretariat.' : 'CDS holds today. Absentees will be queried.', 'off'), rumour ? 9000 : 3500);
+    setObj('CDS day: get to the CDS ground at the Secretariat by 10:00 AM'); ST.target = { x: LGA.x + 9, z: -14, label: 'CDS ground' };
+  }
+  if (Y.kind === 'Sat') { setObj('Free day: hustle, rest, or show face at an owambe. Sleep at your lodge to end the day.'); ST.target = null; ySaturday(); }
+  if (Y.kind === 'Clr') { Y.queue = ST.post && /Ikeja/.test(ST.post.lga || 'Ikeja') ? 14 : 8; Y.inQ = false; setObj('Monthly clearance: get to the LGA Secretariat'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; setTimeout(() => chat('Ikeja LGA Corpers', 'Clearance don start o. The queue is already long 😩'), 2500); }
+  if (Y.kind === 'Pop') { setObj('Passing Out Parade at the LGA Secretariat'); ST.target = { x: LGA.x, z: LGA.z, label: 'POP venue' }; chat('LGI (Official)', 'POP holds at the LGA Secretariat ground. Corps members must be in full kit.', 'off'); }
+  $('arrow').style.display = ST.target ? 'block' : 'none';
+}
+// morning events: life happens
+const YEVENTS = [
+  () => ask('Mummy ❤️', '"My dear, your younger brother needs ₦10,000 for his WAEC registration. Help me."', [['Send ₦10,000', () => ySpend(10000, 'Transfer to MUMMY', () => { ST.rep += 2; Y.sent += 10000; chat('Mummy ❤️', 'God bless you my child 🙏🏾', '', 'Mummy ❤️'); })], ['"Mummy, the alert never land."', () => { ST.stress = clamp(ST.stress + 4, 0, 100); }]]),
+  () => { toast('NEPA took light all night. You slept in heat. Energy −12', 3200); ST.energy = clamp(ST.energy - 12, 0, 100); },
+  () => ask('Your phone', 'The screen cracked when it fell from the bed. The phone man at Computer Village says ₦8,000.', [['Fix it (₦8,000)', () => ySpend(8000, 'Phone repair · Computer Village')], ['Manage it like that', () => { ST.stress = clamp(ST.stress + 5, 0, 100); }]]),
+  () => ask('Tolu', '"Babe/guy, my birthday is Saturday. Just come with a gift o, nothing much 😌"', [['Send ₦3,000 gift', () => ySpend(3000, 'Transfer to TOLU', () => { ST.rep += 2; })], ['"I go come with prayers"', () => { ST.rep -= 1; }]]),
+  () => { if (ST.bg === 'car') ask('Your Corolla', 'The check-engine light is on again. Mechanic says ₦12,000.', [['Fix it', () => ySpend(12000, 'Mechanic · Ikeja')], ['Ignore the light', () => { ST.stress = clamp(ST.stress + 6, 0, 100); }]]); else ask('Your phone', 'Data finished in the middle of the group chat drama. ₦1,000 for 1.5GB?', [['Buy data', () => ySpend(1000, 'Airtime & data')], ['Beg for hotspot at PPA', () => { ST.rep -= 1; }]]); },
+  () => { chat('Landlord (Baba Lodge)', 'Good morning corper. Remember light bill is ₦2,500 this month. Thank you.', '', 'Baba Lodge'); ySpend(2500, 'Light bill · Corper Lodge', null, true); },
+  () => { chat('Chioma (CDS Sec)', 'Hello! We are contributing ₦1,000 each for the CDS project (borehole signage). Pay before Thursday 🙏🏾', '', 'Chioma (CDS Sec)'); ask('CDS contribution', 'Pay ₦1,000 now? Some people are asking where last month\'s money went.', [['Pay', () => ySpend(1000, 'CDS project contribution', () => { ST.rep += 1; })], ['"Abeg show us the receipt first"', () => { ST.infoPlug = (ST.infoPlug || 0) + 1; ST.rep -= 1; }]]); },
+  () => { toast('Aunty Kemi sent you a voice note: "Corper, come and teach my son Maths on Saturday, I go pay."', 3600); Y.tutor = true; },
+];
+function yEvent() { if (Y.kind === 'Pop' || Y.kind === 'Clr' || Y.kind === 'Sat' || DLG || Math.random() < 0.3) return; const e = YEVENTS[(Math.random() * YEVENTS.length) | 0]; Y.events.push(e.name || 'event'); e(); }
+function ySpend(n, label, then, force) {
+  if (ST.cash < n && !force) { toast('Insufficient funds. Your account is shy.'); return false; }
+  ST.txn = label; ST.cash -= n; Y.spent += n; hudSync(); if (ST.cash < 0) { Y.debt += -ST.cash; ST.stress = clamp(ST.stress + 6, 0, 100); } if (then) then(); return true;
+}
+function ySaturday() {
+  const opts = [
+    ['Tutor Aunty Kemi\'s son (+₦5,000, −20 energy)', () => { if (ST.energy < 20) return toast('You are too tired. Rest first.'); ST.txn = 'AUNTY KEMI · lesson'; ST.cash += 5000; Y.earned += 5000; Y.hustled++; ST.energy = clamp(ST.energy - 20, 0, 100); hudSync(); toast('Two hours of fractions. The boy finally gets it. +₦5,000', 3200); }],
+    ['Buy aso-ebi for Seyi\'s sister\'s wedding (₦15,000)', () => ySpend(15000, 'Aso-ebi · Balogun', () => { Y.aso++; ST.rep += 3; ST.stress = clamp(ST.stress - 8, 0, 100); toast('You danced, you sprayed, you ate jollof. Worth it. Mostly.', 3200); })],
+    ['Rest at home all day (+energy, −stress)', () => { ST.energy = clamp(ST.energy + 25, 0, 100); ST.stress = clamp(ST.stress - 10, 0, 100); toast('You slept till 1 PM. No regrets.', 2600); }],
+  ];
+  if (ST.bg === 'hustler') opts.unshift(['Run your POS stand at the bus stop (+₦3,000–₦7,000)', () => { const a = pick([3000, 4500, 7000]); ST.txn = 'POS charges · Corper Close'; ST.cash += a; Y.earned += a; Y.hustled++; ST.energy = clamp(ST.energy - 15, 0, 100); hudSync(); toast(`Busy day at the POS stand. +${naira(a)}`, 2800); }]);
+  const tok = Y.month * 100 + Y.di;
+  setTimeout(() => Y.month * 100 + Y.di === tok && Y.kind === 'Sat' && !Y.done && ask('Saturday', 'What are you doing with your day?', opts.map(([l, f]) => [l, () => { if (Y.month * 100 + Y.di !== tok) return; f(); Y.done = true; setObj('Sleep at your lodge to end the day'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block'; }])), 5200);
+}
+function yInteractables() {
+  const L = [], P = player.o.position;
+  L.push({ x: LODGE.x, z: LODGE.z, label: Y.kind === 'Pop' ? 'Your room (POP is today!)' : Y.done ? 'Sleep (end the day)' : 'Sleep early (skip the day)', act: ySleep });
+  if (Y.kind === 'Mon' && !Y.signed) L.push({ x: SCH.x + 15, z: -24, label: 'Sign the staff attendance book', act: ySignPPA });
+  if (Y.kind === 'Mon' && Y.signed && !Y.done) {
+    L.push({ x: SCH.spots.board.x, z: SCH.spots.board.z, label: 'Teach JSS 2A (3 questions)', act: () => { for (const s of SCH.students) s.hidden = false; startLesson(ok => yPPADone(ok >= 2 ? 3 : 0, ok >= 2 ? 'The class went well.' : 'Rough class. Tomorrow is another day.'), 3); } });
+    L.push({ x: SCH.x + 12.6, z: -26.9, label: 'Mark JSS 1 exercise books', act: yMarking });
+    L.push({ x: SCH.spots.principal.x, z: SCH.spots.principal.z, label: 'See Mr. Adebayo about the printer', act: yPrinter });
+  }
+  if (Y.kind === 'Thu' && !Y.signed && Math.hypot(P.x - (LGA.x + 9), P.z + 14) < 12) L.push({ x: LGA.x + 9, z: -12.4, label: Y.cdsOff ? 'Ask the security man about CDS' : 'Sign the CDS register', act: ySignCDS });
+  if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, label: Y.inQ ? `Wait for your name (${Y.queue} before you)` : 'Join the clearance queue', act: yClearance });
+  if (Y.kind === 'Pop' && !Y.done && Math.hypot(P.x - LGA.x, P.z - LGA.z) < 20) L.push({ x: LGA.x, z: -12.4, label: 'Take your place at the parade', act: yPOP });
+  return L;
+}
+function ySignPPA() {
+  Y.signed = true; Y.late = ST.mins > 8 * 60; if (Y.late) Y.lates++;
+  ask('Mrs. Okon', Y.late ? '"Corper, it is past eight. Mr. Adebayo has drawn the red line under your name."' : '"Good morning! You are early today. Sign there."', [['"Good morning ma."', () => { if (Y.late) { ST.rep -= 1; ST.stress = clamp(ST.stress + 4, 0, 100); } setObj('PPA: pick one job for today (classroom, staff room, or principal\'s office)'); ST.target = null; $('arrow').style.display = 'none'; }]]);
+}
+function yPPADone(rep, msg) {
+  Y.done = true; Y.ppaDays++; ST.rep += rep; ST.energy = clamp(ST.energy - 12, 0, 100); ST.mins = Math.max(ST.mins, 14 * 60); setTOD('Afternoon');
+  toast(msg + ' PPA day done ✅', 3000); setObj('Go home and rest at your lodge'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
+}
+function yMarking() {
+  const a = 4 + ((Math.random() * 5) | 0), b = 3 + ((Math.random() * 6) | 0), wrong = Math.random() < 0.5, w = wrong ? a * b + pick([-2, 2, 10]) : a * b;
+  ask('Exercise book · Chiamaka, JSS 1B', `Q4: ${a} × ${b} = ${w}. Is it correct?`, [['✔ Mark it right', () => yPPADone(wrong ? 0 : 2, wrong ? `You missed it: ${a} × ${b} is ${a * b}. Mrs. Okon noticed.` : 'Forty books marked. Your red pen is dying.')], ['✘ Mark it wrong', () => yPPADone(wrong ? 2 : 0, wrong ? 'Correct. Forty books marked.' : `It was right. Chiamaka will cry tomorrow.`)]]);
+}
+function yPrinter() {
+  ask('Mr. Adebayo', '"Corper, this printer is not printing the exam questions. You young people know these things."', [
+    ['Check the cable and paper tray', () => yPPADone(2, 'The paper was jammed. You are now the school\'s IT department.')],
+    ['"Sir, it needs a new cartridge (₦6,000)"', () => { ask('Mr. Adebayo', '"Ehn… pay for it, the school will refund you." (It will not.)', [['Pay ₦6,000', () => ySpend(6000, 'Printer cartridge · Ikeja', () => yPPADone(3, 'The printer works. The refund will come "next month".'))], ['"Sir, I don\'t have money"', () => yPPADone(0, 'He sighs and calls the bursar.')]]); }],
+  ]);
+}
+function ySignCDS() {
+  if (Y.cdsOff) { toast('Security man: "No CDS today o. Check your LGI channel." You came for nothing.', 3600); Y.signed = true; Y.done = true; ST.stress = clamp(ST.stress + 3, 0, 100); setObj('Go home'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; return; }
+  const late = ST.mins > 10 * 60;
+  if (late) { Y.signed = true; Y.done = true; Y.cdsMiss++; ST.rep -= 2; ask('DFQC CDS President', '"Register closed at 10. I will mark you absent."', [['"Ah, traffic…"', () => { setObj('Go home'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block'; }]]); return; }
+  Y.signed = true; Y.done = true; Y.cdsDays++; ST.rep += 2; ST.energy = clamp(ST.energy - 8, 0, 100); ST.mins = Math.max(ST.mins, 12 * 60);
+  toast(pick(['Sensitisation at Ikeja Grammar School. You talked about drug abuse to 200 teenagers.', 'Sanitation round the Secretariat. Thumbprint, register, done.', 'Group meeting. Forty minutes about the CDS project budget. Register signed.']) + ' ✅', 4200);
+  setObj('Go home and rest'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
+}
+function yClearance() {
+  if (!Y.inQ) { Y.inQ = true; toast(`A man with a file: "You are number ${Y.queue}. Stay around."`, 3000); return; }
+  toast(`${Y.queue} people still before you. Gist, buy pure water, check the group.`, 2400);
+}
+function yUpdate(dt) {
+  if (!Y.on || !player) return;
+  if (Y.kind === 'Clr' && Y.inQ && !Y.done) {
+    const near = Math.hypot(player.o.position.x - LGA.x, player.o.position.z - LGA.z) < 20; Y.qt = (Y.qt || 0) + dt * (near ? 1 : 0.3);
+    if (Y.qt > 1.5) { Y.qt = 0; Y.queue--; ST.mins += 5; setObj(`Clearance queue: ${Math.max(0, Y.queue)} before you`); }
+    if (Y.queue <= 0) {
+      if (!near) { Y.queue = 3; toast('They called your name while you were away! Back of the line!', 3200); ST.stress = clamp(ST.stress + 6, 0, 100); return; }
+      Y.done = true; Y.cleared = (Y.cleared || 0) + 1; ST.txn = 'NYSC allowance · FGN'; ST.cash += 77000; Y.earned += 77000; ST.stress = clamp(ST.stress - 10, 0, 100); hudSync();
+      chat('Naija Trust Bank', `Credit alert: ₦77,000.00 · NYSC allowance. Bal: ${naira(ST.cash)}`, 'off');
+      setTimeout(() => { ySpend(RENT, 'Rent · Corper Lodge (Baba Lodge)', null, true); chat('Landlord (Baba Lodge)', `Thank you corper. I have collected this month's rent ${naira(RENT)}. God bless.`, '', 'Baba Lodge'); }, 3500);
+      toast('Thumbprint. Cleared ✅ +₦77,000', 4200); setObj('Go home'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
+    }
+  }
+  if (!Y.done && !Y.dusk && ST.mins > 19 * 60 && Y.kind !== 'Sat' && Y.kind !== 'Pop') { Y.dusk = true; setTOD('Evening'); setObj('It is late. Go home and sleep.'); }
+}
+function ySleep() {
+  if (Y.kind === 'Pop' && !Y.done) return toast('Sleep?! Today is your POP! Get to the Secretariat ground.', 3000);
+  const missed = !Y.done && Y.kind !== 'Sat';
+  const go = () => {
+    if (missed) {
+      if (Y.kind === 'Mon') { Y.ppaMiss++; ST.rep -= 2; chat('Mr. Adebayo', 'Corper, you did not come to school today. I am writing it in your monthly clearance letter.', '', 'Mr. Adebayo'); }
+      if (Y.kind === 'Thu' && !Y.cdsOff) { Y.cdsMiss++; ST.rep -= 3; ST.queried = true; chat('LGI (Official)', 'Corps members absent from CDS today will be queried.', 'off'); }
+      if (Y.kind === 'Clr') { Y.clrMiss++; ST.stress = clamp(ST.stress + 15, 0, 100); chat('LGI (Official)', 'Corps members who did not clear this month will not receive their allowance.', 'off'); }
+    }
+    if (Y.kind === 'Clr') { Y.month++; Y.di = 0; } else Y.di++;
+    yMorning();
+  };
+  if (missed) ask('Your room', Y.kind === 'Mon' ? 'You never went to school today. Sleep anyway?' : Y.kind === 'Thu' ? (Y.cdsOff ? 'CDS was cancelled anyway. Sleep?' : 'You skipped CDS. The register remembers. Sleep anyway?') : 'You never cleared. No clearance, no allowance. Sleep anyway?', [['Sleep', go], ['Not yet', () => { }]]);
+  else go();
+}
+function yPOP() {
+  Y.done = true;
+  cine('PASSING OUT PARADE', 'Khaki starched. Boots shining. The LGI calls your name.', () => { setTOD('Afternoon'); ST.mins = 11 * 60; }, 3200).then(() => {
+    const exempt = Y.ppaMiss + Y.cdsMiss + Y.clrMiss <= 1;
+    chat('Mummy ❤️', 'Congratulations my Ex-corper!!! 🎉🎉 Send me picture', '', 'Mummy ❤️'); confettiBurst(); bugle();
+    toast(exempt ? 'Certificate of National Service collected 🎓' : 'The LGI says your certificate is delayed until your extension is served. Omo.', 5200);
+    setTimeout(() => showSummary(3), 4800);
+  });
+}
+function confettiBurst() { tone(523, .12, 'sine', .06); tone(659, .12, 'sine', .06, .12); tone(784, .2, 'sine', .06, .24); }
+function yearType() {
+  if (Y.ppaMiss + Y.cdsMiss + Y.clrMiss >= 4) return ['THE EXTENSION CANDIDATE', 'Between the missed CDS, the missed PPA days and that one clearance… the LGI has your file on her desk.'];
+  if (Y.hustled >= 3) return ['THE SIDE-HUSTLE MINISTER', 'Tutoring, POS, data business. The ₦77k was just a bonus.'];
+  if (Y.sent >= 20000) return ['THE FAMILY BREADWINNER', 'Half of your allowance went home. Mummy tells everyone at church about you.'];
+  if (Y.aso >= 2) return ['THE OWAMBE CORPER', 'Every Saturday, a new aso-ebi. Your wardrobe is a rainbow. Your account is not.'];
+  if (Y.cdsDays >= 5 && Y.ppaDays >= 5) return ['THE PPA LEGEND', 'Never missed PPA, never missed CDS. The principal wants to retain you.'];
+  if ((ST.infoPlug || 0) >= 3) return ['THE INFORMATION PLUG', 'You checked before you trusted. The group chat now waits for your confirmation.'];
+  return ['THE "I JUST WANT POP" CORPER', 'Head down, attendance up, no wahala. And now: POP.'];
+}
+window.__year = { Y, startYear, yMorning, ySleep, ySignPPA, ySignCDS, yClearance, yPOP, yInteractables, yMarking, yPrinter };
 
 /* ---------------- boot ---------------- */
 async function boot() {
@@ -1995,6 +2158,7 @@ function updateUI(dt) {
 }
 function updateStory(dt) {
   if (ST.area === 'camp') { updateDrill(dt); ST.mins += dt * 0.5; return; }
+  yUpdate(dt);
   chatT += dt;
   const script = [
     [3, () => chat('Ikeja LGA Corpers', 'Guys clearance has started at the Secretariat 🏃🏾‍♂️🏃🏾‍♀️')],
@@ -2106,7 +2270,7 @@ boot().then(T => {
   };
   go.onclick = () => start();
   const sv = loadSave(), c = $('gocont');
-  if (sv) { c.hidden = false; c.textContent = `▶ Continue ${sv.st && sv.st.name ? 'as ' + sv.st.name : ''} · ${sv.cp === 'ch2' ? 'Chapter 2: CDS week' : 'Chapter 1: Lagos street'}`;
+  if (sv) { c.hidden = false; c.textContent = `▶ Continue ${sv.st && sv.st.name ? 'as ' + sv.st.name : ''} · ${sv.cp === 'year' ? 'Service year · Month ' + ((sv.y && sv.y.month) || 1) : sv.cp === 'ch2' ? 'Chapter 2: CDS week' : 'Chapter 1: Lagos street'}`;
     c.onclick = async () => { if (sv.st) { CH.tone = sv.st.tone ?? CH.tone; CH.bg = sv.st.bg || CH.bg; if (sv.st.name) $('cname').value = sv.st.name; } await start(sv.g); resumeFrom(sv); }; }
   window.__start = start;
 }).catch(e => { $('lmsg').textContent = 'Could not load: ' + e.message; console.error(e); });
