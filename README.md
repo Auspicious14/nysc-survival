@@ -29,6 +29,7 @@ Deploy: import the repo in Vercel. No build settings needed. Add the two Supabas
 | `audio/afrobeat*.mp3` | stage / street music (Pixabay, credited in `models/credits.txt`) |
 | `voice/*.mp3` + `voice/manifest.json` | recorded Nigerian-English lines (YarnGPT) |
 | `bake/` | source rigs used only by the bake tool |
+| `tools/simplify.js` | decimates a character mesh: `node tools/simplify.js models/lewis 0.3` (originals kept in `bake/orig/`) |
 | `tools/bake.js` | re-bakes outfits + clips: `node tools/bake.js game3d-src http://localhost:8765/index.html` (serve `game3d-src/` first) |
 | `tools/extract_lines.py`, `tools/NYSC_Voices_YarnGPT.ipynb` | voice pipeline: extract lines → generate on Colab → drop the zip into `voice/` |
 

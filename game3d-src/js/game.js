@@ -870,6 +870,18 @@ function play(p, name, fade = 0.25) {
   if (name === 'walk') a.timeScale = p.walkScale || 1;
 }
 
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* ---------------- character creator ---------------- */
+const BACKGROUNDS = [ // id, label, blurb, starting state
+  ['allowance', 'Allowance-only', 'You and the ₦77k alert. No plan B.', { cash: 12450 }],
+  ['family', 'Family-supported', 'Mummy sends "something small" when you least expect it.', { cash: 40000, stress: 10 }],
+  ['struggling', 'Struggling', 'You borrowed transport fare to reach camp.', { cash: 3500, stress: 32 }],
+  ['car', 'Car owner', 'Your Corolla is parked outside. Fuel is not free.', { cash: 22000 }],
+  ['hustler', 'Side-hustler', 'POS and data business on the side. Alerts come in small small.', { cash: 15000 }],
+];
+const CH = { g: 'm', tone: 1, bg: 'allowance', name: '' };
+const PTEX = {};
+function playerTex(g, kind, tone) { const k = `${g}_${kind}_${tone}`; return PTEX[k] || (PTEX[k] = new THREE.TextureLoader().loadAsync(`models/tex/player/${k}.jpg`).then(t => { t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(4, ANISO); return t; })); }
 /* ---------------- game state ---------------- */
 const ST = { cash: 12450, energy: 82, stress: 18, mins: 7 * 60 + 42, obj: 'Show your call-up letter at the camp gate', phase: 0, queue: 0, riding: null, done: false, area: 'camp', cstep: 0, day: 1, rep: 0, seg: 'Morning', target: null };
 let player, hud = {};
@@ -880,6 +892,8 @@ const NPC = [];
 function toast(t, ms = 2600) { try { speakToast(t); } catch (e) { } const e = $('toast'); e.textContent = t; e.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => e.style.display = 'none', ms); }
 function setObj(t) { ST.obj = t; $('objt').textContent = t; }
 function hudSync() {
+  if (PH.cash === null) PH.cash = ST.cash; else if (ST.cash !== PH.cash) { const d = ST.cash - PH.cash; PH.ledger.unshift({ d, label: ST.txn || (d > 0 ? 'Transfer received' : 'POS / cash payment'), t: ($('dayn').textContent || '') + ' · ' + ($('clock').textContent || '') }); ST.txn = null; PH.cash = ST.cash; if (PH.screen === 'bank' && $('phone').classList.contains('on')) renderBank(); }
+  { const hc = $('phclock'); if (hc) { hc.textContent = $('pclock').textContent; $('phdate').textContent = $('dayn').textContent + ' · ' + (ST.area === 'camp' ? 'Orientation camp' : 'Ikeja, Lagos'); } }
   $('cash').textContent = naira(ST.cash);
   const h = Math.floor(ST.mins / 60), m = Math.floor(ST.mins % 60), ap = h >= 12 ? 'PM' : 'AM', hh = ((h + 11) % 12) + 1;
   $('clock').textContent = `${hh}:${String(m).padStart(2, '0')} ${ap}`; $('pclock').textContent = `${hh}:${String(m).padStart(2, '0')}`;
@@ -888,16 +902,67 @@ function hudSync() {
 
 /* ---------------- phone / Corper Connect ---------------- */
 const CHAT = [];
-function chat(from, text, kind = '') {
-  CHAT.push({ from, text, kind }); const el = $('msgs');
-  el.insertAdjacentHTML('beforeend', `<div class="m ${kind}"><b>${from}</b>${text}</div>`); el.scrollTop = 1e6;
-  if (!$('phone').classList.contains('on')) { $('ntext').innerHTML = `<b>${from}:</b> ${text}`; const n = $('notif'); n.classList.add('on'); clearTimeout(chat.t); chat.t = setTimeout(() => n.classList.remove('on'), 4200); beep(); }
+const PH = { screen: 'home', thread: null, threads: new Map(), ledger: [], cash: null, acts: [], seq: 0 };
+function thr(name, kind = 'group') { let t = PH.threads.get(name); if (!t) { t = { name, kind, msgs: [], unread: 0, last: 0 }; PH.threads.set(name, t); } return t; }
+function setGroup(name) { ST.group = name; thr(name); PH.thread = name; renderThread(); if ($('phone').classList.contains('on')) phShow(PH.screen); }
+function msgHTML(m) { return `<div class="m ${m.kind}"><b>${m.from}</b>${m.text}</div>`; }
+function renderThread() { const el = $('msgs'); el.innerHTML = thr(PH.thread || ST.group || 'Platoon 5 · Camp Gist').msgs.map(msgHTML).join(''); el.scrollTop = 1e6; }
+function badge() { let n = 0; for (const t of PH.threads.values()) n += t.unread; const b = $('bdg'); b.hidden = !n; b.textContent = n > 9 ? '9+' : n; const hb = $('hbdg'); if (hb) { hb.hidden = !n; hb.textContent = b.textContent; } }
+function chat(from, text, kind = '', to) {
+  const g = ST.group || 'Platoon 5 · Camp Gist', auto = /^Naija Trust Bank/.test(from) ? ['Naija Trust Bank', 'sms'] : /^Mummy/.test(from) ? [from, 'dm'] : null;
+  const name = to || (auto ? auto[0] : from === 'You' ? (PH.thread || g) : g), t = thr(name, to ? 'dm' : auto ? auto[1] : 'group');
+  const m = { from, text, kind }; t.msgs.push(m); t.last = ++PH.seq; CHAT.push(m);
+  if ((PH.thread || g) === name) { const el = $('msgs'); el.insertAdjacentHTML('beforeend', msgHTML(m)); el.scrollTop = 1e6; }
+  const open = $('phone').classList.contains('on') && PH.screen === 'thread' && PH.thread === name;
+  if (!open && from !== 'You') {
+    t.unread++; badge(); $('nsrc').textContent = (t.kind === 'sms' ? 'SMS · ' : 'CORPER CONNECT · ') + name; $('ntext').innerHTML = `<b>${from}:</b> ${text}`; const n = $('notif'); n.dataset.thread = name; n.classList.add('on'); clearTimeout(chat.t); chat.t = setTimeout(() => n.classList.remove('on'), 4200); beep();
+  }
+  if (PH.screen === 'chats') renderChats();
 }
-function phone(on) { if (on) ST.phoneOpens = (ST.phoneOpens || 0) + 1; $('phone').classList.toggle('on', on); $('notif').classList.remove('on'); if (on && ST.phase === 0 && ST.area === 'street') { ST.phase = 1; setObj('Get to the LGA Secretariat for clearance'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; $('arrow').style.display = 'block'; } }
+function openThread(name, kind) { thr(name, kind); PH.thread = name; if (!$('phone').classList.contains('on')) phone(true); phShow('thread'); }
+function renderChats() {
+  const ts = [...PH.threads.values()].sort((a, b) => b.last - a.last);
+  $('pchats').innerHTML = ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
+  for (const b of $('pchats').querySelectorAll('button')) b.onclick = () => { PH.thread = b.dataset.n; phShow('thread'); };
+}
+function renderBank() {
+  const acct = '30' + String(10000000 + ((ST.name || 'corper').split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 89999999)).slice(0, 8);
+  $('pbank').innerHTML = `<div class="bal"><small>NAIJA TRUST BANK · SAVINGS</small><b>${naira(ST.cash)}</b><span>${(ST.name || 'Corps Member').toUpperCase()} · ${acct}</span></div>
+  <div class="bacts"><button id="bsend">💸 Send ${naira(5000)} home</button><button id="bdata">📶 Buy data ${naira(1000)}</button></div>
+  <h4>Recent transactions</h4><ul>${PH.ledger.slice(0, 30).map(l => `<li><div><b>${l.label}</b><small>${l.t}</small></div><span class="${l.d > 0 ? 'cr' : 'dr'}">${l.d > 0 ? '+' : '−'}${naira(Math.abs(l.d))}</span></li>`).join('') || '<li><div><b>No transactions yet</b><small>Your alert never comes when you need it.</small></div></li>'}</ul>`;
+  $('bsend').onclick = () => { if (ST.cash < 5000) return toast('Insufficient funds. The app is laughing at you.'); ST.txn = 'Transfer to MUMMY'; ST.cash -= 5000; ST.rep += 1; ST.stress = clamp(ST.stress - 4, 0, 100); ST.sentHome = (ST.sentHome || 0) + 1; hudSync(); setTimeout(() => chat('Mummy ❤️', pick(['I have seen the alert. God will bless you my child 🙏🏾', 'Ah! My own corper! Thank you. Have you eaten?', 'Thank you my dear. Your daddy says well done.'])), 2200); };
+  $('bdata').onclick = () => { if (ST.cash < 1000) return toast('Insufficient funds. Even data is doing shakara.'); ST.txn = 'Airtime & data'; ST.cash -= 1000; ST.stress = clamp(ST.stress - 1, 0, 100); hudSync(); toast('3GB added. It will finish before Friday.', 2600); };
+}
+function renderID() {
+  const bgl = (BACKGROUNDS.find(b => b[0] === ST.bg) || [0, 'Allowance-only'])[1], bar = (v, c) => `<div class="bar"><i style="width:${clamp(v, 0, 100)}%;background:${c}"></i></div>`;
+  $('pid').innerHTML = `<div class="idc"><small>CORPS MEMBER · FICTIONAL ID</small><b>${ST.name || 'Corper'}</b><span>${ST.code || 'State code: not yet registered'}</span></div>
+  <dl><div><dt>Platoon</dt><dd>${ST.code ? '5' : '—'}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga + ', ' + ST.post.state : '—'}</dd></div><div><dt>PPA</dt><dd>${ST.post ? ST.post.ppa : '—'}</dd></div><div><dt>Background</dt><dd>${bgl}</dd></div><div><dt>Reputation</dt><dd>${ST.rep}</dd></div></dl>
+  <label>Energy ${Math.round(ST.energy)}</label>${bar(ST.energy, '#1a9d52')}<label>Stress ${Math.round(ST.stress)}</label>${bar(ST.stress, '#d93025')}
+  <div class="vibe"><small>YOUR VIBE SO FAR</small><b>${corperType()[0]}</b></div>`;
+}
+function phShow(s) {
+  PH.screen = s; const g = ST.group || 'Platoon 5 · Camp Gist'; if (!PH.thread) PH.thread = g;
+  $('phome').hidden = s !== 'home'; $('pchats').hidden = s !== 'chats'; $('msgs').hidden = s !== 'thread'; $('pacts').hidden = s !== 'thread' || PH.thread !== g || !PH.acts.length; $('pmap').hidden = s !== 'map'; $('pbank').hidden = s !== 'bank'; $('pid').hidden = s !== 'id';
+  $('pback').hidden = s === 'home'; $('pmapbtn').textContent = s === 'map' ? '💬' : '🗺️';
+  $('phd').style.background = { bank: '#0b3d91', map: '#1a73e8', id: '#8a5a00', home: '#12161b' }[s] || '#1a9d52';
+  $('phdr').textContent = { home: (ST.name ? ST.name + '’s' : 'Your') + ' phone', chats: '💬 Corper Connect', thread: (thr(PH.thread).kind === 'sms' ? '✉️ ' : '💬 ') + PH.thread, map: '🗺️ Maps · ' + (ST.area === 'camp' ? 'Orientation camp' : 'Ikeja'), bank: '🏦 Naija Trust Bank', id: '🪪 My NYSC' }[s];
+  if (s === 'thread') { thr(PH.thread).unread = 0; badge(); renderThread(); }
+  if (s === 'chats') renderChats(); if (s === 'bank') renderBank(); if (s === 'id') renderID();
+  if (s === 'map') { MAPV.follow = true; MAPV.R = ST.area === 'camp' ? 62 : 70; MAPV.sel = null; $('pmapsheet').hidden = true; mapList(); mapT = 0; }
+}
+function phone(on) {
+  if (on) ST.phoneOpens = (ST.phoneOpens || 0) + 1; $('phone').classList.toggle('on', on); $('notif').classList.remove('on');
+  const g = ST.group || 'Platoon 5 · Camp Gist';
+  if (on) { let s = PH.screen; if (s === 'home' || s === 'thread') { const u = thr(g).unread ? thr(g) : [...PH.threads.values()].filter(t => t.unread).sort((a, b) => b.last - a.last)[0]; if (u) { PH.thread = u.name; s = 'thread'; } else s = 'home'; } phShow(s); }
+  else { if (PH.screen === 'thread') PH.screen = 'home'; PH.thread = g; renderThread(); }
+  if (on && ST.phase === 0 && ST.area === 'street') { ST.phase = 1; setObj('Get to the LGA Secretariat for clearance'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; $('arrow').style.display = 'block'; }
+}
+$('pback').onclick = () => phShow(PH.screen === 'thread' ? 'chats' : 'home'); $('phomebar').onclick = () => phShow('home');
+for (const b of $('phome').querySelectorAll('[data-app]')) b.onclick = () => phShow(b.dataset.app);
 $('bphone').onclick = () => phone(!$('phone').classList.contains('on'));
 $('pclose').onclick = () => phone(false);
-$('notif').onclick = () => phone(true);
-function phoneActs(list) { $('pacts').innerHTML = list.map((a, i) => `<button data-i="${i}">${a[0]}</button>`).join(''); [...$('pacts').children].forEach((b, i) => b.onclick = () => { list[i][1](); }); }
+$('notif').onclick = () => { const n = $('notif').dataset.thread; if (n && PH.threads.has(n)) openThread(n); else phone(true); };
+function phoneActs(list) { PH.acts = list; $('pacts').hidden = PH.screen !== 'thread' || PH.thread !== (ST.group || 'Platoon 5 · Camp Gist') || !list.length; $('pacts').innerHTML = list.map((a, i) => `<button data-i="${i}">${a[0]}</button>`).join(''); [...$('pacts').children].forEach((b, i) => b.onclick = () => { list[i][1](); }); }
 phoneActs([['Who has confirmed?', () => { chat('You', 'Who has confirmed? 👀', 'me'); setTimeout(() => chat('Chioma (CDS Sec)', 'I am at the Secretariat now. Queue is long o. Come with your ID card.'), 1600); phoneActs([]); }],
   ['🙏🏾 Thanks', () => { chat('You', 'Thank you 🙏🏾', 'me'); phoneActs([]); }]]);
 
@@ -1050,12 +1115,12 @@ function interactables() {
 function buy(what) {
   const food = /puff|GLORY|EKO|corn/i.test(what), cost = food ? 200 : 50;
   if (ST.cash < cost) { toast('Your account is crying. 😭'); return; }
-  ST.cash -= cost; ST.energy = clamp(ST.energy + (food ? 10 : 4), 0, 100); ST.stress = clamp(ST.stress - 2, 0, 100);
+  ST.txn = 'Street vendor'; ST.cash -= cost; ST.energy = clamp(ST.energy + (food ? 10 : 4), 0, 100); ST.stress = clamp(ST.stress - 2, 0, 100);
   toast(food ? `Puff-puff, hot and oily. ${naira(cost)} gone, energy back.` : `Pure water, ${naira(cost)}. Cold. Life is good.`); tone(660, .08, 'sine', .05); hudSync();
 }
 function board(bus) {
   if (ST.cash < 300) { toast('Conductor: "Who no get change make e come down!"'); return; }
-  ST.cash -= 300; hudSync(); ST.riding = bus; bus.passenger = true; bus.stop = 0.6; player.o.visible = false;
+  ST.txn = 'Danfo fare'; ST.cash -= 300; hudSync(); ST.riding = bus; bus.passenger = true; bus.stop = 0.6; player.o.visible = false;
   toast('You squeeze in. Conductor: "Shift! Shift! Four four for back!"', 3200); horn(4);
 }
 function alight(bus) {
@@ -1063,22 +1128,28 @@ function alight(bus) {
   player.o.position.set(bus.x - 1, 0.18, 8.4); toast('"Secretariat! Make we see your leg!" You jump down.', 3000);
 }
 /* ---------------- getting around: walk, keke, ride-hailing car, danfo ---------------- */
+function travelGo(mode, dest, name) {
+  if (mode === 'walk') { ST.target = { x: dest.x, z: dest.z, label: name }; $('arrow').style.display = 'block'; phone(false); toast(ST.area === 'street' ? `Trekking to ${name}. Follow the blue line. Small exercise no kill anybody.` : `Directions set: ${name}.`, 2600); return; }
+  const fare = { keke: 200, car: 1500, own: 300 }[mode];
+  if (ST.cash < fare) return toast(mode === 'keke' ? 'Keke man: "No money, no movement."' : mode === 'own' ? 'Fuel gauge is on E and your account is on E. Trek.' : 'Ride app: "Payment declined." Your account is shy.');
+  ST.txn = mode === 'keke' ? 'Keke fare' : mode === 'own' ? 'Fuel · filling station' : 'Ride app trip'; ST.cash -= fare; if (mode === 'car') ST.stress = clamp(ST.stress - 3, 0, 100); hudSync(); phone(false);
+  ST.target = { x: dest.x, z: dest.z, label: name }; rideTo(dest, mode, name);
+}
 function travelMenu(dest, label) {
   if (!dest || !player) return;
-  const P = player.o.position, d = Math.abs(dest.x - P.x) + Math.abs(dest.z - P.z), walkMin = Math.max(1, Math.round(d / 1.3 / 60 * 6)), name = label || dest.label || 'there';
-  const walk = () => { ST.target = { x: dest.x, z: dest.z, label: name }; $('arrow').style.display = 'block'; phone(false); toast(`Trekking to ${name}. Follow the arrow. Small exercise no kill anybody.`, 2600); };
-  if (ST.area !== 'street' || d < 18) { walk(); return; }
+  const P = player.o.position, d = routeLen(P, dest), walkMin = Math.max(1, Math.round(d / 75)), name = label || dest.label || 'there';
+  if (ST.area !== 'street' || d < 18) { travelGo('walk', dest, name); return; }
   phone(false);
   ask('How are you getting to ' + name + '?', `It is about ${Math.round(d)} m away. Lagos sun is not smiling today.`, [
-    [`🚶🏾 Trek (free · about ${walkMin} min)`, walk],
-    [`🛺 Keke (${naira(200)} · ${Math.max(2, Math.round(walkMin / 3))} min)`, () => { if (ST.cash < 200) return toast('Keke man: "No money, no movement."'); ST.cash -= 200; hudSync(); rideTo(dest, 'keke', name); }],
-    [`🚗 Ride app car (${naira(1500)} · AC dey)`, () => { if (ST.cash < 1500) return toast('Ride app: "Payment declined." Your account is shy.'); ST.cash -= 1500; ST.stress = clamp(ST.stress - 3, 0, 100); hudSync(); rideTo(dest, 'car', name); }],
+    [`🚶🏾 Trek (free · about ${walkMin} min)`, () => travelGo('walk', dest, name)],
+    [`🛺 Keke (${naira(200)})`, () => travelGo('keke', dest, name)],
+    ST.bg === 'car' ? [`🚙 Drive your own car (fuel ${naira(300)})`, () => travelGo('own', dest, name)] : [`🚗 Ride app car (${naira(1500)} · AC dey)`, () => travelGo('car', dest, name)],
     ['🚌 Danfo (₦300, from the bus stop)', () => { ST.target = { x: BUSSTOP_X, z: 9, label: 'Corper Close bus stop' }; $('arrow').style.display = 'block'; toast('Danfos stop at Corper Close bus stop and go towards the Secretariat. Okada? LASTMA banned them on this road.', 4200); }],
   ]);
 }
 function rideTo(dest, kind, label) {
   const P = player.o.position, dir = dest.x >= P.x ? 1 : -1, lane = LANES[0].dir === dir ? 0 : 1;
-  cine(kind === 'keke' ? 'KEKE NAPEP' : 'RIDE APP', `To ${label || 'your stop'} · ${kind === 'keke' ? '"Hold your bag well o."' : 'The driver is playing Asake.'}`, () => {
+  cine(kind === 'keke' ? 'KEKE NAPEP' : kind === 'own' ? 'YOUR CAR' : 'RIDE APP', `To ${label || 'your stop'} · ${kind === 'keke' ? '"Hold your bag well o."' : kind === 'own' ? 'AC on. Fuel light also on.' : 'The driver is playing Asake.'}`, () => {
     const v = kind === 'keke' ? keke() : car(); applyReal(v); v.kind = kind; v.ride = true; v.lane = lane; v.x = clamp(P.x - dir * 4, -HALF + 5, HALF - 5); v.v = 3; v.vmax = kind === 'keke' ? 10 : 13; v.stop = 0; v.goal = clamp(dest.x, -PLAY, PLAY);
     v.g.position.set(v.x, 0, LANES[lane].z); v.g.rotation.y = LANES[lane].dir > 0 ? 0 : Math.PI; scene.add(v.g); traffic.push(v); v.dest = dest; v.startX = v.x;
     ST.riding = v; player.o.visible = false; cam.yaw = LANES[lane].dir > 0 ? -Math.PI / 2 + 0.5 : Math.PI / 2 - 0.5; cam.pitch = 0.22;
@@ -1090,7 +1161,7 @@ function rideArrive(v) {
     traffic.splice(traffic.indexOf(v), 1); scene.remove(v.g); ST.riding = null; player.o.visible = true;
     const z = v.dest.z < 0 ? -8.6 : 8.6; player.o.position.set(v.goal, 0.18, z); player.o.rotation.y = v.dest.z < 0 ? Math.PI : 0; cam.yaw = v.dest.z < 0 ? 0 : Math.PI; camLook.copy(player.o.position);
     ST.mins += Math.round(Math.abs(v.goal - (v.startX || v.goal)) / 60) + 6; if (ST.target) $('arrow').style.display = 'block';
-  }, 700).then(() => toast(v.kind === 'keke' ? 'Keke man: "We don reach. Change dey?"' : 'Driver: "Please rate me five stars, corper."', 2600));
+  }, 700).then(() => toast(v.kind === 'keke' ? 'Keke man: "We don reach. Change dey?"' : v.kind === 'own' ? 'You park, lock the car twice, and check the door again.' : 'Driver: "Please rate me five stars, corper."', 2600));
 }
 function clearance() {
   if (!ST.queue) { ST.queue = 23; toast('A man with a file: "You are number 23. Don\'t go far o."', 3200); setObj('Queue position 23 — stay around the Secretariat'); chat('Ikeja LGA Corpers', 'LGI said nobody should leave the premises. Names will be called ONCE.', 'off'); return; }
@@ -1148,7 +1219,7 @@ function setTOD(seg) {
 let TEX = null;
 function dress(kind) { // 'mufti' | 'white' | 'khaki'
   ST.outfit = kind; const f = ST.g === 'f';
-  const t = f ? { mufti: TEX.civF1, white: TEX.whiteF, khaki: TEX.corperF }[kind] : { mufti: TEX.lMufti, white: TEX.lWhite, khaki: TEX.lCorper }[kind];
+  const t = TEX['p_' + kind] || (f ? { mufti: TEX.civF1, white: TEX.whiteF, khaki: TEX.corperF }[kind] : { mufti: TEX.lMufti, white: TEX.lWhite, khaki: TEX.lCorper }[kind]);
   player.o.traverse(m => { if (m.isMesh && m.material.map && !/hair/i.test(m.material.name)) { m.material.map = t; m.material.needsUpdate = true; } });
 }
 
@@ -1262,7 +1333,7 @@ function market(name) {
   else if (/PHOTO/.test(name)) ask('Photographer', '"One snap for your Instagram, ₦500."', [['Take a photo ₦500', () => spend(500, 'Instant print. Your mum will frame it.', { stress: -3 })], ['No thanks', () => { }]]);
   else ask('Charging stall', '"Phone charging ₦100 per hour. No stealing, we have CCTV." (There is no CCTV.)', [['Charge ₦100', () => spend(100, 'Phone charged to 76%.', {})], ['No', () => { }]]);
 }
-function spend(n, msg, e) { if (ST.cash < n) { toast('Not enough money. Your alert has not come.'); return; } ST.cash -= n; for (const [k, v] of Object.entries(e)) ST[k] = clamp((ST[k] || 0) + v, 0, k === 'rep' ? 999 : 100); toast(msg); tone(660, .08, 'sine', .05); }
+function spend(n, msg, e) { if (ST.cash < n) { toast('Not enough money. Your alert has not come.'); return; } ST.txn = 'Mammy market'; ST.cash -= n; for (const [k, v] of Object.entries(e)) ST[k] = clamp((ST[k] || 0) + v, 0, k === 'rep' ? 999 : 100); toast(msg); tone(660, .08, 'sine', .05); }
 
 /* ---------------- parade drill ---------------- */
 const DRILL_CMDS = [['RIGHT… TURN!', -Math.PI / 2], ['LEFT… TURN!', Math.PI / 2], ['ABOUT… TURN!', Math.PI]];
@@ -1302,7 +1373,7 @@ function endDrill() {
 }
 function posting() {
   ST.post = { lga: 'Ikeja LGA', state: 'Lagos', ppa: 'Corper Close Model School' };
-  ask('Posting list', `Your name, ${ST.code || 'LA/26C/----'}: <b>${ST.post.lga}, ${ST.post.state}</b>. PPA: ${ST.post.ppa}. Clearance is monthly at the LGA Secretariat.`, [
+  ask('Posting list', `${esc(ST.name || 'Your name')}, ${ST.code || 'LA/26C/----'}: <b>${ST.post.lga}, ${ST.post.state}</b>. PPA: ${ST.post.ppa}. Clearance is monthly at the LGA Secretariat.`, [
     ['"God, thank you!" 🙏🏾', () => { ST.stress = clamp(ST.stress - 6, 0, 100); dress('khaki'); toast('Swearing-in done, khaki on. The bus to your LGA is outside the gate.', 4000); campGo(7); }],
     ['Try to redeploy (₦…?)', () => { toast('A man whispers "I know somebody". You walk away. Ikeja it is.', 3800); dress('khaki'); campGo(7); }],
   ], SAY('Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.'));
@@ -1317,17 +1388,18 @@ function enterStreet() {
     if (CAMP.ring) CAMP.ring.visible = false;
     for (const v of traffic) v.g.visible = true;
     player.o.position.set(BUSSTOP_X - 3, 0.18, 9.0); player.o.rotation.y = Math.PI / 2; cam.yaw = -Math.PI / 2; camLook.copy(player.o.position);
-    $('phdr').textContent = '💬 Ikeja LGA Corpers'; $('nsrc').textContent = 'CORPER CONNECT · Ikeja LGA Corpers';
+    setGroup('Ikeja LGA Corpers');
     setObj('Check your phone'); ST.target = null; $('arrow').style.display = 'none';
     for (const p of CAMP.hostelNight || []) p.hidden = true;
+    if (ST.bg === 'family' && !ST.famSent) { ST.famSent = true; setTimeout(() => { ST.txn = 'MUMMY'; ST.cash += 15000; chat('Mummy ❤️', 'I sent you something small for upkeep. Eat well o. Don\'t tell your daddy.'); chat('Naija Trust Bank', 'Credit alert: ₦15,000.00 from MRS ' + (ST.name || 'CORPER').toUpperCase() + ' SNR. Bal: ' + naira(ST.cash), 'off'); hudSync(); }, 45000); }
   }
 }
 /* ---------------- save / continue (this browser only) ---------------- */
-const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done'];
+const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles'];
 function saveGame(cp) { try { const d = { cp, g: ST.g, at: Date.now(), st: {} }; for (const k of SAVE_FIELDS) if (ST[k] !== undefined) d.st[k] = ST[k]; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { } }
 function loadSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.cp && d.g ? d : null; } catch (e) { return null; } }
 function resumeFrom(d) {
-  Object.assign(ST, d.st); ST.cstep = 99; CAMP.exodus = true;
+  Object.assign(ST, d.st); PH.cash = null; ST.cstep = 99; CAMP.exodus = true;
   for (const p of people) if (p.area === 'camp') p.hidden = true;
   if (d.cp === 'ch2') { ST.done = true; ST.ppa = 5; enterStreet(); startChapter2(); }
   else cine('WELCOME BACK', 'Ikeja, Lagos · Monthly clearance day', () => enterStreet(), 2200);
@@ -1361,7 +1433,7 @@ function ppaInteractables() {
 }
 function kekeToPPA() {
   if (ST.cash < 200) { toast('Keke man: "No money, no movement."'); return; }
-  ST.cash -= 200; hudSync(); rideTo({ x: SCH.gate.x + 1.5, z: -8.6 }, 'keke', 'Model School');
+  ST.txn = 'Keke fare'; ST.cash -= 200; hudSync(); rideTo({ x: SCH.gate.x + 1.5, z: -8.6 }, 'keke', 'Model School');
 }
 function principal1() {
   ask('Mr. Adebayo (Principal)', '"Welcome, corper. We have no Maths teacher for JSS2 since January. You will take them. The class is waiting."', [
@@ -1406,7 +1478,7 @@ function endLesson() {
 function staffRoom() {
   ask('Mrs. Okon (Vice Principal)', '"Corper, compile JSS2 scores. Ah, and a parent called. Her son scored 38. She said you should make it 50 and she will \'appreciate you\'."', [
     ['Refuse politely, enter the real score', () => { ST.rep += 3; ST.honest = true; typing('You type the real scores into the old computer. Mrs. Okon nods slowly. "You will go far."'); }],
-    ['Take the ₦5,000 "appreciation"', () => { ST.cash += 5000; ST.rep -= 4; ST.bribeTaken = true; ST.stress = clamp(ST.stress + 8, 0, 100); typing('You change 38 to 50. The ₦5,000 alert comes. You feel it in your chest.'); chat('Naija Trust Bank', 'Credit alert: ₦5,000.00 from MRS ADA (UNKNOWN). Bal: ' + naira(ST.cash), 'off'); }],
+    ['Take the ₦5,000 "appreciation"', () => { ST.txn = 'MRS ADA (unknown sender)'; ST.cash += 5000; ST.rep -= 4; ST.bribeTaken = true; ST.stress = clamp(ST.stress + 8, 0, 100); typing('You change 38 to 50. The ₦5,000 alert comes. You feel it in your chest.'); chat('Naija Trust Bank', 'Credit alert: ₦5,000.00 from MRS ADA (UNKNOWN). Bal: ' + naira(ST.cash), 'off'); }],
     ['Report it to the principal', () => { ST.rep += 2; ST.stress = clamp(ST.stress + 4, 0, 100); typing('You type the real scores. Mr. Adebayo calls the parent. You will hear about this in the staff room for weeks.'); }],
   ]);
 }
@@ -1417,7 +1489,7 @@ function typing(msg) {
 }
 function principal2() {
   ask('Mr. Adebayo (Principal)', `"Corper, ${ST.ppaScore >= 4 ? 'the children are talking about your class!' : 'thank you for today.'} Take this small transport money. See you on Monday, not Wednesday."`, [
-    ['"Thank you, sir!" (collect ₦5,000)', () => { ST.cash += 5000; ST.rep += 1; chat('Naija Trust Bank', 'Credit alert: ₦5,000.00 · CORPER CLOSE MODEL SCH. Bal: ' + naira(ST.cash), 'off'); ppaGo(5); ST.target = null; $('arrow').style.display = 'none'; setObj('Chapter 1 complete'); setTimeout(showSummary, 1600); }],
+    ['"Thank you, sir!" (collect ₦5,000)', () => { ST.txn = 'Corper Close Model Sch'; ST.cash += 5000; ST.rep += 1; chat('Naija Trust Bank', 'Credit alert: ₦5,000.00 · CORPER CLOSE MODEL SCH. Bal: ' + naira(ST.cash), 'off'); ppaGo(5); ST.target = null; $('arrow').style.display = 'none'; setObj('Chapter 1 complete'); setTimeout(showSummary, 1600); }],
   ], ST.ppaScore >= 4 ? SAY('Corper, the children are talking about your class! Take this small transport money. See you on Monday, not Wednesday.') : SAY('Corper, thank you for today. Take this small transport money. See you on Monday, not Wednesday.'));
 }
 function corperType() {
@@ -1432,8 +1504,8 @@ function corperType() {
 }
 function showSummary(ch = 1) {
   const [t, d] = corperType(), el = $('summary');
-  el.innerHTML = `<small>YOUR SERVICE SO FAR · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
-  <dl><div><dt>State code</dt><dd>${ST.code || '—'}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch > 1 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div></dl>
+  el.innerHTML = `<small>${esc((ST.name || 'CORPER').toUpperCase())} · ${ST.code || 'NO STATE CODE'} · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
+  <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch > 1 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div></dl>
   <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : 'Keep exploring'}</button><button class="btn" id="sumagain">Start again</button></div>`;
   if (ch === 1) saveGame('ch2');
   el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); }; $('sumagain').onclick = () => location.reload();
@@ -1475,12 +1547,12 @@ function startChapter2() {
     setTOD('Evening'); ST.mins = 18 * 60 + 40; ST.area = 'street'; ST.target = null;
     player.o.position.set(-43.4, 0.2, 13.4); player.o.rotation.y = 0; cam.yaw = Math.PI; cam.pitch = 0.32; cam.tdist = 4.2; camLook.copy(player.o.position);
   }, 3000);
-  $('phdr').textContent = '💬 Ikeja LGA Corpers';
+  setGroup('Ikeja LGA Corpers');
   setObj('Is there CDS tomorrow? Find out, then rest at your lodge'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Corper lodge' }; $('arrow').style.display = 'block';
   const lines = [[1.5, 'Emeka', 'Guys is there CDS tomorrow?'], [4, 'Bisi', 'They said no CDS because of the LG election thing'], [7, 'Seyi', 'Who said?? Abeg post proof'], [10, 'Ikeja LGA Corpers', 'My cousin\'s friend works at the Secretariat, he said no CDS 💯'], [13.5, 'Kunle', 'Wait for official announcement before una go dey shout'], [17, 'Bisi', 'I\'m sleeping in tomorrow sha 😴']];
   for (const [t, w, m] of lines) setTimeout(() => chat(w, m), (t + 5) * 1000);
   phoneActs([
-    ['DM Tolu', () => { chat('You', '@Tolu abeg is there CDS tomorrow?', 'me'); phoneActs(cdsActs()); setTimeout(() => { const right = Math.random() < 0.8; CDS.hint = right ? CDS.truth : !CDS.truth; chat('Tolu', CDS.hint ? 'Yes o. Our CDS exec said nothing was cancelled. 9AM.' : 'I heard it was cancelled. I\'m not going 🤷🏾‍♀️'); }, 2500); }],
+    ['DM Tolu', () => { openThread('Tolu', 'dm'); chat('You', 'Tolu abeg, is there CDS tomorrow?', 'me', 'Tolu'); phoneActs(cdsActs()); setTimeout(() => { const right = Math.random() < 0.8; CDS.hint = right ? CDS.truth : !CDS.truth; chat('Tolu', CDS.hint ? 'Yes o. Our CDS exec said nothing was cancelled. 9AM.' : 'I heard it was cancelled. I\'m not going 🤷🏾‍♀️', '', 'Tolu'); }, 2500); }],
     ...cdsActs(),
   ]);
 }
@@ -1619,11 +1691,20 @@ async function bakeAll(m2, lew, fem, byName, C2) {
     applyShorts(T.lWhite, LM, SKIN[0]); applyShorts(T.lWhite2, LM, SKIN[2]); applyShorts(T.lWhite3, LM, SKIN[4]);
     applyShorts(T.whiteF, FM, SKIN[1]); applyShorts(T.whiteF2, FM, SKIN[3]); applyShorts(T.mWhite, XM, SKIN[1]);
   }
+  // the player's own outfits in three skin tones (loaded on demand by the character creator)
+  const PT = {}, LMp = legMask(lew.scene, lewImg.width, lewImg.height), FMp = legMask(fem.scene, fImg.width, fImg.height);
+  [SKIN[3], SKIN[0], SKIN[4]].forEach((sk, i) => {
+    PT[`m_mufti_${i}`] = recolorOutfit(lewImg, sk, [0.2, 0.45, 0.75], [0.15, 0.2, 0.35]); PT[`m_khaki_${i}`] = recolorOutfit(lewImg, sk, [0.93, 0.93, 0.9], KHAKI);
+    PT[`m_white_${i}`] = applyShorts(recolorOutfit(lewImg, sk, WH, WH2), LMp, sk);
+    PT[`f_mufti_${i}`] = F(sk, {}); PT[`f_khaki_${i}`] = F(sk, { Shirt: KHAKI, Pants: KHAKI, Heels: [0.12, 0.1, 0.09] });
+    PT[`f_white_${i}`] = applyShorts(F(sk, { Shirt: WH, Pants: WH2, Heels: WH }), FMp, sk);
+  });
   for (const [rig, cs] of Object.entries(CL)) Object.assign(RIGS[rig].clips, cs);
   const BIG = ['lMufti', 'lWhite', 'lCorper', 'civF1', 'whiteF', 'corperF'];
   window.__bake = () => ({
     clips: Object.fromEntries(Object.entries(CL).map(([r, cs]) => [r, Object.fromEntries(Object.entries(cs).map(([k, c]) => [k, THREE.AnimationClip.toJSON(c)]))])),
-    tex: Object.fromEntries(Object.entries(T).map(([k, t]) => { const s = BIG.includes(k) ? 1024 : 512, c = document.createElement('canvas'); c.width = c.height = s; c.getContext('2d').drawImage(t.image, 0, 0, s, s); return [k, c.toDataURL('image/jpeg', 0.86)]; })),
+    ptex: Object.fromEntries(Object.entries(PT).map(([k, t]) => [k, t.image.toDataURL('image/jpeg', 0.88)])),
+    tex: Object.fromEntries(Object.entries(T).map(([k, t]) => { const s = BIG.includes(k) ? 512 : 512, c = document.createElement('canvas'); c.width = c.height = s; c.getContext('2d').drawImage(t.image, 0, 0, s, s); return [k, c.toDataURL('image/jpeg', 0.86)]; })),
   });
   return T;
 }
@@ -1678,7 +1759,8 @@ function N(rig, tex, x, z, ry, extra = {}) { return (() => { const p = makePerso
 
 function spawnWorld(T, gender) {
   TEX = T; ST.g = gender;
-  player = makePerson(gender === 'f' ? 'fem' : 'lewis', { tex: gender === 'f' ? T.civF1 : T.lMufti, h: gender === 'f' ? 1.66 : 1.78, npc: false });
+  player = makePerson(gender === 'f' ? 'fem' : 'lewis', { tex: T.p_mufti || (gender === 'f' ? T.civF1 : T.lMufti), h: gender === 'f' ? 1.66 : 1.78, npc: false });
+  { const b = BACKGROUNDS.find(b => b[0] === CH.bg) || BACKGROUNDS[0]; Object.assign(ST, b[3]); ST.bg = b[0]; ST.name = CH.name || 'Corper'; ST.tone = CH.tone; }
   for (const m of player.meshes) { m.castShadow = true; m.frustumCulled = false; }
   player.o.position.set(-3, 0.02, CZ + 63); player.o.rotation.y = Math.PI; player.speed = 0; ST.outfit = 'mufti'; cam.yaw = 0;
   for (const v of traffic) v.g.visible = false;
@@ -1715,41 +1797,88 @@ function spawnWorld(T, gender) {
   // the danfo waiting outside the gate
   for (const bx of [-14, -26]) { const bus = danfo(); if (realModels.danfo) { bus.g.children.forEach(c => c.visible = false); bus.g.add(realModels.danfo.clone()); } bus.g.position.set(bx, 0, CZ + 65.5); scene.add(bus.g); }
   { const bus = danfo(); if (realModels.danfo) { bus.g.children.forEach(c => c.visible = false); bus.g.add(realModels.danfo.clone()); } bus.g.position.set(CAMP.busSpot.x + 3, 0, CAMP.busSpot.z + 1.5); scene.add(bus.g); }
-  $('phdr').textContent = '💬 Platoon 5 · Camp Gist'; $('nsrc').textContent = 'CORPER CONNECT · Platoon 5 · Camp Gist';
+  setGroup('Platoon 5 · Camp Gist');
   campGo(0); setTOD('Morning');
   window.__merged = mergeStatic();
   window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, interactables, cam, LGA, board, CAMP, CZ, RIGS };
 }
 
-/* ---------------- maps: corner minimap + phone Map app ---------------- */
-const PLACES = {
-  camp: () => [['Gate', CAMP.spots.gate], ['Registration', CAMP.spots.desk], ['Kit store', CAMP.spots.kit], ['Hostel B', CAMP.spots.hostel], ['Parade ground', { x: 0, z: CZ }], ['Stage', CAMP.spots.stage], ['Mammy market', CAMP.spots.market[2]], ['Notice board', CAMP.spots.notice], ['Clinic', CAMP.spots.clinic], ['SAED hall', CAMP.spots.hall]],
-  street: () => [['Home (Corper Lodge)', LODGE.door || LODGE], ['Corper Close bus stop', { x: BUSSTOP_X, z: 9 }], ['LGA Secretariat', { x: LGA.x, z: -10 }], ['Model School (PPA)', SCH.gate], ['Mama Tolani Provisions', shopSpots.find(s => /TOLANI/.test(s.name)) || { x: 0, z: 9 }], ['Umbrella stall', vendorSpots[0]]],
+/* ---------------- maps: corner minimap + the phone's Map app (pan, zoom, pins, routes) ---------------- */
+const POIS = {
+  camp: () => [['🚧', 'Camp gate', CAMP.spots.gate, '#5d4037'], ['📝', 'Registration', CAMP.spots.desk, '#1565c0'], ['🎽', 'Kit store', CAMP.spots.kit, '#6a1b9a'], ['🛏️', 'Hostel B', CAMP.spots.hostel, '#00695c'], ['🪖', 'Parade ground', { x: 0, z: CZ }, '#33691e'], ['🎤', 'Stage', CAMP.spots.stage, '#ad1457'], ['🛍️', 'Mammy market', CAMP.spots.market[2], '#ef6c00'], ['📋', 'Notice board', CAMP.spots.notice, '#455a64'], ['🏥', 'Camp clinic', CAMP.spots.clinic, '#c62828'], ['🎓', 'SAED hall', CAMP.spots.hall, '#4527a0'], ['🚌', 'Bus park', CAMP.busSpot, '#f9a825']],
+  street: () => [['🏠', 'Home · Corper Lodge', LODGE.door || LODGE, '#00695c'], ['🚌', 'Corper Close Bus Stop', { x: BUSSTOP_X, z: 9 }, '#f9a825'], ['🏛️', 'LGA Secretariat', { x: LGA.x, z: -10 }, '#1565c0'], ['🧹', 'CDS ground', { x: LGA.x + 9, z: -14 }, '#6a1b9a'], ['🏫', 'Model School (PPA)', SCH.gate, '#c62828'], ['🛒', 'Mama Tolani Provisions', shopSpots.find(s => /TOLANI/.test(s.name)) || { x: 0, z: 9 }, '#ef6c00'], ['🍛', 'Buka & speaker', { x: 46, z: 9.4 }, '#ad1457'], ['⛱️', 'Umbrella stall', vendorSpots[0], '#455a64']],
 };
-function drawMap(g, W, H, cx, cz, R, labels) {
-  const k = W / (R * 2), X = x => W / 2 + (x - cx) * k, Z = z => H / 2 + (z - cz) * k;
-  g.clearRect(0, 0, W, H); g.fillStyle = ST.area === 'camp' ? '#5f7d3a' : '#b9ad95'; g.fillRect(0, 0, W, H);
-  if (ST.area === 'street') { g.fillStyle = '#3c3c3c'; g.fillRect(0, Z(-7), W, 14 * k); g.fillStyle = '#d8d2c4'; g.fillRect(0, Z(7.8), W, 3.6 * k); g.fillRect(0, Z(-11.4), W, 3.6 * k); }
-  else { g.fillStyle = '#9b9a92'; g.fillRect(X(-22), Z(CZ - 15), 44 * k, 30 * k); g.fillStyle = '#a5643a'; g.fillRect(X(-4), Z(CZ + 18), 8 * k, 40 * k); }
-  g.fillStyle = 'rgba(245,240,228,.95)'; g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = 1;
-  for (const c of colliders) { if (c.x1 < cx - R || c.x0 > cx + R || c.z1 < cz - R || c.z0 > cz + R) continue; const w = Math.max(1.5, (c.x1 - c.x0) * k), h = Math.max(1.5, (c.z1 - c.z0) * k); g.fillRect(X(c.x0), Z(c.z0), w, h); }
-  const pl = PLACES[ST.area] ? PLACES[ST.area]() : [];
-  for (const [n, p] of pl) { if (!p) continue; g.fillStyle = '#1a73e8'; g.beginPath(); g.arc(X(p.x), Z(p.z), labels ? 5 : 3, 0, 7); g.fill(); if (labels) { g.font = '600 11px system-ui'; g.fillStyle = '#111'; g.fillText(n, X(p.x) + 7, Z(p.z) + 4); } }
-  if (ST.target) { g.fillStyle = '#ffd54f'; g.strokeStyle = '#111'; g.beginPath(); g.arc(X(ST.target.x), Z(ST.target.z), labels ? 7 : 5, 0, 7); g.fill(); g.stroke(); }
-  const P = player.o.position, a = player.o.rotation.y; g.save(); g.translate(X(P.x), Z(P.z)); g.rotate(-a + Math.PI); g.fillStyle = '#e53935'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, -8); g.lineTo(6, 6); g.lineTo(0, 3); g.lineTo(-6, 6); g.closePath(); g.stroke(); g.fill(); g.restore();
+const MAPV = { cx: 0, cz: 0, R: 70, follow: true, sel: null };
+function routePts(P, T) { // walking route: along the sidewalk, cross where you need to
+  if (ST.area !== 'street') return [P, T];
+  const sp = P.z >= 0 ? 9.6 : -9.6, st = T.z >= 0 ? 9.6 : -9.6, pts = [{ x: P.x, z: P.z }];
+  if (Math.abs(P.z) > 11) pts.push({ x: P.x, z: sp });
+  pts.push({ x: T.x, z: sp }); if (sp !== st) pts.push({ x: T.x, z: st }); pts.push({ x: T.x, z: T.z }); return pts;
+}
+function routeLen(P, T) { const r = routePts(P, T); let d = 0; for (let i = 1; i < r.length; i++) d += Math.hypot(r[i].x - r[i - 1].x, r[i].z - r[i - 1].z); return d; }
+function drawMap(g, W, H, cx, cz, R, full) {
+  const k = W / (R * 2), X = x => W / 2 + (x - cx) * k, Z = z => H / 2 + (z - cz) * k, camp = ST.area === 'camp';
+  const rect = (x0, z0, x1, z1, fill, stroke, lw = 1) => { g.beginPath(); g.rect(X(x0), Z(z0), (x1 - x0) * k, (z1 - z0) * k); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } };
+  const label = (t, x, z, size = 11, col = '#5f6368', bold = '600') => { g.font = `${bold} ${size}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText(t, X(x), Z(z)); g.fillStyle = col; g.fillText(t, X(x), Z(z)); };
+  g.clearRect(0, 0, W, H); g.fillStyle = camp ? '#cfe3bd' : '#eceef1'; g.fillRect(0, 0, W, H);
+  if (!camp) {
+    rect(-HALF, -60, HALF, -11.4, '#f4efe4'); rect(-HALF, 11.4, HALF, 60, '#f4efe4'); // plots behind the sidewalks
+    rect(SCH.x - 21, -41.6, SCH.x + 21, -11.6, '#fdf1c9', '#e2c877', 1.5); rect(LGA.x - 18, -44, LGA.x + 18, -11.6, '#dcebfb', '#9dbfe6', 1.5);
+    rect(-HALF, -11.4, HALF, -7.8, '#dfe2e6'); rect(-HALF, 7.8, HALF, 11.4, '#dfe2e6'); // sidewalks
+    rect(-HALF, -7.2, HALF, 7.2, '#b9c0c9'); rect(-HALF, -6.6, HALF, 6.6, '#ffffff'); // road with casing
+    g.strokeStyle = '#f2c94c'; g.lineWidth = Math.max(1, k * 0.3); g.setLineDash([k * 3, k * 3]); g.beginPath(); g.moveTo(0, Z(0)); g.lineTo(W, Z(0)); g.stroke(); g.setLineDash([]);
+  } else {
+    rect(-CAMP_HALF, CZ - CAMP_HALF, CAMP_HALF, CZ + CAMP_HALF, '#dcebcb');
+    rect(-CAMP_HALF - 40, CZ + CAMP_HALF + 5, CAMP_HALF + 40, CZ + CAMP_HALF + 15, '#ffffff', '#b9c0c9'); // road outside the gate
+    rect(-22, CZ - 15, 22, CZ + 15, '#c9c6ba', '#a8a596'); rect(-4, CZ + 15, 4, CZ + CAMP_HALF, '#ead9bd'); rect(-36, CZ + 16, 36, CZ + 22, '#ead9bd'); rect(-22, CZ - 36, -14, CZ - 15, '#ead9bd');
+  }
+  for (const c of colliders) { // building footprints and walls
+    if (c.x1 < cx - R * 1.2 || c.x0 > cx + R * 1.2 || c.z1 < cz - R * 1.5 || c.z0 > cz + R * 1.5) continue;
+    const w = c.x1 - c.x0, d = c.z1 - c.z0; if (Math.min(w, d) < 1.2) { rect(c.x0, c.z0, c.x1, c.z1, '#a9b0ba'); continue; }
+    rect(c.x0, c.z0, c.x1, c.z1, camp ? '#f3ede0' : '#d9dde3', camp ? '#b9ad95' : '#b7bdc7', 1);
+  }
+  if (full) {
+    if (!camp) { for (let x = Math.ceil((cx - R) / 70) * 70; x < cx + R; x += 70) label('C O R P E R   C L O S E   R O A D', x + 35, 3.4, Math.max(8, Math.min(12, k * 2.6)), '#8a9099', '500'); label('Model School', SCH.x, -30, 11, '#a17800'); label('Local Govt. Secretariat', LGA.x, -30, 11, '#1a5fb4');
+      if (k > 3.2) for (const s of shopSpots) if (Math.abs(s.x - cx) < R) label(s.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).slice(0, 22), s.x, s.z + (s.side > 0 ? 5 : -5), 9, '#7a8088', '500'); }
+    else { label('PARADE GROUND', 0, CZ, 10, '#77735f'); label('Camp road', 0, CZ + CAMP_HALF + 10, 10, '#8a9099', '500'); }
+  }
+  const P = player.o.position, T0 = ST.target;
+  if (T0) { const r = routePts(P, T0); g.lineJoin = g.lineCap = 'round'; for (const [col, lw] of [['#ffffff', full ? 8 : 5], ['#1a73e8', full ? 5 : 3]]) { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); r.forEach((p, i) => i ? g.lineTo(X(p.x), Z(p.z)) : g.moveTo(X(p.x), Z(p.z))); g.stroke(); } }
+  const pl = POIS[ST.area] ? POIS[ST.area]() : []; MAPV.hit = []; const used = []; if (MAPV.sel) pl.sort((a, b) => (b[1] === MAPV.sel) - (a[1] === MAPV.sel));
+  for (const [ic, n, p, col] of pl) { if (!p) continue; const x = X(p.x), y = Z(p.z), sel = MAPV.sel === n, r = full ? (sel ? 15 : 12) : 4;
+    if (full) { g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, y + r + 4, r * 0.6, 3, 0, 0, 7); g.fill(); }
+    g.fillStyle = col; g.strokeStyle = '#fff'; g.lineWidth = full ? 2.5 : 1.2; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.stroke();
+    if (full) { g.font = `${sel ? 16 : 13}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(ic, x, y + 1); g.font = `${sel ? 700 : 600} 11px system-ui, sans-serif`; const tw = g.measureText(n).width / 2 + 4, bx = { x0: x - tw, x1: x + tw, y0: y + r + 2, y1: y + r + 16 }; if (!used.some(u => u.x0 < bx.x1 && u.x1 > bx.x0 && u.y0 < bx.y1 && u.y1 > bx.y0)) { used.push(bx); g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.95)'; g.strokeText(n, x, y + r + 9); g.fillStyle = '#202124'; g.fillText(n, x, y + r + 9); } MAPV.hit.push({ n, p, x, y }); } }
+  if (T0) { const x = X(T0.x), y = Z(T0.z); g.fillStyle = '#ea4335'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, full ? 7 : 5, 0, 7); g.fill(); g.stroke(); }
+  const a = player.o.rotation.y, px = X(P.x), py = Z(P.z); // you: blue dot with a heading cone
+  g.save(); g.translate(px, py); g.rotate(-a + Math.PI); const cr = full ? 26 : 18, gr = g.createRadialGradient(0, 0, 2, 0, 0, cr); gr.addColorStop(0, 'rgba(26,115,232,.55)'); gr.addColorStop(1, 'rgba(26,115,232,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, cr, -Math.PI / 2 - 0.55, -Math.PI / 2 + 0.55); g.closePath(); g.fill(); g.restore();
+  g.fillStyle = '#1a73e8'; g.strokeStyle = '#fff'; g.lineWidth = full ? 3 : 2; g.beginPath(); g.arc(px, py, full ? 7 : 5, 0, 7); g.fill(); g.stroke();
 }
 let mapT = 0;
+function mapOpen() { return $('phone').classList.contains('on') && PH.screen === 'map'; }
 function updateMaps(dt) {
-  mapT -= dt; if (mapT > 0 || !player) return; mapT = 0.2;
-  const P = player.o.position, mm = $('minimap'); if (mm) drawMap(mm.getContext('2d'), mm.width, mm.height, P.x, P.z, 45, false);
-  if ($('phone').classList.contains('on') && !$('pmap').hidden) { const c = $('pmapc'); const big = ST.area === 'camp' ? { x: 0, z: CZ + 5, R: 64 } : { x: P.x, z: 0, R: 70 }; drawMap(c.getContext('2d'), c.width, c.height, big.x, big.z, big.R, true); }
+  mapT -= dt; if (mapT > 0 || !player) return; mapT = mapOpen() ? 0.1 : 0.25;
+  const P = player.o.position, mm = $('minimap'); if (mm) drawMap(mm.getContext('2d'), mm.width, mm.height, P.x, P.z, 42, false);
+  if (mapOpen()) { if (MAPV.follow) { MAPV.cx = P.x; MAPV.cz = ST.area === 'camp' ? P.z : clamp(P.z, -14, 14); } const c = $('pmapc'), g = c.getContext('2d'); g.save(); g.scale(2, 2); drawMap(g, c.width / 2, c.height / 2, MAPV.cx, MAPV.cz, MAPV.R, true); g.restore(); }
+}
+function mapSheet(n, p) {
+  MAPV.sel = n; const sh = $('pmapsheet'), P = player.o.position, d = Math.round(routeLen(P, p)), walkMin = Math.max(1, Math.round(d / 75)), street = ST.area === 'street' && d >= 18;
+  sh.innerHTML = `<b>${n}</b><small>${d} m away · about ${walkMin} min on foot</small><div class="modes"><button data-m="walk">🚶🏾 Trek<i>Free</i></button>${street ? `<button data-m="keke">🛺 Keke<i>${naira(200)}</i></button><button data-m="car">🚗 Ride app<i>${naira(1500)}</i></button>${ST.bg === 'car' ? `<button data-m="own">🚙 Your car<i>Fuel ${naira(300)}</i></button>` : ''}` : ''}</div>`;
+  sh.hidden = false; for (const b of sh.querySelectorAll('button')) b.onclick = () => { sh.hidden = true; travelGo(b.dataset.m, { x: p.x, z: p.z }, n); };
 }
 function mapList() {
-  const pl = PLACES[ST.area] ? PLACES[ST.area]() : [];
-  $('pmapl').innerHTML = pl.map(([n, p], i) => `<button data-i="${i}">📍 ${n} <small>${Math.round(Math.hypot(p.x - player.o.position.x, p.z - player.o.position.z))} m</small></button>`).join('');
-  [...$('pmapl').children].forEach((b, i) => b.onclick = () => { const [n, p] = pl[i]; travelMenu({ x: p.x, z: p.z }, n); });
+  const pl = POIS[ST.area] ? POIS[ST.area]() : [], P = player.o.position;
+  $('pmapl').innerHTML = pl.map(([ic, n, p], i) => `<button data-i="${i}">${ic} ${n} <small>${Math.round(routeLen(P, p))} m</small></button>`).join('');
+  [...$('pmapl').children].forEach((b, i) => b.onclick = () => { const [, n, p] = pl[i]; MAPV.follow = false; MAPV.cx = p.x; MAPV.cz = ST.area === 'camp' ? p.z : clamp(p.z, -14, 14); mapSheet(n, p); $('pmap').scrollTop = 0; mapT = 0; });
 }
-$('pmapbtn').onclick = () => { const on = $('pmap').hidden; $('pmap').hidden = !on; $('msgs').hidden = on; $('pacts').hidden = on; $('pmapbtn').textContent = on ? '💬' : '🗺️'; if (on) { mapList(); mapT = 0; } };
+{ // map gestures: drag to pan, tap a pin, buttons to zoom and recentre
+  const c = $('pmapc'); let d0 = null, moved = 0;
+  c.addEventListener('pointerdown', e => { d0 = { x: e.clientX, y: e.clientY }; moved = 0; try { c.setPointerCapture(e.pointerId); } catch (er) { } });
+  c.addEventListener('pointermove', e => { if (!d0) return; const s = (MAPV.R * 2) / c.clientWidth, dx = e.clientX - d0.x, dy = e.clientY - d0.y; moved += Math.abs(dx) + Math.abs(dy); if (moved > 6) { MAPV.follow = false; MAPV.cx -= dx * s; MAPV.cz -= dy * s; mapT = 0; } d0 = { x: e.clientX, y: e.clientY }; });
+  c.addEventListener('pointerup', e => { if (d0 && moved <= 6) { const r = c.getBoundingClientRect(), sx = (c.width / 2) / r.width, x = (e.clientX - r.left) * sx, y = (e.clientY - r.top) * sx; let best = null, bd = 26; for (const h of MAPV.hit || []) { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = h; } } if (best) mapSheet(best.n, best.p); else { $('pmapsheet').hidden = true; MAPV.sel = null; } mapT = 0; } d0 = null; });
+  $('mzin').onclick = () => { MAPV.R = Math.max(18, MAPV.R / 1.4); mapT = 0; }; $('mzout').onclick = () => { MAPV.R = Math.min(140, MAPV.R * 1.4); mapT = 0; }; $('mzme').onclick = () => { MAPV.follow = true; mapT = 0; };
+}
+$('pmapbtn').onclick = () => phShow(PH.screen === 'map' ? (thr(ST.group || 'Platoon 5 · Camp Gist').msgs.length ? 'thread' : 'home') : 'map');
 /* ---------------- update loop ---------------- */
 const clock = new THREE.Clock(); let tAcc = 0, chatT = 0, story = 0;
 const tmp = new THREE.Vector3(), camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
@@ -1881,8 +2010,9 @@ function updateStory(dt) {
     const near = Math.hypot(player.o.position.x - LGA.x, player.o.position.z - LGA.z) < 20;
     ST.qt = (ST.qt || 0) + dt * (near ? 1 : 0.3);
     if (ST.qt > 1.6) { ST.qt = 0; ST.queue--; ST.mins += 4; setObj(`Queue position ${ST.queue} — stay around the Secretariat`); if (ST.queue === 5) chat('Chioma (CDS Sec)', 'They are calling names from 15 to 25 now o!'); if (!near && ST.queue <= 3) { toast('They called your name while you were away! Hurry back! 🏃🏾'); } }
-    if (ST.queue <= 0 && !ST.done) { if (near) { ST.done = true; ST.cash += 77000; ST.stress = clamp(ST.stress - 12, 0, 100); setObj('Cleared ✅  Allowance is on the way'); ST.target = null; $('arrow').style.display = 'none'; toast('Thumbprint captured. Cleared! ✅  Alert: +₦77,000 allowance 🎉', 5000); chat('Naija Trust Bank', 'Credit alert: ₦77,000.00 — NYSC allowance. Bal: ' + naira(ST.cash), 'off'); setTimeout(() => { ppaGo(0); chat('Corper Close Model School', 'Corper, the principal is asking of you. Come to school after clearance.'); }, 5200); tone(523, .15, 'sine', .07); tone(659, .15, 'sine', .07, .15); tone(784, .3, 'sine', .07, .3); } else ST.queue = 1; }
+    if (ST.queue <= 0 && !ST.done) { if (near) { ST.done = true; ST.txn = 'NYSC allowance · FGN'; ST.cash += 77000; ST.stress = clamp(ST.stress - 12, 0, 100); setObj('Cleared ✅  Allowance is on the way'); ST.target = null; $('arrow').style.display = 'none'; toast('Thumbprint captured. Cleared! ✅  Alert: +₦77,000 allowance 🎉', 5000); chat('Naija Trust Bank', 'Credit alert: ₦77,000.00 — NYSC allowance. Bal: ' + naira(ST.cash), 'off'); setTimeout(() => { ppaGo(0); chat('Corper Close Model School', 'Corper, the principal is asking of you. Come to school after clearance.'); }, 5200); tone(523, .15, 'sine', .07); tone(659, .15, 'sine', .07, .15); tone(784, .3, 'sine', .07, .3); } else ST.queue = 1; }
   }
+  if (ST.bg === 'hustler' && (ST.hustles || 0) < 5) { ST.hustleT = (ST.hustleT || 0) + dt; if (ST.hustleT > 80) { ST.hustleT = 0; ST.hustles = (ST.hustles || 0) + 1; const amt = pick([1500, 2500, 3000, 4000]); ST.cash += amt; chat(pick(['POS customer', 'Data customer', 'Aunty Kemi']), pick(['I don send the money for the 10GB. Abeg load am now now.', 'Corper, your POS charge too much o. But I don pay.', 'Thanks for the airtime. You be correct person.'])); chat('Naija Trust Bank', `Credit alert: ${naira(amt)}.00 · side hustle. Bal: ${naira(ST.cash)}`, 'off'); } }
   ST.mins += dt * 0.5; ST.stress = clamp(ST.stress + dt * 0.02, 0, 100);
 }
 function updateCamera(dt) {
@@ -1944,23 +2074,39 @@ function mergeStatic() {
 }
 
 boot().then(T => {
-  $('lmsg').textContent = 'Ready. Choose your corper:';
-  const go = $('go'); go.style.display = 'inline-block'; go.textContent = '👨🏾 Male corper';
-  const f = go.cloneNode(); f.id = 'gof'; f.textContent = '👩🏾 Female corper'; f.style.marginLeft = '8px'; go.after(f);
+  const L = $('load'), C = $('creator'), go = $('go');
+  // live preview: your corper standing outside the camp gate
+  let pvP = null, pvOn = true, pvTok = 0; const pvPos = new THREE.Vector3(-3, 0.02, CZ + 63), pvClock = new THREE.Clock();
+  async function preview() { const tok = ++pvTok, tex = await playerTex(CH.g, 'mufti', CH.tone); if (tok !== pvTok || !pvOn) return; if (pvP) scene.remove(pvP.o);
+    pvP = makePerson(CH.g === 'f' ? 'fem' : 'lewis', { tex, h: CH.g === 'f' ? 1.66 : 1.78, npc: false, anim: 'idle' }); for (const m of pvP.meshes) m.frustumCulled = false; pvP.o.position.copy(pvPos); pvP.o.rotation.y = 0.35; }
+  function pvLoop() { if (!pvOn) return; const dt = Math.min(0.05, pvClock.getDelta()), narrow = innerWidth < 760, ox = narrow ? 0 : -1.0;
+    if (pvP) { pvP.mixer.update(dt); pvP.o.rotation.y = 0.25 + Math.sin(performance.now() / 2600) * 0.45; }
+    camera.position.set(pvPos.x + ox, narrow ? 1.5 : 1.3, pvPos.z + (narrow ? 5.2 : 3.7)); camera.lookAt(pvPos.x + ox, narrow ? 0.15 : 0.95, pvPos.z); sky.position.copy(camera.position);
+    sunL.position.copy(pvPos).addScaledVector(sun, 80); sunL.target.position.copy(pvPos); renderer.render(scene, camera); requestAnimationFrame(pvLoop); }
+  // creator controls
+  $('cbg').innerHTML = BACKGROUNDS.map(b => `<button data-v="${b[0]}"><b>${b[1]}</b><span>${naira(b[3].cash)} · ${b[2]}</span></button>`).join('');
+  const sync = () => { for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.classList.toggle('on', String(CH[key]) === b.dataset.v); };
+  for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.onclick = () => { CH[key] = key === 'tone' ? +b.dataset.v : b.dataset.v; sync(); if (key !== 'bg') preview(); };
+  try { const last = JSON.parse(localStorage.getItem('nysc3d.corper') || 'null'); if (last) { Object.assign(CH, last); $('cname').value = CH.name || ''; } } catch (e) { }
+  sync(); preview(); pvLoop();
+  L.style.transition = 'opacity .7s'; L.style.opacity = 0; setTimeout(() => { if (pvOn) L.style.display = 'none'; }, 750); C.hidden = false;
   const start = async g => {
-    go.style.display = f.style.display = 'none'; if ($('gocont')) $('gocont').style.display = 'none'; $('lmsg').textContent = 'Taking you to camp…'; $('lbar').style.width = '100%'; audio();
+    if (g) CH.g = g; CH.name = ($('cname').value || '').trim().slice(0, 14); try { localStorage.setItem('nysc3d.corper', JSON.stringify(CH)); } catch (e) { }
+    C.hidden = true; L.style.transition = ''; L.style.display = 'grid'; L.style.opacity = 1; $('lmsg').textContent = 'Taking you to camp…'; $('lbar').style.width = '100%'; audio();
     await new Promise(r => setTimeout(r, 40));
-    spawnWorld(T, g); hudSync(); camLook.copy(player.o.position); camLook.y += 1.55; updateCamera(0.016);
+    pvOn = false; pvTok++; if (pvP) { scene.remove(pvP.o); pvP = null; }
+    try { const [a, b, c] = await Promise.all(['mufti', 'white', 'khaki'].map(k => playerTex(CH.g, k, CH.tone))); T.p_mufti = a; T.p_white = b; T.p_khaki = c; } catch (e) { }
+    spawnWorld(T, CH.g); $('hud').style.visibility = 'visible'; hudSync(); camLook.copy(player.o.position); camLook.y += 1.55; updateCamera(0.016);
     for (const t of Object.values(T)) renderer.initTexture(t);
     try { await renderer.compileAsync(scene, camera); } catch (e) { try { renderer.compile(scene, camera); } catch (e2) { } }
     renderer.render(scene, camera); await new Promise(r => requestAnimationFrame(r));
-    const L = $('load'); L.style.transition = 'opacity .9s'; L.style.opacity = 0; setTimeout(() => L.style.display = 'none', 950);
+    L.style.transition = 'opacity .9s'; L.style.opacity = 0; setTimeout(() => L.style.display = 'none', 950);
     loop(); setTimeout(() => { ST.ready = true; }, 1600);
     setTimeout(() => { const c = renderer.getContext(); if (c && c.isContextLost && c.isContextLost()) toast('Your phone ran out of graphics memory. Close other tabs and reload.', 6000); }, 4000);
   };
-  go.onclick = () => start('m'); f.onclick = () => start('f');
-  const sv = loadSave();
-  if (sv) { const c = go.cloneNode(); c.id = 'gocont'; c.textContent = `▶ Continue · ${sv.cp === 'ch2' ? 'Chapter 2: CDS week' : 'Chapter 1: Lagos street'}`; c.style.display = 'block'; c.style.margin = '10px auto 0'; f.after(c);
-    c.onclick = async () => { c.style.display = 'none'; await start(sv.g); resumeFrom(sv); }; }
+  go.onclick = () => start();
+  const sv = loadSave(), c = $('gocont');
+  if (sv) { c.hidden = false; c.textContent = `▶ Continue ${sv.st && sv.st.name ? 'as ' + sv.st.name : ''} · ${sv.cp === 'ch2' ? 'Chapter 2: CDS week' : 'Chapter 1: Lagos street'}`;
+    c.onclick = async () => { if (sv.st) { CH.tone = sv.st.tone ?? CH.tone; CH.bg = sv.st.bg || CH.bg; if (sv.st.name) $('cname').value = sv.st.name; } await start(sv.g); resumeFrom(sv); }; }
   window.__start = start;
 }).catch(e => { $('lmsg').textContent = 'Could not load: ' + e.message; console.error(e); });

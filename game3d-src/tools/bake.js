@@ -18,6 +18,7 @@ const { chromium } = require('playwright'); const fs = require('fs');
   fs.writeFileSync(D + 'clips.json', JSON.stringify(r.clips));
   for (const [k, u] of Object.entries(r.tex)) fs.writeFileSync(D + 'tex/' + k + '.jpg', Buffer.from(u.split(',')[1], 'base64'));
   fs.writeFileSync(D + 'tex/index.json', JSON.stringify(Object.keys(r.tex)));
+  fs.mkdirSync(D + 'tex/player', { recursive: true }); for (const [k, u] of Object.entries(r.ptex)) fs.writeFileSync(D + 'tex/player/' + k + '.jpg', Buffer.from(u.split(',')[1], 'base64'));
   console.log('baked', Object.keys(r.tex).length, 'textures');
   await b.close();
 })();
