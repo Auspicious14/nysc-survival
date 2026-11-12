@@ -1,0 +1,137 @@
+-- ============================================================================
+-- NYSC Survival: database setup for REAL-TIME CHAT and BATCHES (Supabase)
+-- Run this ONCE: Supabase dashboard -> SQL Editor -> New query -> paste -> Run.
+-- It is safe to run again (it uses "if not exists" / "or replace").
+-- Before running, enable: Authentication -> Providers -> Anonymous Sign-Ins.
+-- ============================================================================
+
+-- ---- tables ---------------------------------------------------------------
+create table if not exists public.batches (
+  id         int generated always as identity primary key,
+  seats      int not null default 0,
+  cap        int not null default 40,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.players (
+  uid        uuid primary key references auth.users(id) on delete cascade,
+  name       text not null check (char_length(name) <= 18),
+  skin       int  not null default 0,
+  batch_id   int  not null references public.batches(id),
+  seat       int  not null,
+  lga_i      int  not null,   -- index into the game's LGA list (0..7)
+  ppa_i      int  not null,   -- index into the game's PPA list (0..11)
+  created_at timestamptz not null default now()
+);
+create index if not exists players_batch_idx on public.players (batch_id, lga_i, ppa_i);
+
+create table if not exists public.messages (
+  id      bigint generated always as identity primary key,
+  channel text   not null check (char_length(channel) between 1 and 90),
+  ts      bigint not null default ((extract(epoch from now()) * 1000)::bigint),
+  uid     uuid   not null default auth.uid(),
+  n       text   not null check (char_length(n) between 1 and 18),
+  sk      int    not null default 0,
+  tx      text   not null check (char_length(tx) between 1 and 240)
+);
+create index if not exists messages_channel_ts_idx on public.messages (channel, ts desc);
+
+-- ---- server-side rules for every new message --------------------------------
+-- The server (not the browser) decides who sent it and when. One message per
+-- ~1 second per person (chat channels). Inbox pings are not rate limited.
+create or replace function public.messages_before_insert() returns trigger
+language plpgsql as $$
+begin
+  new.uid := auth.uid();
+  new.ts  := (extract(epoch from now()) * 1000)::bigint;
+  new.tx  := btrim(new.tx);
+  if new.uid is null then raise exception 'not signed in'; end if;
+  if new.channel not like 'inbox-%' and exists (
+       select 1 from public.messages m
+       where m.uid = new.uid and m.channel not like 'inbox-%' and m.ts > new.ts - 900) then
+    raise exception 'rate limit';
+  end if;
+  return new;
+end $$;
+drop trigger if exists messages_before_insert on public.messages;
+create trigger messages_before_insert before insert on public.messages
+  for each row execute function public.messages_before_insert();
+
+-- ---- who may do what (Row Level Security) -----------------------------------
+alter table public.batches  enable row level security;
+alter table public.players  enable row level security;
+alter table public.messages enable row level security;
+-- batches and players have NO direct policies: the browser can only use the two
+-- functions below. Messages:
+drop policy if exists messages_read   on public.messages;
+drop policy if exists messages_insert on public.messages;
+drop policy if exists messages_delete on public.messages;
+-- Public channels (camp hall, LGA, PPA) are readable by everyone signed in.
+-- Private DMs (dm-a--b) and inboxes (inbox-<uid>) only by people whose id is in the name.
+create policy messages_read on public.messages for select to authenticated using (
+  (channel not like 'dm-%' and channel not like 'inbox-%') or position(auth.uid()::text in channel) > 0);
+create policy messages_insert on public.messages for insert to authenticated with check (
+  uid = auth.uid() and (channel not like 'dm-%' or position(auth.uid()::text in channel) > 0));
+-- You can delete your own messages; anyone can clean messages older than 48 hours.
+create policy messages_delete on public.messages for delete to authenticated using (
+  uid = auth.uid() or ts < ((extract(epoch from now()) * 1000)::bigint - 172800000));
+
+-- ---- batches: put players into the same LGA / PPA -----------------------------
+-- Seats are handed out in order. Every 5 players share an LGA; inside an LGA the
+-- first 3 share one PPA and the next 2 share another. So 10 players = 2 LGAs of 5,
+-- each split 3 + 2 (the example from the game design).
+create or replace function public.join_batch(p_name text, p_skin int, p_fresh boolean default false)
+returns table (o_batch int, o_seat int, o_lga int, o_ppa int)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid := auth.uid();
+  b public.batches%rowtype;
+  s int; slot int; grp int; ppa int;
+begin
+  if v_uid is null then raise exception 'not signed in'; end if;
+  if not p_fresh then
+    return query select pl.batch_id, pl.seat, pl.lga_i, pl.ppa_i from public.players pl where pl.uid = v_uid;
+    if found then return; end if;
+  end if;
+  select * into b from public.batches where seats < cap order by id limit 1 for update skip locked;
+  if not found then insert into public.batches default values returning * into b; end if;
+  s := b.seats;
+  update public.batches set seats = seats + 1 where id = b.id;
+  slot := (s / 5) % 8;           -- which LGA (0..7)
+  grp  := (s % 5) / 3;           -- 0 for the first three, 1 for the other two
+  ppa  := (slot * 2 + grp) % 12; -- which PPA (0..11)
+  insert into public.players (uid, name, skin, batch_id, seat, lga_i, ppa_i)
+  values (v_uid, left(coalesce(nullif(btrim(p_name), ''), 'Corper'), 18), coalesce(p_skin, 0), b.id, s, slot, ppa)
+  on conflict (uid) do update set name = excluded.name, skin = excluded.skin, batch_id = excluded.batch_id,
+     seat = excluded.seat, lga_i = excluded.lga_i, ppa_i = excluded.ppa_i, created_at = now();
+  return query select b.id, s, slot, ppa;
+end $$;
+
+-- Who else is in my LGA (same PPA first)?
+create or replace function public.get_mates()
+returns table (o_uid uuid, o_name text, o_skin int, o_lga int, o_ppa int, o_same_ppa boolean)
+language sql security definer set search_path = public stable as $$
+  select p.uid, p.name, p.skin, p.lga_i, p.ppa_i, (p.ppa_i = me.ppa_i)
+  from public.players p
+  join public.players me on me.uid = auth.uid()
+  where p.batch_id = me.batch_id and p.lga_i = me.lga_i and p.uid <> me.uid
+  order by (p.ppa_i = me.ppa_i) desc, p.seat
+  limit 20;
+$$;
+
+revoke all on function public.join_batch(text, int, boolean) from public, anon;
+revoke all on function public.get_mates() from public, anon;
+grant execute on function public.join_batch(text, int, boolean) to authenticated;
+grant execute on function public.get_mates() to authenticated;
+
+-- ---- live updates -----------------------------------------------------------
+do $$ begin
+  alter publication supabase_realtime add table public.messages;
+exception when duplicate_object then null; when undefined_object then null; end $$;
+
+-- ---- optional housekeeping --------------------------------------------------
+create or replace function public.prune_messages() returns void
+language sql security definer set search_path = public as $$
+  delete from public.messages where ts < ((extract(epoch from now()) * 1000)::bigint - 172800000);
+$$;
+revoke all on function public.prune_messages() from public, anon, authenticated;

@@ -1,0 +1,14 @@
+NYSC Survival 3D — asset credits
+
+3D models (CC BY 4.0, credit required):
+- "Lagos Danfo Bus" by Iam_thearchitect (Sketchfab), CC BY 4.0 — http://creativecommons.org/licenses/by/4.0/
+- "Autorikshaw - Indian Tuk Tuk" by bhagathartworks (https://sketchfab.com/bhagathartworks), CC BY 4.0
+  https://sketchfab.com/3d-models/autorikshaw-indian-tuk-tuk-5775d012693741008acff9dad410e92d
+  Textures resized and recoloured use unchanged; models scaled and repositioned for the game.
+
+Characters and animations: Mixamo ("Lewis" with Walking, Idle, Running, Talking; female character "Ch26" with Walking, Idle, Running, Talking; the Samba dance and Xbot clips from the three.js examples are retargeted offline). Outfits are recoloured offline (tools/bake.js).
+Second male character: Mixamo "Ch41" with Walking, Idle, Running, Standing Arguing, Texting While Standing, Typing, Waving, Sitting Idle.
+Music: royalty-free afrobeat tracks from Pixabay (Pixabay Content License) by FreeMusicForVideo ("Afrobeat Afro Beat" #456650), PlayStarz_Music ("Afrobeat Afro Beat" #496406) and Kiravale ("Afrobeat" #593655).
+Voices: generated with YarnGPT (Nigerian-accented open TTS).
+Sky: three.js Sky shader. Buildings, roads, signs and street furniture: procedural, made for this game.
+Shop names and the "Local Govt. Secretariat" are fictional. Not an official NYSC product.

@@ -1,0 +1,6 @@
+node_modules
+.next
+.env.local
+public/game/index.html
+next-env.d.ts
+public/game3d/
