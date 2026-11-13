@@ -7,6 +7,7 @@ import { Sky } from './Sky.js';
 import { mergeGeometries } from './BufferGeometryUtils.js';
 import { STATES, ZONES } from './naija.js';
 import { mountWhot, mountDash } from './phonegames.js';
+import { loadOSM, buildOSM, drawOSMMap } from './osmworld.js';
 
 const $ = id => document.getElementById(id);
 const TOUCH = matchMedia('(hover:none)').matches || innerWidth < 760;
@@ -403,14 +404,14 @@ umbrellaStall(-52, -9.9, 'roasted corn & ube');
 }
 
 // bus stop shelter (south side)
-const BUSSTOP_X = -20;
+const BUSSTOP_X = -20, BUSSIGN = { m: null };
 {
   const g = new THREE.Group(); g.position.set(BUSSTOP_X, 0.18, 9.6); scene.add(g);
   for (const dx of [-2.6, 2.6]) for (const dz of [-.8, .8]) box(0.1, 2.6, 0.1, M.pole, dx, 1.3, dz, g);
   const rf = box(5.6, 0.1, 2.0, M.roof, 0, 2.65, 0, g); rf.rotation.x = -0.08;
   box(5, 0.08, 0.45, M.wood, 0, 0.55, 0.45, g);
   const st = ctex(512, 128, (c, w, h) => { c.fillStyle = '#0d47a1'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = '900 52px Arial Black, Impact'; c.textAlign = 'center'; c.fillText('CORPER CLOSE', w / 2, 62); c.font = '700 30px Arial'; c.fillText('BUS STOP', w / 2, 108); });
-  const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshStandardMaterial({ map: st })); sg.position.set(0, 3.1, -1.0); sg.rotation.y = Math.PI; g.add(sg);
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshStandardMaterial({ map: st })); sg.position.set(0, 3.1, -1.0); sg.rotation.y = Math.PI; g.add(sg); BUSSIGN.m = sg;
   addCol(BUSSTOP_X - 2.7, BUSSTOP_X + 2.7, 10.3, 10.5);
 }
 
@@ -1344,7 +1345,7 @@ function travelMenu(dest, label) {
     [`🚶🏾 Trek (free · about ${walkMin} min)`, () => travelGo('walk', dest, name)],
     [`🛺 Keke (${naira(fareOf(200))})`, () => travelGo('keke', dest, name)],
     ST.bg === 'car' ? [`🚙 Drive your own car (fuel ${naira(fareOf(300))})`, () => travelGo('own', dest, name)] : [`🚗 Ride app car (${naira(fareOf(1500))} · AC dey)`, () => travelGo('car', dest, name)],
-    [`🚌 Danfo (${naira(fareOf(300))}, from the bus stop)`, () => { ST.target = { x: BUSSTOP_X, z: 9, label: 'Corper Close bus stop' }; $('arrow').style.display = 'block'; toast('Danfos stop at Corper Close bus stop and go towards the Secretariat. Okada? LASTMA banned them on this road.', 4200); }],
+    [`🚌 Danfo (${naira(fareOf(300))}, from the bus stop)`, () => { ST.target = { x: BUSSTOP_X, z: 9, label: BSTOP() + ' bus stop' }; $('arrow').style.display = 'block'; toast('Danfos stop at ' + BSTOP() + ' bus stop and go towards the Secretariat. Okada? LASTMA banned them on this road.', 4200); }],
   ]);
 }
 function rideTo(dest, kind, label) {
@@ -1408,7 +1409,7 @@ function setTOD(seg) {
   hemi.intensity = night ? 0.18 : 0.55; hemi.color.set(night ? 0x5a6a9a : 0xe4ecff);
   renderer.toneMappingExposure = night ? 0.75 : 0.85;
   scene.fog.color.set(night ? 0x141a2a : seg === 'Evening' ? 0xd8b896 : 0xd9d6cb);
-  { const cl = ST.state ? STATE().climate : 'humid', base = FOGBASE || (FOGBASE = [scene.fog.near, scene.fog.far]); scene.fog.near = base[0]; scene.fog.far = base[1];
+  { const cl = ST.state ? STATE().climate : 'humid', base = FOGBASE || (FOGBASE = [scene.fog.near, scene.fog.far]); scene.fog.near = base[0]; scene.fog.far = base[1] * (OSMG && ST.area !== 'camp' ? 1.5 : 1);
     if (!night && cl === 'harmattan') { scene.fog.color.set(seg === 'Evening' ? 0xcfa77a : 0xd8c7a2); scene.fog.near = base[0] * 0.55; scene.fog.far = base[1] * 0.7; sunL.intensity *= 0.82; } // dusty harmattan haze
     if (!night && cl === 'cool') { scene.fog.color.set(0xc9d4de); scene.fog.near = base[0] * 0.7; sunL.intensity *= 0.9; }
     if (!night && cl === 'riverine') scene.fog.color.set(0xc6d4c4); }
@@ -2244,6 +2245,7 @@ async function bakeAll(m2, lew, fem, byName, C2) {
 
 let streetSpawned = false;
 function spawnStreet(T = TEX) {
+  realStreet();
   if (streetSpawned) return; streetSpawned = true;
   // pedestrians walking the sidewalks
   const civ = ['lCiv1', 'mCiv1', 'lCiv3', 'civF1', 'civF2', 'mSuit', 'civF3', 'lCorper2', 'mCiv2', 'civF1', 'lCiv4', 'corperF', 'mCorper'];
@@ -2261,10 +2263,10 @@ function spawnStreet(T = TEX) {
       label: 'Talk to Tolu (fellow corper)', act() {
         play(this, 'agree'); setTimeout(() => play(this, 'idle'), 2200);
         if (ST.phase === 0) { toast('Tolu: "Have you checked the group? Something about clearance."', 3200); return; }
-        toast('Tolu: "Danfo dey stop for Corper Close B/Stop, ₦300. Or trek — e no far, like 120 metres."', 4200);
+        toast('Tolu: "Danfo dey stop for ' + BSTOP() + ' B/Stop, ₦300. Or trek — e no far, like 120 metres."', 4200);
       }
     }
-  }).talk.act = function () { const t = NPC.find(n => n.name === 'Tolu'); play(t, 'wave'); setTimeout(() => play(t, 'idle'), 2600); if (ST.phase === 0) toast('Tolu: "Have you checked the group? Something about clearance."', 3200); else toast('Tolu: "Danfo dey stop for Corper Close bus stop, ₦300. Or trek — e no far, like 120 metres."', 4200); };
+  }).talk.act = function () { const t = NPC.find(n => n.name === 'Tolu'); play(t, 'wave'); setTimeout(() => play(t, 'idle'), 2600); if (ST.phase === 0) toast('Tolu: "Have you checked the group? Something about clearance."', 3200); else toast('Tolu: "Danfo dey stop for ' + BSTOP() + ' bus stop, ₦300. Or trek — e no far, like 120 metres."', 4200); };
   for (const dx of [-2.4, 2.4]) N('lewis', T.police, LGA.x + dx, -10.6, 0, {});
   NPC[NPC.length - 1].talk = { label: 'Ask the security man', act() { toast('Security: "Corper, clearance is inside, Hall B. Join the queue, no dulling."', 3600); } };
   // queue of corpers at the secretariat
@@ -2347,13 +2349,28 @@ function spawnWorld(T, gender) {
   setGroup('Platoon 5 · Camp Gist');
   campGo(0); setTOD('Morning');
   window.__merged = mergeStatic();
-  window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK };
+  window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK, osm: () => ({ OSM, OSMG, camera }) };
 }
 
+/* ---------------- real town around the street (OpenStreetMap, © OpenStreetMap contributors) ---------------- */
+let OSM = null, OSMG = null, OSMID = null;
+const RD = () => (OSM && OSM.road) || 'Corper Close';
+const BSTOP = () => OSM && OSM.stop ? OSM.stop.replace(/\s*(bus\s*stop|b\/stop)$/i, '') : RD();
+async function realStreet() {
+  const id = ST.state || 'LA'; if (OSMID === id) return; OSMID = id;
+  const D = await loadOSM(id); if (OSMID !== id) return;
+  if (OSMG) { scene.remove(OSMG); OSMG = null; } OSM = D; if (!D) return;
+  OSMG = buildOSM(scene, D, scene.fog.color.getHex()); OSMG.visible = ST.area !== 'camp';
+  camera.far = 1400; camera.updateProjectionMatrix(); setTOD(ST.seg || 'Morning');
+  if (BUSSIGN.m) { const n = BSTOP().toUpperCase(), old = BUSSIGN.m.material.map; BUSSIGN.m.material.map = ctex(512, 128, (c, w, h) => { c.fillStyle = '#0d47a1'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.textAlign = 'center'; let fs = 52; c.font = `900 ${fs}px Arial Black, Impact`; while (c.measureText(n).width > w - 24 && fs > 22) { fs -= 3; c.font = `900 ${fs}px Arial Black, Impact`; } c.fillText(n, w / 2, 62); c.font = '700 30px Arial'; c.fillText('BUS STOP', w / 2, 108); }); BUSSIGN.m.material.needsUpdate = true; if (old) old.dispose(); }
+  mapT = 0;
+}
+function compassOf(x, z) { const th = (OSM ? OSM.theta : 0) * Math.PI / 180, c = Math.cos(th), s = Math.sin(th), de = x * c + z * s, dn = x * s - z * c; const b = (Math.atan2(de, dn) * 180 / Math.PI + 360) % 360; return ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'][Math.round(b / 45) % 8]; }
+function lookDir(x, z) { const P = player.o.position, a = Math.atan2(x - P.x, z - P.z) - Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)); return ['straight ahead', 'to your right', 'behind you', 'to your left'][((Math.round(-a / (Math.PI / 2)) % 4) + 4) % 4]; }
 /* ---------------- maps: corner minimap + the phone's Map app (pan, zoom, pins, routes) ---------------- */
 const POIS = {
   camp: () => [['🚧', 'Camp gate', CAMP.spots.gate, '#5d4037'], ['📝', 'Registration', CAMP.spots.desk, '#1565c0'], ['🎽', 'Kit store', CAMP.spots.kit, '#6a1b9a'], ['🛏️', 'Hostel B', CAMP.spots.hostel, '#00695c'], ['🪖', 'Parade ground', { x: 0, z: CZ }, '#33691e'], ['🎤', 'Stage', CAMP.spots.stage, '#ad1457'], ['🛍️', 'Mammy market', CAMP.spots.market[2], '#ef6c00'], ['📋', 'Notice board', CAMP.spots.notice, '#455a64'], ['🏥', 'Camp clinic', CAMP.spots.clinic, '#c62828'], ['🎓', 'SAED hall', CAMP.spots.hall, '#4527a0'], ['🚌', 'Bus park', CAMP.busSpot, '#f9a825']],
-  street: () => [['🏠', 'Home · Corper Lodge', LODGE.door || LODGE, '#00695c'], ['🚌', 'Corper Close Bus Stop', { x: BUSSTOP_X, z: 9 }, '#f9a825'], ['🏛️', 'LGA Secretariat', { x: LGA.x, z: -10 }, '#1565c0'], ['🧹', 'CDS ground', { x: LGA.x + 9, z: -14 }, '#6a1b9a'], ['🏫', PKIND() === 'school' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Model School', SCH.gate, '#c62828'], ['🏥', PKIND() === 'clinic' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Health centre', WORK.clinic.door, '#00897b'], ['🏢', PKIND() === 'office' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Office complex', WORK.office.door, '#283593'], ['🛒', 'Mama Tolani Provisions', shopSpots.find(s => /TOLANI/.test(s.name)) || { x: 0, z: 9 }, '#ef6c00'], ['🍛', 'Buka & speaker', { x: 46, z: 9.4 }, '#ad1457'], ['⛱️', 'Umbrella stall', vendorSpots[0], '#455a64']],
+  street: () => [['🏠', 'Home · Corper Lodge', LODGE.door || LODGE, '#00695c'], ['🚌', BSTOP() + ' Bus Stop', { x: BUSSTOP_X, z: 9 }, '#f9a825'], ['🏛️', 'LGA Secretariat', { x: LGA.x, z: -10 }, '#1565c0'], ['🧹', 'CDS ground', { x: LGA.x + 9, z: -14 }, '#6a1b9a'], ['🏫', PKIND() === 'school' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Model School', SCH.gate, '#c62828'], ['🏥', PKIND() === 'clinic' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Health centre', WORK.clinic.door, '#00897b'], ['🏢', PKIND() === 'office' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Office complex', WORK.office.door, '#283593'], ['🛒', 'Mama Tolani Provisions', shopSpots.find(s => /TOLANI/.test(s.name)) || { x: 0, z: 9 }, '#ef6c00'], ['🍛', 'Buka & speaker', { x: 46, z: 9.4 }, '#ad1457'], ['⛱️', 'Umbrella stall', vendorSpots[0], '#455a64']],
 };
 const MAPV = { cx: 0, cz: 0, R: 70, follow: true, sel: null };
 function routePts(P, T) { // walking route: along the sidewalk, cross where you need to
@@ -2368,8 +2385,9 @@ function drawMap(g, W, H, cx, cz, R, full) {
   const rect = (x0, z0, x1, z1, fill, stroke, lw = 1) => { g.beginPath(); g.rect(X(x0), Z(z0), (x1 - x0) * k, (z1 - z0) * k); if (fill) { g.fillStyle = fill; g.fill(); } if (stroke) { g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); } };
   const label = (t, x, z, size = 11, col = '#5f6368', bold = '600') => { g.font = `${bold} ${size}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText(t, X(x), Z(z)); g.fillStyle = col; g.fillText(t, X(x), Z(z)); };
   g.clearRect(0, 0, W, H); g.fillStyle = camp ? '#cfe3bd' : '#eceef1'; g.fillRect(0, 0, W, H);
+  if (!camp && OSM) drawOSMMap(g, OSM, W, H, cx, cz, k, full);
   if (!camp) {
-    rect(-HALF, -60, HALF, -11.4, '#f4efe4'); rect(-HALF, 11.4, HALF, 60, '#f4efe4'); // plots behind the sidewalks
+    rect(-HALF, OSM ? -50 : -60, HALF, -11.4, '#f4efe4'); rect(-HALF, 11.4, HALF, OSM ? 32 : 60, '#f4efe4'); // plots behind the sidewalks
     rect(SCH.x - 21, -41.6, SCH.x + 21, -11.6, '#fdf1c9', '#e2c877', 1.5); rect(LGA.x - 18, -44, LGA.x + 18, -11.6, '#dcebfb', '#9dbfe6', 1.5); rect(64, 11.7, 80, 23.1, '#d7f0ea', '#86c7b8', 1.5); rect(20.5, -23.8, 37.5, -11.8, '#e3e6f5', '#9fa8da', 1.5);
     rect(-HALF, -11.4, HALF, -7.8, '#dfe2e6'); rect(-HALF, 7.8, HALF, 11.4, '#dfe2e6'); // sidewalks
     rect(-HALF, -7.2, HALF, 7.2, '#b9c0c9'); rect(-HALF, -6.6, HALF, 6.6, '#ffffff'); // road with casing
@@ -2385,7 +2403,7 @@ function drawMap(g, W, H, cx, cz, R, full) {
     rect(c.x0, c.z0, c.x1, c.z1, camp ? '#f3ede0' : '#d9dde3', camp ? '#b9ad95' : '#b7bdc7', 1);
   }
   if (full) {
-    if (!camp) { for (let x = Math.ceil((cx - R) / 70) * 70; x < cx + R; x += 70) label('C O R P E R   C L O S E   R O A D', x + 35, 3.4, Math.max(8, Math.min(12, k * 2.6)), '#8a9099', '500'); label('Model School', SCH.x, -30, 11, '#a17800'); label('Health centre', 72, 17.4, 11, '#00796b'); label('Offices', 29, -17.8, 11, '#283593'); label('Local Govt. Secretariat', LGA.x, -30, 11, '#1a5fb4');
+    if (!camp) { for (let x = Math.ceil((cx - R) / 70) * 70; x < cx + R; x += 70) label(RD().toUpperCase().split('').join(' ').replace(/   /g, '     '), x + 35, 3.4, Math.max(8, Math.min(12, k * 2.6)), '#8a9099', '500'); label('Model School', SCH.x, -30, 11, '#a17800'); label('Health centre', 72, 17.4, 11, '#00796b'); label('Offices', 29, -17.8, 11, '#283593'); label('Local Govt. Secretariat', LGA.x, -30, 11, '#1a5fb4');
       if (k > 3.2) for (const s of shopSpots) if (Math.abs(s.x - cx) < R) label(s.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).slice(0, 22), s.x, s.z + (s.side > 0 ? 5 : -5), 9, '#7a8088', '500'); }
     else { label('PARADE GROUND', 0, CZ, 10, '#77735f'); label('Camp road', 0, CZ + CAMP_HALF + 10, 10, '#8a9099', '500'); }
   }
@@ -2400,13 +2418,15 @@ function drawMap(g, W, H, cx, cz, R, full) {
   const a = player.o.rotation.y, px = X(P.x), py = Z(P.z); // you: blue dot with a heading cone
   g.save(); g.translate(px, py); g.rotate(-a + Math.PI); const cr = full ? 26 : 18, gr = g.createRadialGradient(0, 0, 2, 0, 0, cr); gr.addColorStop(0, 'rgba(26,115,232,.55)'); gr.addColorStop(1, 'rgba(26,115,232,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, cr, -Math.PI / 2 - 0.55, -Math.PI / 2 + 0.55); g.closePath(); g.fill(); g.restore();
   g.fillStyle = '#1a73e8'; g.strokeStyle = '#fff'; g.lineWidth = full ? 3 : 2; g.beginPath(); g.arc(px, py, full ? 7 : 5, 0, 7); g.fill(); g.stroke();
+  if (full && OSM && !camp) { g.font = '500 9px system-ui, sans-serif'; g.textAlign = 'right'; g.textBaseline = 'bottom'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.9)'; g.strokeText('© OpenStreetMap contributors', W - 6, H - 4); g.fillStyle = '#5f6368'; g.fillText('© OpenStreetMap contributors', W - 6, H - 4); }
 }
 let mapT = 0;
 function mapOpen() { return $('phone').classList.contains('on') && PH.screen === 'map'; }
 function updateMaps(dt) {
   mapT -= dt; if (mapT > 0 || !player) return; mapT = mapOpen() ? 0.1 : 0.25;
+  if (OSMG) OSMG.visible = ST.area !== 'camp';
   const P = player.o.position, mm = $('minimap'); if (mm) drawMap(mm.getContext('2d'), mm.width, mm.height, P.x, P.z, 42, false);
-  if (mapOpen()) { if (MAPV.follow) { MAPV.cx = P.x; MAPV.cz = ST.area === 'camp' ? P.z : clamp(P.z, -14, 14); } const c = $('pmapc'), g = c.getContext('2d'); g.save(); g.scale(2, 2); drawMap(g, c.width / 2, c.height / 2, MAPV.cx, MAPV.cz, MAPV.R, true); g.restore(); }
+  if (mapOpen()) { if (MAPV.follow) { MAPV.cx = P.x; MAPV.cz = ST.area === 'camp' || OSM ? P.z : clamp(P.z, -14, 14); } const c = $('pmapc'), g = c.getContext('2d'); g.save(); g.scale(2, 2); drawMap(g, c.width / 2, c.height / 2, MAPV.cx, MAPV.cz, MAPV.R, true); g.restore(); }
 }
 function mapSheet(n, p) {
   MAPV.sel = n; const sh = $('pmapsheet'), P = player.o.position, d = Math.round(routeLen(P, p)), walkMin = Math.max(1, Math.round(d / 75)), street = ST.area === 'street' && d >= 18;
@@ -2416,14 +2436,17 @@ function mapSheet(n, p) {
 function mapList() {
   const pl = POIS[ST.area] ? POIS[ST.area]() : [], P = player.o.position;
   $('pmapl').innerHTML = pl.map(([ic, n, p], i) => `<button data-i="${i}">${ic} ${n} <small>${Math.round(routeLen(P, p))} m</small></button>`).join('');
-  [...$('pmapl').children].forEach((b, i) => b.onclick = () => { const [, n, p] = pl[i]; MAPV.follow = false; MAPV.cx = p.x; MAPV.cz = ST.area === 'camp' ? p.z : clamp(p.z, -14, 14); mapSheet(n, p); $('pmap').scrollTop = 0; mapT = 0; });
+  const LM = OSMG && ST.area !== 'camp' ? OSMG.userData.LM : [];
+  if (LM.length) $('pmapl').innerHTML += `<div class="lmh">Landmarks around ${STATE().capital}</div>` + LM.map((l, i) => `<button data-l="${i}">${{ rock: '⛰️', mosque: '🕌', church: '⛪', stadium: '🏟️', tower: '🗼', bridge: '🌉', monument: '🗿', palace: '🏰', airport: '✈️', block: '🏢' }[l.t] || '📍'} ${l.name} <small>${l.dist >= 1000 ? (l.dist / 1000).toFixed(1) + ' km' : l.dist + ' m'} ${compassOf(l.x, l.z)}</small></button>`).join('');
+  for (const b of $('pmapl').querySelectorAll('[data-l]')) b.onclick = () => { const l = LM[+b.dataset.l], P = l.mesh.position; toast(`${l.name}: about ${l.dist >= 1000 ? (l.dist / 1000).toFixed(1) + ' km' : l.dist + ' m'} ${compassOf(l.x, l.z)} of here. Look ${lookDir(P.x, P.z)} on the skyline.`, 4200); };
+  [...$('pmapl').querySelectorAll('[data-i]')].forEach((b, i) => b.onclick = () => { const [, n, p] = pl[i]; MAPV.follow = false; MAPV.cx = p.x; MAPV.cz = ST.area === 'camp' || OSM ? p.z : clamp(p.z, -14, 14); mapSheet(n, p); $('pmap').scrollTop = 0; mapT = 0; });
 }
 { // map gestures: drag to pan, tap a pin, buttons to zoom and recentre
   const c = $('pmapc'); let d0 = null, moved = 0;
   c.addEventListener('pointerdown', e => { d0 = { x: e.clientX, y: e.clientY }; moved = 0; try { c.setPointerCapture(e.pointerId); } catch (er) { } });
   c.addEventListener('pointermove', e => { if (!d0) return; const s = (MAPV.R * 2) / c.clientWidth, dx = e.clientX - d0.x, dy = e.clientY - d0.y; moved += Math.abs(dx) + Math.abs(dy); if (moved > 6) { MAPV.follow = false; MAPV.cx -= dx * s; MAPV.cz -= dy * s; mapT = 0; } d0 = { x: e.clientX, y: e.clientY }; });
   c.addEventListener('pointerup', e => { if (d0 && moved <= 6) { const r = c.getBoundingClientRect(), sx = (c.width / 2) / r.width, x = (e.clientX - r.left) * sx, y = (e.clientY - r.top) * sx; let best = null, bd = 26; for (const h of MAPV.hit || []) { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = h; } } if (best) mapSheet(best.n, best.p); else { $('pmapsheet').hidden = true; MAPV.sel = null; } mapT = 0; } d0 = null; });
-  $('mzin').onclick = () => { MAPV.R = Math.max(18, MAPV.R / 1.4); mapT = 0; }; $('mzout').onclick = () => { MAPV.R = Math.min(140, MAPV.R * 1.4); mapT = 0; }; $('mzme').onclick = () => { MAPV.follow = true; mapT = 0; };
+  $('mzin').onclick = () => { MAPV.R = Math.max(18, MAPV.R / 1.4); mapT = 0; }; $('mzout').onclick = () => { MAPV.R = Math.min(OSM && ST.area !== 'camp' ? 520 : 140, MAPV.R * 1.4); mapT = 0; }; $('mzme').onclick = () => { MAPV.follow = true; mapT = 0; };
 }
 $('pmapbtn').onclick = () => phShow(PH.screen === 'map' ? (thr(ST.group || 'Platoon 5 · Camp Gist').msgs.length ? 'thread' : 'home') : 'map');
 for (const b of document.querySelectorAll('#phome [data-app]')) b.onclick = () => phShow(b.dataset.app);

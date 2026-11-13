@@ -15,3 +15,5 @@ Shop names and the "Local Govt. Secretariat" are fictional. Not an official NYSC
 
 Nigeria data (js/naija.js): state names, capitals, official nicknames and the 774 LGA names from the ng.states dataset by skaex (github.com/skaex/ng.states). Orientation camp locations from public listings (legit.ng, 2025); camps can move, so treat them as indicative. Urban/rural tags, costs, foods, greetings, organisations and climate notes are game design, not official data. All organisations and people in the game are fictional.
 Phone games: "Whot!" follows the common Nigerian Whot rules (Hold on, Pick two, Suspension, General market, Whot 20). Danfo Dash is an original mini-game.
+
+Real streets, buildings, place names and landmark positions: © OpenStreetMap contributors, available under the Open Database Licence (ODbL), openstreetmap.org/copyright. Extracted from the Geofabrik Nigeria file with osmium (tools/NYSC_OSM_Extract.ipynb, tools/osm_prep.py). Data in osm/*.json is ODbL.
