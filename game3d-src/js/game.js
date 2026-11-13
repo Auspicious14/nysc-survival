@@ -26,7 +26,8 @@ const POSTINGS = [
 /* ---------------- Nigeria: your state, your LGA, your PPA ---------------- */
 const STATE = () => STATES.find(s => s.id === (ST.state || 'LA')) || STATES.find(s => s.id === 'LA');
 const ZN = () => ZONES[STATE().zone];
-const SNAME = () => STATE().name;
+const TOK = k => window.__tokens ? '{' + k + '}' : null; // voice-line capture uses placeholders
+const SNAME = () => TOK('STATE') || STATE().name;
 function seedRand(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
 const COURSES = [ // course → how likely each kind of PPA is
   ['education', 'Education / Arts', { edu: .8, gov: .1, ngo: .1 }], ['science', 'Sciences', { edu: .6, health: .1, priv: .15, gov: .15 }],
@@ -36,8 +37,8 @@ const COURSES = [ // course → how likely each kind of PPA is
 ];
 const ORGWORD = { SW: ['Omoluabi', 'Ireti', 'Olumo', 'Ayomide'], SE: ['Ugochukwu', 'Nkem', 'Ifeoma', 'Udo'], SS: ['Creekside', 'Atlantic', 'Ebiye', 'Delta Breeze'], NC: ['Confluence', 'Harmony', 'Middlebelt', 'Unity Gate'], NE: ['Savannah', 'Lake Chad', 'Gongola', 'Sahel Star'], NW: ['Arewa', 'Kurmi', 'Rimi', 'Sahel'] };
 const PRINCIPALS = { SW: ['Mr. Adebayo', 'Mrs. Okon'], SE: ['Mr. Okonkwo', 'Mrs. Eze'], SS: ['Mr. Ebiere', 'Mrs. Okon'], NC: ['Mr. Terna', 'Mrs. Abdullahi'], NE: ['Malam Bello', 'Mrs. Hauwa'], NW: ['Malam Sani', 'Mrs. Zainab'] };
-const PRN = () => (ST.state && ST.state !== 'LA' ? PRINCIPALS[STATE().zone] : PRINCIPALS.SW)[0];
-const TCH = () => (ST.state && ST.state !== 'LA' ? PRINCIPALS[STATE().zone] : PRINCIPALS.SW)[1];
+const PRN = () => TOK('PRN') || (ST.state && ST.state !== 'LA' ? PRINCIPALS[STATE().zone] : PRINCIPALS.SW)[0];
+const TCH = () => TOK('TCH') || (ST.state && ST.state !== 'LA' ? PRINCIPALS[STATE().zone] : PRINCIPALS.SW)[1];
 function orgsFor(st, lga, tier) { // deterministic per LGA, so every player posted there sees the same places
   const R = seedRand(st.id + '/' + lga), z = st.zone, L = lga.replace(/\//g, ' / '), w = ORGWORD[z], pk = a => a[(R() * a.length) | 0], O = [];
   const sch = { NW: ['Government Secondary School', 'Government Girls Secondary School', 'Government Day Junior Secondary School'], NE: ['Government Secondary School', 'Government Girls Secondary School', 'Government Day Secondary School'], SW: ['Community High School', 'Grammar School', 'Comprehensive High School'], SE: ['Community Secondary School', 'Girls\' Secondary School', 'Boys\' High School'], SS: ['Government Secondary School', 'Model Secondary School', 'Comprehensive High School'], NC: ['Government Secondary School', 'Community Secondary School', 'Government Day Secondary School'] }[z];
@@ -68,7 +69,7 @@ function drawPosting(stId, course) {
   return { id: lga, short: lga, lga: lga + ' LGA', state: st.name, stateId: st.id, tier, org, sector: org.sector, kind: org.kind, ppa: org.name, prof: profileFor(st, lga, tier) };
 }
 const PF = () => (ST.post && ST.post.prof) || POSTINGS.find(p => ST.post && p.id === ST.post.id) || POSTINGS[0];
-const LGN = () => (ST.post && ST.post.short) || PF().short;
+const LGN = () => TOK('LGA') || (ST.post && ST.post.short) || PF().short;
 const GRP = () => LGN() + ' LGA Corpers';
 const fareOf = n => Math.max(50, Math.round(n * PF().fx / 50) * 50);
 const naira = n => (n < 0 ? '−₦' : '₦') + Math.round(Math.abs(n)).toLocaleString('en-NG');
@@ -1243,17 +1244,19 @@ function pickVoice(f) {
   const en = VOICES.filter(v => /^en/i.test(v.lang)), ng = en.filter(v => /NG/i.test(v.lang)), pool = ng.length ? ng : en.filter(v => /(GB|ZA|KE|GH|IN|AU|IE)/i.test(v.lang)).concat(en);
   return pool.find(v => (f ? FEM : MAL).test(v.name)) || pool[0] || null;
 }
-const FEMALE_NAMES = /tolu|chioma|mama|aunty|nurse|mc spicy|bisi|ronke|chidinma|photographer|she/i;
+const FEMALE_NAMES = /tolu|chioma|mama|aunty|nurse|mc spicy|bisi|ronke|chidinma|photographer|she|matron|mrs\.|miss |hauwa|zainab|halima|fatima|ngozi|folake|ladi|hadiza|ofure|amina|rakiya|nkechi|kemi|mummy|okon|eze|abdullahi/i;
 // Recorded Nigerian voices (YarnGPT): voice/manifest.json lists line ids; voice/<id>.mp3 holds the audio.
 const VOICE_IDS = new Set(); let voiceEl = null;
 const VOICE_CACHE = {};
 fetch('voice/manifest.json').then(r => r.ok ? r.json() : []).then(a => { for (const id of a) { VOICE_IDS.add(id); const el = new Audio(); el.preload = 'auto'; el.src = 'voice/' + id + '.mp3'; VOICE_CACHE[id] = el; } }).catch(() => { });
 function stopVoice() { try { if (voiceEl) voiceEl.pause(); if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } }
 function fnv(t) { let h = 0x811c9dc5; for (const b of new TextEncoder().encode(t)) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); }
-function speak(text, female, priority = true) {
-  if (MUTED || !text) return;
+function speak(text, female, priority = true, who = '') {
+  if (!text) return;
   let t = String(text).replace(/<[^>]+>/g, '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').replace(/₦\s?([\d,]+)/g, '$1 naira').replace(/[“”"]/g, '').replace(/\s+/g, ' ').trim();
   if (!t) return;
+  if (window.__said) window.__said.set(t, { who: String(who || ''), female: !!female });
+  if (MUTED) return;
   const id = fnv(t);
   if (VOICE_IDS.has(id)) { if (!priority && voiceEl && !voiceEl.paused) return; try { if (voiceEl) voiceEl.pause(); if (window.speechSynthesis) speechSynthesis.cancel(); voiceEl = VOICE_CACHE[id] || new Audio('voice/' + id + '.mp3'); voiceEl.currentTime = 0; voiceEl.volume = 1; voiceEl.playbackRate = 1.0; voiceEl.preservesPitch = true; voiceEl.play().catch(() => { }); window.__lastVoice = id; } catch (e) { } return; }
   if (!window.speechSynthesis) return;
@@ -1264,7 +1267,7 @@ function speak(text, female, priority = true) {
     u.rate = 0.92; u.pitch = female ? 1.15 : 0.88; u.volume = 1; speechSynthesis.speak(u);
   } catch (e) { }
 }
-function speakToast(t) { const m = String(t).match(/^([^:"]{1,40}):?\s*"([^"]+)"/) || String(t).match(/"([^"]{4,})"/); if (!m) return; const who = m.length > 2 ? m[1] : '', line = m.length > 2 ? m[2] : m[1]; speak(line, FEMALE_NAMES.test(who)); }
+function speakToast(t) { const m = String(t).match(/^([^:"]{1,40}):?\s*"([^"]+)"/) || String(t).match(/"([^"]{4,})"/); if (!m) return; const who = m.length > 2 ? m[1] : '', line = m.length > 2 ? m[2] : m[1]; speak(line, FEMALE_NAMES.test(who), true, who); }
 window.__sndInfo = () => AC ? { state: AC.state, music: SND.music.gain.value, step: SND.step, amb: amb.gain.value, crick: SND.crick.gain.value } : null;
 function setMute(on) { MUTED = on; if (MASTER) MASTER.gain.value = on ? 0 : 0.9; if (on && window.speechSynthesis) speechSynthesis.cancel(); const b = $('bmute'); if (b) b.textContent = on ? '🔇 Sound off' : '🔊 Sound on'; try { localStorage.setItem('nysc3d-mute', on ? '1' : '0'); } catch (e) { } }
 try { MUTED = localStorage.getItem('nysc3d-mute') === '1'; } catch (e) { }
@@ -1374,7 +1377,7 @@ function interact() {
 let DLG = null;
 const SAY = t => t; // marks a fixed line to record (tools/extract_lines.py collects SAY('...'))
 function ask(who, text, choices, say) {
-  DLG = { who, text, choices }; const el = $('dlg'); speak(say || text, FEMALE_NAMES.test(who));
+  DLG = { who, text, choices }; const el = $('dlg'); speak(say || text, FEMALE_NAMES.test(who), true, who);
   el.innerHTML = `<b>${who}</b><p>${text}</p><div class="ch">${choices.map((c, i) => `<button data-i="${i}"><kbd>${i + 1}</kbd>${c[0]}</button>`).join('')}</div>`;
   el.hidden = false; [...el.querySelectorAll('button')].forEach((b, i) => b.onclick = () => choose(i));
 }
@@ -1652,10 +1655,10 @@ function drawBoard(lines, sub) {
   SCH.boardTex.needsUpdate = true;
 }
 const PKIND = () => (ST.post && ST.post.kind) || 'school';
-const PPANAME = () => (ST.post && ST.post.ppa) || 'Corper Close Model School';
+const PPANAME = () => TOK('PPA') || (ST.post && ST.post.ppa) || 'Corper Close Model School';
 const PPADOOR = () => PKIND() === 'school' ? SCH.gate : WORK[PKIND()].door;
 const BOSSES = { clinic: { SW: 'Matron Folake', SE: 'Matron Ngozi', SS: 'Matron Tamara', NC: 'Matron Ladi', NE: 'Matron Fatima', NW: 'Matron Hadiza' }, office: { SW: 'Mr. Bankole', SE: 'Mr. Obinna', SS: 'Mrs. Ofure', NC: 'Mr. Danladi', NE: 'Mr. Garba', NW: 'Mr. Yusuf' } };
-const BOSS = () => PKIND() === 'school' ? PRN() : BOSSES[PKIND()][(ST.state ? STATE() : { zone: 'SW' }).zone];
+const BOSS = () => PKIND() === 'school' ? PRN() : TOK('BOSS') || BOSSES[PKIND()][(ST.state ? STATE() : { zone: 'SW' }).zone];
 const BOSSROLE = () => PKIND() === 'clinic' ? 'Matron' : PKIND() === 'office' ? (ST.post && ST.post.sector === 'gov' ? 'Head of Admin' : ST.post && ST.post.sector === 'ngo' ? 'Programme Coordinator' : 'Branch Manager') : 'Principal';
 const PPA_FLOWS = {
   clinic: [
@@ -1710,7 +1713,7 @@ function work1() {
     : `"So you are our new corper. Welcome to ${esc(PPANAME())}. We resume 8 AM, not 8:30. You will help with reports, customers and anything that has a printer inside it."`, [
     ['"Yes ma/sir. I\'m ready to learn."', () => { ST.rep += 2; ppaGo(2); }],
     ['"Do you people pay corpers allowance here?"', () => { ST.stress = clamp(ST.stress + 3, 0, 100); toast(BOSS() + ': "Let us see your work first."', 2800); ppaGo(2); }],
-  ]);
+  ], K === 'clinic' ? SAY('Corper, welcome. We are three nurses for this whole community. You will help with triage, records and immunisation days. Can you stand the sight of blood?') : SAY('So you are our new corper. Welcome. We resume 8 AM, not 8:30. You will help with reports, customers and anything that has a printer inside it.'));
 }
 const TRIAGE = [
   [['A child with high fever who just had a convulsion', 2], ['A man who wants his blood pressure checked "just to know"', 0], ['A woman for her routine antenatal visit', 1]],
@@ -2149,6 +2152,7 @@ function yearType() {
   if ((ST.infoPlug || 0) >= 3) return ['THE INFORMATION PLUG', 'You checked before you trusted. The group chat now waits for your confirmation.'];
   return ['THE "I JUST WANT POP" CORPER', 'Head down, attendance up, no wahala. And now: POP.'];
 }
+window.__vc = { YEVENTS, PPA_JOBS, ySaturday, work1, triage, reportFix, recordsEthics, printerEthics, work2, engLesson, market, callUpLetter, socialNight, playerDance, lodgeSleep, travelMenu, WORK };
 window.__year = { Y, startYear, yMorning, ySleep, ySignPPA, ySignCDS, yClearance, yPOP, yInteractables, yMarking, yPrinter };
 
 /* ---------------- boot ---------------- */
@@ -2532,7 +2536,7 @@ function updateUI(dt) {
   // conductor bubble
   let cd = null, bd = 18; for (const n of NPC) if (n.bubble && player && !n.hidden) { const d = n.o.position.distanceTo(player.o.position); if (d < bd) { bd = d; cd = n; } } bubT -= dt; if (!cd) bub.style.display = 'none';
   if (cd) { tmp.copy(cd.o.position); tmp.y += 2.15; tmp.project(camera); const vis = tmp.z < 1 && cd.o.position.distanceTo(camera.position) < 30;
-    if (bubT <= 0) { bubT = 3.2; bubI++; } const btxt = cd.bubble[bubI % cd.bubble.length]; if (btxt !== bub.textContent) { bub.textContent = btxt; cd.said = cd.said || new Set(); if (ST.ready && (ST.drill || (player && cd.o.position.distanceTo(player.o.position) < 6 && !cd.said.has(btxt))) && btxt !== '…' && !DLG && !ST.busy) { cd.said.add(btxt); speak(btxt, cd.rig === 'fem', !!ST.drill); } }
+    if (bubT <= 0) { bubT = 3.2; bubI++; } const btxt = cd.bubble[bubI % cd.bubble.length]; if (btxt !== bub.textContent) { bub.textContent = btxt; cd.said = cd.said || new Set(); if (ST.ready && (ST.drill || (player && cd.o.position.distanceTo(player.o.position) < 6 && !cd.said.has(btxt))) && btxt !== '…' && !DLG && !ST.busy) { cd.said.add(btxt); speak(btxt, cd.rig === 'fem', !!ST.drill, cd.name || (cd.rig === 'fem' ? 'woman' : 'man')); } }
     bub.style.display = vis ? 'block' : 'none'; bub.style.left = ((tmp.x + 1) / 2 * innerWidth) + 'px'; bub.style.top = ((1 - tmp.y) / 2 * innerHeight) + 'px'; }
   // objective arrow
   const T0 = ST.target; if (T0 && player && !ST.drill) { const d = Math.round(Math.hypot(T0.x - player.o.position.x, T0.z - player.o.position.z)); const a = Math.atan2(T0.x - player.o.position.x, T0.z - player.o.position.z) - Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)); const arrows = ['⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️']; const k = ((Math.round(-a / (Math.PI / 4)) % 8) + 8) % 8; const tx = `${arrows[k]} ${T0.label} · ${d} m${ST.area === 'street' && d > 18 && !ST.riding ? ' · 🛺 tap to ride' : ''}`; if ($('arrow').textContent !== tx) $('arrow').textContent = tx; }
