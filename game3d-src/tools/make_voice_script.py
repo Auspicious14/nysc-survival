@@ -65,7 +65,7 @@ def add(text, who='', female=False, zone='', prio=1):
     i = fnv(t)
     if i in lines: lines[i]['prio'] = min(lines[i]['prio'], prio); return
     v, role = pick_voice(who, female, t)
-    lines[i] = {'id': i, 'text': t, 'voice': v, 'style': f'Say this exactly as written, as {role}, in {ACCENT['']}. Sound like a real person in a real conversation, not a radio presenter. Natural pace, small pauses at commas and full stops. Pidgin words are read as Nigerians say them.', 'prio': prio}
+    lines[i] = {'id': i, 'text': t, 'voice': v, 'style': f'Speaker: {role}. Accent: {ACCENT[""]}. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.', 'prio': prio}
 
 def expand(text, who, female):
     toks = set(re.findall(r'\{(PRN|TCH|BOSS|STATE)\}', text + ' ' + who))
