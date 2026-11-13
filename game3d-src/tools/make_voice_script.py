@@ -65,7 +65,7 @@ def add(text, who='', female=False, zone='', prio=1):
     i = fnv(t)
     if i in lines: lines[i]['prio'] = min(lines[i]['prio'], prio); return
     v, role = pick_voice(who, female, t)
-    lines[i] = {'id': i, 'text': t, 'voice': v, 'style': f'Say this exactly as written, as {role}, in {ACCENT[zone]}. Sound like a real person in a real conversation, not a radio presenter. Natural pace, small pauses at commas and full stops. Pidgin words are read as Nigerians say them.', 'prio': prio}
+    lines[i] = {'id': i, 'text': t, 'voice': v, 'style': f'Say this exactly as written, as {role}, in {ACCENT['']}. Sound like a real person in a real conversation, not a radio presenter. Natural pace, small pauses at commas and full stops. Pidgin words are read as Nigerians say them.', 'prio': prio}
 
 def expand(text, who, female):
     toks = set(re.findall(r'\{(PRN|TCH|BOSS|STATE)\}', text + ' ' + who))
@@ -90,6 +90,6 @@ for m in re.finditer(r"bubble:\s*\[([^\]]+)\]", src):  # bubbles the walk could 
 for c in ['RIGHT… TURN!', 'LEFT… TURN!', 'ABOUT… TURN!', 'PLATOON 5… ATTENTION!', 'STAND… AT EASE!']: add(c, 'marshal', False, '', 1)
 for m in re.finditer(r"SAY\('((?:[^'\\]|\\.)*)'\)", src): add(m.group(1).replace("\\'", "'"), '', False, '', 1)
 
-out = sorted(lines.values(), key=lambda l: (l['prio'], l['voice'], l['id']))
+out = sorted(lines.values(), key=lambda l: (l['voice'], l['prio'], l['id']))
 json.dump(out, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(out), 'lines,', sum(len(l['text']) for l in out), 'characters →', OUT, '| by priority:', {p: sum(1 for l in out if l['prio'] == p) for p in (1, 2, 3)})
