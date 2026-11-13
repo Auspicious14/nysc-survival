@@ -5,6 +5,8 @@ import { GLTFLoader } from './GLTFLoader.js';
 import * as SkeletonUtils from './SkeletonUtils.js';
 import { Sky } from './Sky.js';
 import { mergeGeometries } from './BufferGeometryUtils.js';
+import { STATES, ZONES } from './naija.js';
+import { mountWhot, mountDash } from './phonegames.js';
 
 const $ = id => document.getElementById(id);
 const TOUCH = matchMedia('(hover:none)').matches || innerWidth < 760;
@@ -21,8 +23,52 @@ const POSTINGS = [
   { id: 'surulere', short: 'Surulere', density: 'High', w: 2, blurb: 'Stadium, bukas, and an owambe every Saturday.', queue: 13, rumour: 0.5, cdsOff: 0.2, rent: 12000, food: 1700, fx: 1, hustle: 1.1, crowd: 0.9 },
   { id: 'epe', short: 'Epe', density: 'Low', w: 2, blurb: 'Lagoon breeze, fish market, short queues. Fewer gigs, less wahala.', queue: 5, rumour: 0.2, cdsOff: 0.1, rent: 7000, food: 1200, fx: 0.8, hustle: 0.7, crowd: 0.45 },
 ];
-const PF = () => POSTINGS.find(p => ST.post && p.id === ST.post.id) || POSTINGS[0];
-const LGN = () => PF().short;
+/* ---------------- Nigeria: your state, your LGA, your PPA ---------------- */
+const STATE = () => STATES.find(s => s.id === (ST.state || 'LA')) || STATES.find(s => s.id === 'LA');
+const ZN = () => ZONES[STATE().zone];
+const SNAME = () => STATE().name;
+function seedRand(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619); return () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
+const COURSES = [ // course → how likely each kind of PPA is
+  ['education', 'Education / Arts', { edu: .8, gov: .1, ngo: .1 }], ['science', 'Sciences', { edu: .6, health: .1, priv: .15, gov: .15 }],
+  ['health', 'Nursing / Medicine / Pharmacy', { health: .85, edu: .1, gov: .05 }], ['tech', 'Computer Science / Engineering', { priv: .45, edu: .35, gov: .2 }],
+  ['business', 'Accounting / Business', { priv: .4, gov: .3, edu: .3 }], ['media', 'Mass Communication', { priv: .35, gov: .25, ngo: .15, edu: .25 }],
+  ['law', 'Law', { gov: .6, ngo: .2, edu: .2 }], ['agric', 'Agriculture', { gov: .45, edu: .35, priv: .2 }],
+];
+const ORGWORD = { SW: ['Omoluabi', 'Ireti', 'Olumo', 'Ayomide'], SE: ['Ugochukwu', 'Nkem', 'Ifeoma', 'Udo'], SS: ['Creekside', 'Atlantic', 'Ebiye', 'Delta Breeze'], NC: ['Confluence', 'Harmony', 'Middlebelt', 'Unity Gate'], NE: ['Savannah', 'Lake Chad', 'Gongola', 'Sahel Star'], NW: ['Arewa', 'Kurmi', 'Rimi', 'Sahel'] };
+const PRINCIPALS = { SW: ['Mr. Adebayo', 'Mrs. Okon'], SE: ['Mr. Okonkwo', 'Mrs. Eze'], SS: ['Mr. Ebiere', 'Mrs. Okon'], NC: ['Mr. Terna', 'Mrs. Abdullahi'], NE: ['Malam Bello', 'Mrs. Hauwa'], NW: ['Malam Sani', 'Mrs. Zainab'] };
+const PRN = () => (ST.state && ST.state !== 'LA' ? PRINCIPALS[STATE().zone] : PRINCIPALS.SW)[0];
+const TCH = () => (ST.state && ST.state !== 'LA' ? PRINCIPALS[STATE().zone] : PRINCIPALS.SW)[1];
+function orgsFor(st, lga, tier) { // deterministic per LGA, so every player posted there sees the same places
+  const R = seedRand(st.id + '/' + lga), z = st.zone, L = lga.replace(/\//g, ' / '), w = ORGWORD[z], pk = a => a[(R() * a.length) | 0], O = [];
+  const sch = { NW: ['Government Secondary School', 'Government Girls Secondary School', 'Government Day Junior Secondary School'], NE: ['Government Secondary School', 'Government Girls Secondary School', 'Government Day Secondary School'], SW: ['Community High School', 'Grammar School', 'Comprehensive High School'], SE: ['Community Secondary School', 'Girls\' Secondary School', 'Boys\' High School'], SS: ['Government Secondary School', 'Model Secondary School', 'Comprehensive High School'], NC: ['Government Secondary School', 'Community Secondary School', 'Government Day Secondary School'] }[z];
+  for (const k of sch) O.push({ name: k === 'Grammar School' ? `${L} Grammar School` : `${k}, ${L}`, sector: 'edu', kind: 'school' });
+  O.push({ name: `LGEA Primary School, ${L}`, sector: 'edu', kind: 'school' });
+  O.push({ name: `Primary Health Centre, ${L}`, sector: 'health', kind: 'clinic' });
+  if (tier !== 'r') O.push({ name: tier === 'u' ? `General Hospital, ${L}` : `Comprehensive Health Centre, ${L}`, sector: 'health', kind: 'clinic' });
+  O.push({ name: `${L} LG Council, Admin Department`, sector: 'gov', kind: 'office' });
+  if (tier === 'u') { O.push({ name: `${st.name} State Ministry of ${pk(['Education', 'Health', 'Agriculture', 'Information', 'Youth & Sports'])}`, sector: 'gov', kind: 'office' }); O.push({ name: `${st.name} State Internal Revenue Service`, sector: 'gov', kind: 'office' }); }
+  if (tier !== 'r') { const a = pk(w), b = pk(w); O.push({ name: `${a} Microfinance Bank`, sector: 'priv', kind: 'office' }); O.push({ name: `${b} ${pk(['Tech Hub', 'Logistics Ltd', 'Media & Communications', 'Agro-Allied Ltd', 'Pharmacy Ltd'])}`, sector: 'priv', kind: 'office' }); }
+  O.push({ name: `${pk(w)} Youth & Community Initiative`, sector: 'ngo', kind: 'office' });
+  return O;
+}
+function profileFor(st, lga, tier) {
+  const fixed = st.id === 'LA' && POSTINGS.find(p => p.short.replace(/\W/g, '').toLowerCase() === lga.replace(/\W/g, '').toLowerCase());
+  if (fixed) return { ...fixed };
+  const T = { u: { queue: 15, rumour: .6, cdsOff: .2, crowd: 1, hustle: 1, rentK: 1, foodK: 1, density: 'High' }, s: { queue: 9, rumour: .42, cdsOff: .16, crowd: .7, hustle: .8, rentK: .6, foodK: .85, density: 'Medium' }, r: { queue: 5, rumour: .25, cdsOff: .12, crowd: .45, hustle: .6, rentK: .4, foodK: .75, density: 'Low' } }[tier], c = st.cost;
+  const big = ['LA', 'FC', 'KN', 'OY', 'RV'].includes(st.id) && tier === 'u';
+  return { id: lga, short: lga, density: big ? 'Very high' : T.density, queue: big ? T.queue + 5 : T.queue, rumour: T.rumour, cdsOff: T.cdsOff, crowd: T.crowd, hustle: +(T.hustle * (0.6 + c * 0.5)).toFixed(2),
+    rent: Math.round(15000 * c * T.rentK / 500) * 500, food: Math.round(1800 * c * T.foodK / 50) * 50, fx: +(c * (tier === 'r' ? .8 : tier === 's' ? .85 : 1)).toFixed(2),
+    blurb: `${tier === 'u' ? 'Town LGA' : tier === 's' ? 'Semi-urban LGA' : 'Rural LGA'} in ${st.name}. ${st.flav || ''}`.trim() };
+}
+function drawPosting(stId, course) {
+  const st = STATES.find(s => s.id === stId) || STATES.find(s => s.id === 'LA'), wts = { u: 3, s: 2, r: 1.6 };
+  let r = Math.random() * st.lgas.reduce((n, l) => n + wts[l[1]], 0), pickL = st.lgas[0]; for (const l of st.lgas) { if ((r -= wts[l[1]]) < 0) { pickL = l; break; } }
+  const [lga, tier] = pickL, orgs = orgsFor(st, lga, tier), cw = (COURSES.find(c => c[0] === course) || COURSES[0])[2];
+  let tot = orgs.reduce((n, o) => n + (cw[o.sector] || .03), 0), q = Math.random() * tot, org = orgs[0]; for (const o of orgs) { if ((q -= (cw[o.sector] || .03)) < 0) { org = o; break; } }
+  return { id: lga, short: lga, lga: lga + ' LGA', state: st.name, stateId: st.id, tier, org, sector: org.sector, kind: org.kind, ppa: org.name, prof: profileFor(st, lga, tier) };
+}
+const PF = () => (ST.post && ST.post.prof) || POSTINGS.find(p => ST.post && p.id === ST.post.id) || POSTINGS[0];
+const LGN = () => (ST.post && ST.post.short) || PF().short;
 const GRP = () => LGN() + ' LGA Corpers';
 const fareOf = n => Math.max(50, Math.round(n * PF().fx / 50) * 50);
 const naira = n => (n < 0 ? '−₦' : '₦') + Math.round(Math.abs(n)).toLocaleString('en-NG');
@@ -159,6 +205,13 @@ const addCol = (x0, x1, z0, z1) => colliders.push({ x0: Math.min(x0, x1), x1: Ma
 
 /* ---------------- buildings ---------------- */
 const WALLS = ['#e8dcc0', '#d9c4a3', '#c9d6d2', '#e3c7b4', '#bfc9b3', '#ede6d6', '#d8b48c', '#b7c4cf', '#e6d3a8', '#cfe0c8'];
+// shop names by zone (same slots: 0, 4 and 9 sell food)
+const ZSHOPS = {
+  SE: [['MAMA NKECHI PROVISIONS', 'Pure water • Bread • Indomie • Malt'], ['ODOGWU CUTS BARBING SALON', 'Low cut • Gentle man • Punk'], ['CHIDI BUSINESS CENTRE', 'Photocopy • Lamination • Passport'], ['NNEKA PHARMACY', 'Drugs • Cosmetics • Test strips'], ['NWANYI OMA KITCHEN', 'Abacha • Okpa • Nkwobi'], ['IFEANYI PHONES & ACCESSORIES', 'Chargers • Screen guard • Repairs'], ['EBUKA POS & TRANSFERS', 'Withdrawal • Deposit • Airtime'], ['MAMA UCHE RESTAURANT', 'Ofe onugbu • Fufu • Pepper soup'], ['DIVINE TOUCH TAILORING', 'Khaki adjustment while you wait'], ['CHUKS CHOPS & DRINKS', 'Shawarma • Puff-puff • Chapman'], ['ONYEKA ELECTRICALS', 'Bulbs • Extension • Rechargeable fan'], ['FRESH & CLEAN DRY CLEANERS', 'Starch • Iron • Same day'], ['OKWY CYBER CAFE', 'Browsing • Printing • JAMB reg'], ['IKENGA VULCANIZER', 'Tyre • Gum • Air']],
+  SS: [['MAMA EBI PROVISIONS', 'Pure water • Bread • Indomie • Malt'], ['TARE CUTS BARBING SALON', 'Low cut • Gentle man • Punk'], ['ESE BUSINESS CENTRE', 'Photocopy • Lamination • Passport'], ['OGHENE PHARMACY', 'Drugs • Cosmetics • Test strips'], ['EFE KITCHEN', 'Banga • Starch • Owo soup'], ['OKON PHONES & ACCESSORIES', 'Chargers • Screen guard • Repairs'], ['TAMUNO POS & TRANSFERS', 'Withdrawal • Deposit • Airtime'], ['IYE FISH PEPPER SOUP', 'Catfish • Point and kill • Cold drink'], ['DIVINE TOUCH TAILORING', 'Khaki adjustment while you wait'], ['BOLE & FISH JUNCTION', 'Roasted plantain • Fish • Pepper sauce'], ['PROMISE ELECTRICALS', 'Bulbs • Extension • Rechargeable fan'], ['FRESH & CLEAN DRY CLEANERS', 'Starch • Iron • Same day'], ['GRACE CYBER CAFE', 'Browsing • Printing • JAMB reg'], ['OMO NAIJA VULCANIZER', 'Tyre • Gum • Air']],
+  NC: [['MAMA RAKIYA PROVISIONS', 'Pure water • Bread • Indomie • Malt'], ['SANI CUTS BARBING SALON', 'Low cut • Gentle man • Punk'], ['TERNA BUSINESS CENTRE', 'Photocopy • Lamination • Passport'], ['AMINA PHARMACY', 'Drugs • Cosmetics • Test strips'], ['IYA SAKINAT FOOD CANTEEN', 'Pounded yam • Egusi • Tuwo'], ['IBRAHIM PHONES & ACCESSORIES', 'Chargers • Screen guard • Repairs'], ['FAVOUR POS & TRANSFERS', 'Withdrawal • Deposit • Airtime'], ['MALAM SULE SUYA SPOT', 'Suya • Kilishi • Cold kunu'], ['DIVINE TOUCH TAILORING', 'Khaki adjustment while you wait'], ['UNITY CHOPS & DRINKS', 'Shawarma • Puff-puff • Chapman'], ['PROMISE ELECTRICALS', 'Bulbs • Extension • Rechargeable fan'], ['FRESH & CLEAN DRY CLEANERS', 'Starch • Iron • Same day'], ['GRACE CYBER CAFE', 'Browsing • Printing • JAMB reg'], ['OMO NAIJA VULCANIZER', 'Tyre • Gum • Air']],
+  N: [['MALAM AUWAL PROVISIONS', 'Pure water • Bread • Indomie • Malt'], ['BABA SANI BARBING SALON', 'Low cut • Gentle man • Punk'], ['ALHERI BUSINESS CENTRE', 'Photocopy • Lamination • Passport'], ['NASARA PHARMACY', 'Drugs • Cosmetics • Test strips'], ['MAMA HAUWA TUWO SPOT', 'Tuwo • Miyan kuka • Masa'], ['ABBA PHONES & ACCESSORIES', 'Chargers • Screen guard • Repairs'], ['ALHAJI MUSA POS & TRANSFERS', 'Withdrawal • Deposit • Airtime'], ['MAI SUYA JUNCTION', 'Tsire • Kilishi • Kunu'], ['MAI DINKI TAILORING', 'Khaki adjustment while you wait'], ['ZAINAB CHOPS & DRINKS', 'Shawarma • Kosai • Zobo'], ['BALA ELECTRICALS', 'Bulbs • Extension • Rechargeable fan'], ['WANKI DRY CLEANERS', 'Starch • Iron • Same day'], ['ALHERI CYBER CAFE', 'Browsing • Printing • JAMB reg'], ['MAI GYARAN TAYA VULCANIZER', 'Tyre • Gum • Air']],
+};
 const SHOPS = [
   ['MAMA TOLANI PROVISIONS', 'Pure water • Bread • Indomie • Malt', '#c62828', '#fff'],
   ['BLESSED HANDS BARBING SALON', 'Low cut • Gentle man • Punk', '#1565c0', '#fff'],
@@ -232,7 +285,7 @@ const sideMat = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.95 }
 const roofFlat = new THREE.MeshStandardMaterial({ map: concreteTex, roughness: 0.95 });
 
 const shopSpots = []; // for interactions
-let shopIdx = 0;
+let shopIdx = 0; const SHOPSIGNS = [];
 function building(x, side, w, d, storeys, near) {
   const h = storeys * 3.2, zf = side * 11.6, zc = zf + side * d / 2;
   const bays = Math.max(2, Math.round(w / 3.2));
@@ -257,7 +310,8 @@ function building(x, side, w, d, storeys, near) {
     // corrugated awning sloping to the street
     const aw = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.05, 1.8), M.roof); aw.position.set(x, 3.0, zf - side * 0.9); aw.rotation.x = side * -0.18; aw.castShadow = true; scene.add(aw);
     for (const dx of [-w * 0.42, w * 0.42]) box(0.08, 2.9, 0.08, M.pole, x + dx, 1.45, zf - side * 1.7);
-    if (near) shopSpots.push({ name: S[0], x, z: zf - side * 1.6, side });
+    SHOPSIGNS.push({ sm, i: (shopIdx - 1) % SHOPS.length });
+    if (near) shopSpots.push({ name: S[0], x, z: zf - side * 1.6, side, food: [0, 4, 9].includes((shopIdx - 1) % SHOPS.length), si: (shopIdx - 1) % SHOPS.length });
   }
   return m;
 }
@@ -268,7 +322,7 @@ function building(x, side, w, d, storeys, near) {
       const w = rnd(7.5, 13), gap = rnd(0.4, 2.6);
       const cx = x + w / 2;
       const lga = (side < 0 && cx > 60 && cx < 96) || (side < 0 && cx > -100 && cx < -54); // reserve secretariat + school lots (north side)
-      const stop = (side > 0 && cx > -30 && cx < -10) || (side > 0 && cx > -53 && cx < -35); // bus stop + lodge lots (south)
+      const stop = (side > 0 && cx > -30 && cx < -10) || (side > 0 && cx > -53 && cx < -35) || (side > 0 && cx > 56 && cx < 88) || (side < 0 && cx > 12 && cx < 46); // bus stop + lodge + health centre (south), office complex (north)
       if (!lga && !stop) building(cx, side, w, rnd(10, 15), Math.random() < .2 ? 1 : (Math.random() < .6 ? 2 : 3 + (Math.random() < .3 ? 1 : 0)), Math.abs(cx) < 115);
       x += w + gap;
     }
@@ -370,7 +424,7 @@ const flagCloth = { mesh: null, base: null };
   for (const x of [-18, -4, 4, 18]) box(0.6, 2.8, 0.6, new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: .8 }), x, 1.4, 0, g);
   addCol(LGA.x - 18, LGA.x - 4, -11.8, -11.4); addCol(LGA.x + 4, LGA.x + 18, -11.8, -11.4);
   const gs = ctex(1024, 256, (c, w, h) => { c.fillStyle = '#1b5e20'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = '900 76px Arial Black, Impact'; c.fillText('LOCAL GOVT. SECRETARIAT', w / 2, 110); c.font = '700 44px Arial'; c.fillStyle = '#ffeb3b'; c.fillText("Corps members' clearance → Hall B", w / 2, 196); });
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshStandardMaterial({ map: gs })); sign.position.set(0, 3.9, 0.05); g.add(sign);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshStandardMaterial({ map: gs })); LGA.sign = sign; sign.position.set(0, 3.9, 0.05); g.add(sign);
   box(8.4, 0.25, 0.4, new THREE.MeshStandardMaterial({ color: 0x2e7d32 }), 0, 2.85, 0, g);
   // main building
   const bm = [new THREE.MeshStandardMaterial({ color: 0xf3f0e6, map: sideTex }), new THREE.MeshStandardMaterial({ color: 0xf3f0e6, map: sideTex }), roofFlat, roofFlat, new THREE.MeshStandardMaterial({ map: facadeTex(2, 8, '#f3f0e6', false, true) }), sideMat];
@@ -435,7 +489,7 @@ function campSign(text, sub, w, h, bg = '#1b5e20', fg = '#fff', sc = '#ffeb3b') 
 { // gate arch
   for (const x of [-5, 5]) { box(1.2, 5.2, 1.2, M.campGreen, x, 2.6, CZ + CAMP_HALF); addCol(x - .7, x + .7, CZ + CAMP_HALF - .7, CZ + CAMP_HALF + .7); }
   box(11.4, 1.6, 0.6, M.campWall, 0, 5.6, CZ + CAMP_HALF);
-  const s = campSign('ORIENTATION CAMP', 'Welcome, corps members · Fictional camp', 10.6, 1.4); s.position.set(0, 5.6, CZ + CAMP_HALF + 0.32); scene.add(s);
+  const s = campSign('ORIENTATION CAMP', 'Welcome, corps members · Fictional camp', 10.6, 1.4); CAMP.gateSign = s; s.position.set(0, 5.6, CZ + CAMP_HALF + 0.32); scene.add(s);
   box(0.12, 1.1, 3.2, M.black, -4.4, 0.55, CZ + CAMP_HALF + 1.6, scene, false); // boom barrier post
   const bar = box(4.2, 0.12, 0.12, new THREE.MeshStandardMaterial({ color: 0xd32f2f }), -4.4, 2.6, CZ + CAMP_HALF + 1.6, scene, false); bar.rotation.z = Math.PI / 2 - 0.15; // raised boom
   CAMP.spots.gate = { x: 2, z: CZ + CAMP_HALF + 2.2 };
@@ -595,7 +649,7 @@ const SCH = { x: -77, spots: {}, roof: null, students: [], board: null, boardCtx
   for (const s of [-1, 1]) { box(0.3, 2.2, 30, wallM, X + s * 21, 1.1, -26.6); addCol(X + s * 21 - .2, X + s * 21 + .2, -41.6, -11.6); }
   box(42, 2.2, 0.3, wallM, X, 1.1, -41.6); addCol(X - 21, X + 21, -41.8, -41.4);
   for (const dx of [-3, 3]) box(0.7, 3.2, 0.7, blue, X + dx, 1.6, -11.6);
-  const sign = campSign('CORPER CLOSE MODEL SCHOOL', 'Knowledge is light · Fictional school', 7.4, 1.4, '#0d47a1'); sign.position.set(X, 3.9, -11.4); scene.add(sign);
+  const sign = campSign('CORPER CLOSE MODEL SCHOOL', 'Knowledge is light · Fictional school', 7.4, 1.4, '#0d47a1'); SCH.sign = sign; sign.position.set(X, 3.9, -11.4); scene.add(sign);
   box(7.6, 0.2, 0.4, blue, X, 3.1, -11.6);
   const yard = new THREE.PlaneGeometry(41, 29); yard.rotateX(-Math.PI / 2); const ym = new THREE.Mesh(yard, M.concrete); ym.position.set(X, 0.015, -26.6); ym.receiveShadow = true; scene.add(ym);
   // open-sided classroom pavilion: roof on pillars, back wall with the chalkboard
@@ -630,7 +684,7 @@ const SCH = { x: -77, spots: {}, roof: null, students: [], board: null, boardCtx
   box(0.4, 2.0, 2.4, M.wood, X + 19.2, 1.0, -21.5); // shelf of files
   box(3.0, 1.1, 0.04, new THREE.MeshStandardMaterial({ color: 0xc9a46b, roughness: .9 }), X + 15, 1.9, -29.3, scene, false); // notice board
   SCH.spots.staff = { x: X + 18.2, z: -27.2 };
-  SCH.teachers = [{ x: X + 13.2, z: -19.8, r: Math.PI, rig: 'fem', tex: 'fTeacher', name: 'Mrs. Okon', anim: 'sit' }, { x: X + 16.4, z: -19.8, r: Math.PI, rig: 'man2', tex: 'mTeacher', name: 'Mr. Femi', anim: 'type' }, { x: X + 12.6, z: -26.8, r: Math.PI, rig: 'fem', tex: 'civF4', name: 'Miss Halima', anim: 'sit' }];
+  SCH.teachers = [{ x: X + 13.2, z: -19.8, r: Math.PI, rig: 'fem', tex: 'fTeacher', get name() { return TCH(); }, anim: 'sit' }, { x: X + 16.4, z: -19.8, r: Math.PI, rig: 'man2', tex: 'mTeacher', name: 'Mr. Femi', anim: 'type' }, { x: X + 12.6, z: -26.8, r: Math.PI, rig: 'fem', tex: 'civF4', name: 'Miss Halima', anim: 'sit' }];
   // principal's office by the gate
   const po = hollowBuilding({ x: X - 15.5, z: -19, w: 8, d: 7, h: 3.3, door: '+x', doorW: 1.5, doorAt: 0, base: '#efe6cf', inner: '#ece6da', label: 'PRINCIPAL', signBg: '#0d47a1' });
   SCH.office = po.room; desk(X - 17.4, -19, 0.9, 2.0); box(0.6, 1.1, 0.6, new THREE.MeshStandardMaterial({ color: 0x5d4037, roughness: .7 }), X - 18.8, 0.55, -19, scene, false);
@@ -659,6 +713,43 @@ const SCH = { x: -77, spots: {}, roof: null, students: [], board: null, boardCtx
   const fp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 7, 8), M.chrome); fp.position.set(X + 4, 3.5, -16); scene.add(fp);
   tree(X - 9, -14.2, 1.1); tree(X + 9.5, -14.2, 1);
   SCH.gate = { x: X, z: -9.6 };
+}
+/* ---------------- other PPAs: a health centre (south side) and an office complex (north side) ---------------- */
+const WORK = { clinic: { spots: {}, staff: [] }, office: { spots: {}, staff: [] } };
+{
+  const desk = (x, z, w = 1.6, d = 0.8, rot = 0) => { const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; scene.add(g); box(w, 0.07, d, M.wood, 0, 0.78, 0, g); for (const dx of [-w / 2 + 0.08, w / 2 - 0.08]) box(0.07, 0.78, d - 0.1, M.wood, dx, 0.39, 0, g, false); return g; };
+  const dark = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: .6 }), white = new THREE.MeshStandardMaterial({ color: 0xf4f6f6, roughness: .7 }), teal = new THREE.MeshStandardMaterial({ color: 0x00897b, roughness: .7 }), steel = new THREE.MeshStandardMaterial({ color: 0x9aa4ab, roughness: .4, metalness: .5 });
+  // ---- health centre: reception, waiting benches, consulting corner, records shelf ----
+  { const cx = 72, cz = 17.4, w = 16, d = 11.4;
+    const h = hollowBuilding({ x: cx, z: cz, w, d, h: 3.5, door: '-z', doorW: 2.0, doorAt: -3, base: '#eef4f1', inner: '#eaf3ef' });
+    WORK.clinic.room = h.room; WORK.clinic.door = h.doorOut;
+    const sg = campSign('PRIMARY HEALTH CENTRE', 'Health for all · Fictional', 7, 1.2, '#00695c'); sg.position.set(cx + 2.5, 3.0, cz - d / 2 - 0.14); sg.rotation.y = Math.PI; scene.add(sg); WORK.clinic.sign = sg;
+    box(0.5, 0.5, 0.08, new THREE.MeshStandardMaterial({ color: 0xd32f2f, emissive: 0x6a0000 }), cx - 6.2, 2.7, cz - d / 2 - 0.16, scene, false); // red cross panel
+    box(0.16, 0.5, 0.1, white, cx - 6.2, 2.7, cz - d / 2 - 0.22, scene, false); box(0.5, 0.16, 0.1, white, cx - 6.2, 2.7, cz - d / 2 - 0.22, scene, false);
+    desk(cx - 4.6, cz - 1.6, 2.4, 0.8); box(2.4, 1.0, 0.06, teal, cx - 4.6, 0.5, cz - 2.0, scene, false); // reception counter
+    for (const bz of [cz - 3.2, cz - 1.0, cz + 1.2]) { box(3.2, 0.08, 0.5, M.wood, cx + 2.6, 0.45, bz); for (const dx of [-1.4, 1.4]) box(0.08, 0.45, 0.45, steel, cx + 2.6 + dx, 0.22, bz, scene, false); } // waiting benches
+    box(0.05, 2.2, 4.2, white, cx + 4.4, 1.1, cz + 3.2, scene, false); // curtain screen for the consulting corner
+    box(1.9, 0.55, 0.8, white, cx + 6.3, 0.45, cz + 3.8); box(0.6, 0.12, 0.8, new THREE.MeshStandardMaterial({ color: 0xbfe3dc }), cx + 6.9, 0.78, cz + 3.8, scene, false); // examination couch
+    box(0.4, 2.0, 3.0, M.wood, cx - 7.4, 1.0, cz + 2.4); for (let i = 0; i < 4; i++) box(0.3, 0.3, 2.6, new THREE.MeshStandardMaterial({ color: [0xf2c94c, 0x90caf9, 0xef9a9a, 0xa5d6a7][i] }), cx - 7.2, 0.4 + i * 0.45, cz + 2.4, scene, false); // patient cards
+    desk(cx - 2.4, cz + 3.6, 1.8, 0.8); box(0.45, 0.32, 0.06, new THREE.MeshStandardMaterial({ color: 0x2e7d32 }), cx - 2.4, 1.0, cz + 3.95, scene, false); // immunisation table + chart
+    const poster = campSign('IMMUNISE YOUR CHILD', 'Every Thursday · Free', 2.4, 0.8, '#2e7d32'); poster.position.set(cx - 0.4, 1.9, cz + d / 2 - 0.25); poster.rotation.y = Math.PI; scene.add(poster);
+    Object.assign(WORK.clinic.spots, { boss: { x: cx - 4.6, z: cz - 2.6 }, sign: { x: cx - 5.6, z: cz - 2.7 }, triage: { x: cx + 1.0, z: cz - 1.0 }, records: { x: cx - 6.6, z: cz + 2.4 }, immun: { x: cx - 2.4, z: cz + 2.8 }, talk: { x: cx + 2.6, z: cz - 4.4 } });
+  }
+  // ---- office complex: open-plan desks, manager's office, printer, meeting table ----
+  { const cx = 29, cz = -17.8, w = 17, d = 12;
+    const h = hollowBuilding({ x: cx, z: cz, w, d, h: 3.4, door: '+z', doorW: 2.0, doorAt: 0, base: '#e6e9ee', inner: '#eef0f3' });
+    WORK.office.room = h.room; WORK.office.door = h.doorOut;
+    const up = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, 3.4, d + 0.2), [new THREE.MeshStandardMaterial({ color: 0xdfe3e8, map: concreteTex }), new THREE.MeshStandardMaterial({ color: 0xdfe3e8, map: concreteTex }), M.roof, M.roof, extWallMat(w + 0.2, 3.4, '#dfe3e8'), new THREE.MeshStandardMaterial({ color: 0xdfe3e8 })]);
+    up.position.set(cx, 3.6 + 1.7, cz); up.castShadow = true; scene.add(up); // upper floor (exterior only)
+    const sg = campSign('OFFICE COMPLEX', 'Fictional organisation', 7, 1.2, '#283593'); sg.position.set(cx, 3.15, cz + d / 2 + 0.14); scene.add(sg); WORK.office.sign = sg;
+    for (const [dx, dz] of [[-5.5, 0.5], [-2.5, 0.5], [0.5, 0.5], [-5.5, -2.5], [-2.5, -2.5], [0.5, -2.5]]) { desk(cx + dx, cz + dz, 1.6, 0.8); box(0.55, 0.36, 0.05, dark, cx + dx, 1.05, cz + dz - 0.25, scene, false); box(0.04, 0.9, 0.9, new THREE.MeshStandardMaterial({ color: 0x9fa8b3 }), cx + dx + 0.85, 0.85, cz + dz, scene, false); }
+    box(0.08, 2.4, 4.6, new THREE.MeshStandardMaterial({ color: 0xbcd4e6, transparent: true, opacity: .45, roughness: .1 }), cx + 4.2, 1.2, cz - 3.4, scene, false); // glass wall of the manager's office
+    desk(cx + 6.2, cz - 3.6, 1.9, 0.9); box(0.6, 1.1, 0.6, new THREE.MeshStandardMaterial({ color: 0x3e2723 }), cx + 6.2, 0.55, cz - 4.6, scene, false);
+    box(0.9, 1.05, 0.65, new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: .5 }), cx + 7.6, 0.53, cz + 3.6); box(0.6, 0.06, 0.4, white, cx + 7.6, 1.1, cz + 3.6, scene, false); // printer
+    box(3.0, 0.07, 1.3, M.wood, cx + 2.5, 0.76, cz + 3.4); for (const dx of [-1.3, 1.3]) box(0.07, 0.76, 1.1, M.wood, cx + 2.5 + dx, 0.38, cz + 3.4, scene, false); // meeting table
+    const wb = campSign('Q3 TARGETS', 'Customers · Reports · Deadlines', 2.6, 1.0, '#ffffff', '#283593'); wb.position.set(cx - 2.0, 1.8, cz - d / 2 + 0.24); scene.add(wb);
+    Object.assign(WORK.office.spots, { boss: { x: cx + 5.2, z: cz - 3.0 }, sign: { x: cx - 6.5, z: cz + 4.6 }, desk: { x: cx - 2.5, z: cz + 1.4 }, printer: { x: cx + 7.0, z: cz + 2.8 }, meet: { x: cx + 2.5, z: cz + 2.4 }, front: { x: cx - 6.5, z: cz + 4.0 } });
+  }
 }
 /* ---------------- vehicles (procedural, swap-in GLB later) ---------------- */
 function sideShape(pts) { const s = new THREE.Shape(); s.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) { const p = pts[i]; if (p.length === 4) s.quadraticCurveTo(p[0], p[1], p[2], p[3]); else s.lineTo(p[0], p[1]); } return s; }
@@ -906,7 +997,8 @@ function toast(t, ms = 2600) { try { speakToast(t); } catch (e) { } const e = $(
 function setObj(t) { ST.obj = t; $('objt').textContent = t; }
 function hudSync() {
   if (PH.cash === null) PH.cash = ST.cash; else if (ST.cash !== PH.cash) { const d = ST.cash - PH.cash; PH.ledger.unshift({ d, label: ST.txn || (d > 0 ? 'Transfer received' : 'POS / cash payment'), t: ($('dayn').textContent || '') + ' · ' + ($('clock').textContent || '') }); ST.txn = null; PH.cash = ST.cash; if (PH.screen === 'bank' && $('phone').classList.contains('on')) renderBank(); }
-  { const hc = $('phclock'); if (hc) { hc.textContent = $('pclock').textContent; $('phdate').textContent = $('dayn').textContent + ' · ' + (ST.area === 'camp' ? 'Orientation camp' : LGN() + ', Lagos'); } }
+  if (PH.screen === 'home' && $('phone').classList.contains('on') && !(hudSync.n = (hudSync.n || 0) + 1) % 30) homeWidgets();
+  { const hc = $('phclock'); if (hc) { hc.textContent = $('pclock').textContent; $('phdate').textContent = $('dayn').textContent + ' · ' + (ST.area === 'camp' ? SNAME() + ' camp' : LGN() + ', ' + SNAME()); } }
   $('cash').textContent = naira(ST.cash);
   const h = Math.floor(ST.mins / 60), m = Math.floor(ST.mins % 60), ap = h >= 12 ? 'PM' : 'AM', hh = ((h + 11) % 12) + 1;
   $('clock').textContent = `${hh}:${String(m).padStart(2, '0')} ${ap}`; $('pclock').textContent = `${hh}:${String(m).padStart(2, '0')}`;
@@ -927,6 +1019,7 @@ function chat(from, text, kind = '', to) {
   const m = { from, text, kind }; t.msgs.push(m); t.last = ++PH.seq; CHAT.push(m);
   if ((PH.thread || g) === name) { const el = $('msgs'); el.insertAdjacentHTML('beforeend', msgHTML(m)); el.scrollTop = 1e6; }
   const open = $('phone').classList.contains('on') && PH.screen === 'thread' && PH.thread === name;
+  if (!open && from !== 'You' && $('phone').classList.contains('on')) island(t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '💬', name, `<b style="display:inline">${from}:</b> ${text.replace(/<img[^>]*>/g, '📷 Photo')}`);
   if (!open && from !== 'You') {
     t.unread++; badge(); $('nsrc').textContent = (t.kind === 'sms' ? 'SMS · ' : 'CORPER CONNECT · ') + name; $('ntext').innerHTML = `<b>${from}:</b> ${text}`; const n = $('notif'); n.dataset.thread = name; n.classList.add('on'); clearTimeout(chat.t); chat.t = setTimeout(() => n.classList.remove('on'), 4200); beep();
   }
@@ -953,19 +1046,109 @@ function renderID() {
   <label>Energy ${Math.round(ST.energy)}</label>${bar(ST.energy, '#1a9d52')}<label>Stress ${Math.round(ST.stress)}</label>${bar(ST.stress, '#d93025')}
   <div class="vibe"><small>YOUR VIBE SO FAR</small><b>${corperType()[0]}</b></div>`;
 }
+const SCREENS = { // id → [element, title, light status bar?, dark header?]
+  home: ['phome'], chats: ['pchats', 'Corper Connect', 1], thread: ['msgs', null, 1], map: ['pmap', null, 1], bank: ['pbank', 'Naija Trust Bank', 1], id: ['pid', 'My NYSC', 1],
+  music: ['pmusic', 'Music', 0, 1], weather: ['pweather', 'Weather', 0, 1], cal: ['pcal', 'Calendar', 1], photos: ['pphotos', 'Photos', 1], settings: ['psettings', 'Settings', 1], whot: ['pgame', 'Whot!', 0, 1], dash: ['pgame', 'Danfo Dash', 0, 1],
+};
+let gameStop = null;
 function phShow(s) {
+  if (s === 'camera') return snapPhoto();
+  const prevGame = PH.screen === 'whot' || PH.screen === 'dash';
+  if (prevGame && gameStop && s !== PH.screen) { gameStop(); gameStop = null; }
   PH.screen = s; const g = ST.group || 'Platoon 5 · Camp Gist'; if (!PH.thread) PH.thread = g;
-  $('phome').hidden = s !== 'home'; $('pchats').hidden = s !== 'chats'; $('msgs').hidden = s !== 'thread'; $('pacts').hidden = s !== 'thread' || PH.thread !== g || !PH.acts.length; $('pmap').hidden = s !== 'map'; $('pbank').hidden = s !== 'bank'; $('pid').hidden = s !== 'id';
-  $('pback').hidden = s === 'home'; $('pmapbtn').textContent = s === 'map' ? '💬' : '🗺️';
-  $('phd').style.background = { bank: '#0b3d91', map: '#1a73e8', id: '#8a5a00', home: '#12161b' }[s] || '#1a9d52';
-  $('phdr').textContent = { home: (ST.name ? ST.name + '’s' : 'Your') + ' phone', chats: '💬 Corper Connect', thread: (thr(PH.thread).kind === 'sms' ? '✉️ ' : '💬 ') + PH.thread, map: '🗺️ Maps · ' + (ST.area === 'camp' ? 'Orientation camp' : LGN()), bank: '🏦 Naija Trust Bank', id: '🪪 My NYSC' }[s];
+  for (const [k, v] of Object.entries(SCREENS)) $(v[0]).hidden = true;
+  $(SCREENS[s][0]).hidden = false;
+  $('pacts').hidden = s !== 'thread' || PH.thread !== g || !PH.acts.length;
+  const sc = $('pscr'); sc.dataset.s = s; sc.dataset.light = SCREENS[s][2] ? '1' : ''; sc.dataset.dark = SCREENS[s][3] ? '1' : '';
+  $('pback').hidden = s === 'home'; $('pmapbtn').textContent = s === 'map' ? '💬' : '🗺️'; $('pmapbtn').hidden = !['chats', 'thread', 'map', 'home'].includes(s);
+  $('phdr').textContent = SCREENS[s][1] || { thread: (thr(PH.thread).kind === 'sms' ? '✉️ ' : '') + PH.thread, map: 'Maps · ' + (ST.area === 'camp' ? SNAME() + ' camp' : LGN()) }[s] || '';
   if (s === 'thread') { thr(PH.thread).unread = 0; badge(); renderThread(); }
   if (s === 'chats') renderChats(); if (s === 'bank') renderBank(); if (s === 'id') renderID();
   if (s === 'map') { MAPV.follow = true; MAPV.R = ST.area === 'camp' ? 62 : 70; MAPV.sel = null; $('pmapsheet').hidden = true; mapList(); mapT = 0; }
+  if (s === 'music') renderMusic(); if (s === 'weather') renderWeather(); if (s === 'cal') renderCal(); if (s === 'photos') renderPhotos(); if (s === 'settings') renderSettings();
+  if (s === 'whot' || s === 'dash') { const el = $('pgame'); el.innerHTML = ''; ST.phoneGame = true; gameStop = (s === 'whot' ? mountWhot : mountDash)(el, { onEnd: r => { ST.stress = clamp(ST.stress - (r.win ? 5 : 2), 0, 100); ST.mins += 10; ST.gamesWon = (ST.gamesWon || 0) + (r.win ? 1 : 0); if (r.win && r.label === 'Whot') chat('Emeka', pick(['Corper, you don learn this Whot from where? Rematch tomorrow 😤', 'I let you win sha 😂']), '', 'Emeka'); hudSync(); } }); }
+  else ST.phoneGame = false;
+}
+/* ---- the island: message previews while the phone is open ---- */
+let islT = 0;
+function island(icon, title, body) { const I = $('pisland'); $('pisi').textContent = icon; $('pist').textContent = title; $('pisb').innerHTML = body; I.classList.add('big'); clearTimeout(islT); islT = setTimeout(() => I.classList.remove('big'), 3400); }
+$('pisland').onclick = () => { const n = $('notif').dataset.thread; if (n && PH.threads.has(n)) { PH.thread = n; phShow('thread'); } $('pisland').classList.remove('big'); };
+/* ---- camera + photos ---- */
+PH.photos = [];
+function snapPhoto() {
+  phone(false);
+  setTimeout(() => { // the phone slides away, then: click
+    try { renderer.render(scene, camera); const src = renderer.domElement, c = document.createElement('canvas'), k = 540 / Math.max(src.width, src.height); c.width = Math.round(src.width * k); c.height = Math.round(src.height * k); c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+      PH.photos.unshift({ src: c.toDataURL('image/jpeg', 0.82), at: $('clock').textContent + ' · ' + (ST.area === 'camp' ? SNAME() + ' camp' : LGN()) }); if (PH.photos.length > 18) PH.photos.pop(); } catch (e) { toast('The camera app crashed. Typical.'); return; }
+    const fl = $('fade'); fl.style.transition = 'none'; fl.style.background = '#fff'; fl.style.opacity = .85; tone(1800, .03, 'square', .04);
+    setTimeout(() => { fl.style.transition = 'opacity .35s'; fl.style.opacity = 0; setTimeout(() => { fl.style.background = ''; }, 400); }, 60);
+    toast('📸 Saved to Photos', 1800); ST.photos = (ST.photos || 0) + 1;
+    setTimeout(() => { phone(true); phShow('photos'); }, 700);
+  }, 420);
+}
+function renderPhotos(i) {
+  const el = $('pphotos');
+  if (i != null && PH.photos[i]) { const ph = PH.photos[i]; el.innerHTML = `<div class="view"><img src="${ph.src}" alt="Photo taken ${esc(ph.at)}"><small>${esc(ph.at)}</small><button id="pshare">Share to ${esc(ST.group || 'the group')}</button><button class="sec" id="pgrid">All photos</button></div>`;
+    $('pshare').onclick = () => { const g = ST.group || 'Platoon 5 · Camp Gist'; chat('You', `<img src="${ph.src}" alt="photo">`, 'me', g); ST.rep += 1; PH.thread = g; setTimeout(() => chat(pick(['Bisi', 'Tolu', 'Seyi', 'Emeka']), pick(['Omo, see as you fresh! 🔥', 'Who snap this one? Clean!', 'Corper of the year 😂', 'Send me the original abeg'])), 1500); phShow('thread'); };
+    $('pgrid').onclick = () => renderPhotos(); return; }
+  el.innerHTML = PH.photos.length ? `<div class="g">${PH.photos.map((p, k) => `<button data-i="${k}" style="background-image:url('${p.src}')" aria-label="Photo ${k + 1}"></button>`).join('')}</div>` : '<p>No photos yet.<br>Open Camera to snap the moment: parade, mammy market, your khaki.</p>';
+  el.querySelectorAll('.g button').forEach(b => b.onclick = () => renderPhotos(+b.dataset.i));
+}
+/* ---- music ---- */
+const TRACKS = [['Afrobeat Groove', 'FreeMusicForVideo', 'audio/afrobeat1.mp3'], ['Afro Beat Vibes', 'PlayStarz_Music', 'audio/afrobeat2.mp3'], ['Afrobeat', 'Kiravale', 'audio/afrobeat3.mp3']];
+const PM = { el: null, i: 0 };
+function renderMusic() {
+  const el = $('pmusic'), t = TRACKS[PM.i], playing = PM.el && !PM.el.paused;
+  el.innerHTML = `<div class="art" aria-hidden="true">🎧</div><h3>${t[0]}</h3><p>${t[1]} · Pixabay</p><div class="bar"><i id="pmbar"></i></div><div class="ctl"><button id="pmprev" aria-label="Previous">⏮</button><button class="pp" id="pmpp" aria-label="${playing ? 'Pause' : 'Play'}">${playing ? '❚❚' : '▶'}</button><button id="pmnext" aria-label="Next">⏭</button></div><ul>${TRACKS.map((x, k) => `<li><button data-i="${k}" class="${k === PM.i ? 'on' : ''}"><span>${x[0]}</span><span>${x[1]}</span></button></li>`).join('')}</ul>`;
+  const go = k => { PM.i = (k + TRACKS.length) % TRACKS.length; if (!PM.el) { PM.el = new Audio(); PM.el.addEventListener('ended', () => go(PM.i + 1)); PM.el.addEventListener('timeupdate', () => { const b = $('pmbar'); if (b && PM.el.duration) b.style.width = (PM.el.currentTime / PM.el.duration * 100) + '%'; }); } PM.el.src = TRACKS[PM.i][2]; PM.el.volume = 0.7; PM.el.play().catch(() => { }); renderMusic(); };
+  $('pmpp').onclick = () => { if (!PM.el) return go(PM.i); if (PM.el.paused) PM.el.play().catch(() => { }); else PM.el.pause(); renderMusic(); };
+  $('pmprev').onclick = () => go(PM.i - 1); $('pmnext').onclick = () => go(PM.i + 1);
+  el.querySelectorAll('li button').forEach(b => b.onclick = () => go(+b.dataset.i));
+}
+/* ---- weather: your state's climate, your time of day ---- */
+function wxNow() {
+  const cl = ST.state ? STATE().climate : 'humid', seg = ST.seg || 'Morning', night = seg === 'Night', hr = Math.floor((ST.mins || 480) / 60) % 24;
+  const B = { harmattan: [34, 17, 'Hazy · Harmattan dust', '🌫️'], cool: [23, 13, 'Breezy and cool', '🌤️'], humid: [31, 24, 'Partly cloudy · 60% rain later', '⛅'], riverine: [30, 24, 'Showers on and off', '🌦️'], savanna: [33, 21, 'Sunny', '☀️'] }[cl] || [31, 23, 'Partly cloudy', '⛅'];
+  const t = Math.round(night ? B[1] + 2 : seg === 'Morning' ? (B[0] + B[1]) / 2 : seg === 'Evening' ? B[0] - 3 : B[0]);
+  return { cl, t, hi: B[0], lo: B[1], cond: night ? (cl === 'harmattan' ? 'Cold harmattan night' : 'Clear night') : B[2], ic: night ? '🌙' : B[3], hr, city: ST.post ? LGN() : STATE().capital };
+}
+function renderWeather() {
+  const w = wxNow(), el = $('pweather'); el.className = 'papp' + (ST.seg === 'Night' ? ' night' : w.cl === 'harmattan' ? ' harm' : w.cl === 'cool' ? ' cool' : '');
+  const hrs = [0, 2, 4, 6, 8].map(d => { const h = (w.hr + d) % 24; const nt = h < 6 || h >= 19; return `<div>${d ? (h % 12 || 12) + (h < 12 ? 'AM' : 'PM') : 'Now'}<i>${nt ? '🌙' : w.ic}</i>${Math.round(nt ? w.lo + 1 : w.t + (d && d < 6 ? 1 : 0))}°</div>`; }).join('');
+  el.innerHTML = `<h2>${esc(w.city)}</h2><div class="t">${w.t}°</div><p>${w.cond}</p><p>H:${w.hi}°  L:${w.lo}°</p><div class="card"><small>Next hours</small><div class="hrs">${hrs}</div></div><div class="card"><small>${STATE().name} · ${ZN().name}</small>${{ harmattan: 'Dry, dusty wind from the Sahara. Cracked lips, cold nights, Vaseline everywhere.', cool: 'Highland weather. Mornings are cold enough for a sweater.', humid: 'Humid coastal air. Your khaki will be wet by 10 AM.', riverine: 'Creeks and rain. Some roads are boats.', savanna: 'Hot, open savanna. Keep pure water close.' }[w.cl] || ''}</div>`;
+}
+/* ---- calendar: this month, with your service duties on it ---- */
+function renderCal() {
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth(), first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), today = now.getDate();
+  let lastFri = days; while (new Date(y, m, lastFri).getDay() !== 5) lastFri--;
+  const cells = []; for (let i = 0; i < first; i++) cells.push('<span></span>');
+  for (let d = 1; d <= days; d++) { const wd = new Date(y, m, d).getDay(); const dot = wd === 4 ? '#6a1b9a' : d === lastFri ? '#1565c0' : wd === 1 ? '#2e7d32' : null; cells.push(`<span class="${d === today ? 'today' : ''}">${d}${dot && d !== today ? `<i style="background:${dot}"></i>` : ''}</span>`); }
+  $('pcal').innerHTML = `<h3>${now.toLocaleString('en-NG', { month: 'long' })} ${y}</h3><div class="g">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => `<b>${d}</b>`).join('')}${cells.join('')}</div>
+  <ul><li><i style="background:#2e7d32"></i>Mondays · PPA, sign in before 8:00</li><li><i style="background:#6a1b9a"></i>Thursdays · CDS, register closes 10:00</li><li><i style="background:#1565c0"></i>${lastFri} ${now.toLocaleString('en-NG', { month: 'short' })} · Monthly clearance at the ${ST.post ? esc(LGN()) + ' ' : ''}LGA Secretariat</li>${Y.on ? `<li><i style="background:#ff3b30"></i>Service month ${Y.month} of ${Y.MONTHS} · POP after month ${Y.MONTHS}</li>` : ''}</ul>`;
+}
+/* ---- settings ---- */
+function renderSettings() {
+  const W = $('phone').dataset.wall || 'naija';
+  $('psettings').innerHTML = `<h4>Wallpaper</h4><div class="walls">${[['naija', 'linear-gradient(165deg,#2fbf71,#0a3f27)'], ['lagoon', 'linear-gradient(165deg,#3bc9db,#13315c)'], ['sunset', 'linear-gradient(165deg,#ff8a3d,#5a1a3a)']].map(([k, bg]) => `<button data-w="${k}" class="${k === W ? 'on' : ''}" style="background:${bg}" aria-label="${k} wallpaper"></button>`).join('')}</div>
+  <h4>General</h4><div class="grp"><button id="psnd"><span>Sound</span><span>${MUTED ? 'Off' : 'On'}</span></button><div><span>Phone</span><span>NaijaPhone 16 · 5G</span></div><div><span>Owner</span><span>${esc(ST.name || 'Corper')}</span></div><div><span>State of deployment</span><span>${STATE().name}</span></div></div>
+  <h4>About</h4><div class="grp"><div><span>NYSC Survival</span><span>Fictional game</span></div></div>`;
+  $('psettings').querySelectorAll('.walls button').forEach(b => b.onclick = () => { $('phone').dataset.wall = b.dataset.w; try { localStorage.setItem('nysc3d.wall', b.dataset.w); } catch (e) { } renderSettings(); });
+  $('psnd').onclick = () => { $('bmute').click(); renderSettings(); };
+}
+try { const w = localStorage.getItem('nysc3d.wall'); if (w) $('phone').dataset.wall = w; } catch (e) { }
+/* ---- home-screen widgets ---- */
+function homeWidgets() {
+  const w = wxNow(); $('wgcity').textContent = '📍 ' + w.city; $('wgtemp').textContent = w.t + '°'; $('wgcond').textContent = w.ic + ' ' + w.cond; $('wghl').textContent = `H:${w.hi}°  L:${w.lo}°`;
+  const sv = ST.area === 'camp' ? ['Camp', 'Next: ' + (ST.cstep < 3 ? 'Registration' : ST.cstep < 6 ? 'Parade & drill' : 'Posting'), 8] : Y.on ? ['Month ' + Y.month, Y.kind === 'Mon' ? 'Today: PPA' : Y.kind === 'Thu' ? 'Today: CDS' : Y.kind === 'Clr' ? 'Today: Clearance' : Y.kind === 'Pop' ? 'Today: POP 🎓' : 'Free Saturday', 20 + Y.month * 25] : [ST.ch === 2 ? 'CDS week' : 'Chapter 1', ST.ch === 2 ? 'Next: Thursday CDS' : 'Next: Clearance', ST.ch === 2 ? 16 : 12];
+  $('wgsv').textContent = sv[0]; $('wgnext').textContent = sv[1]; $('wgring').style.width = Math.min(100, sv[2]) + '%';
+  const d = new Date(); $('calw').textContent = d.toLocaleString('en-NG', { weekday: 'short' }).toUpperCase(); $('cald').textContent = d.getDate();
+  const n = [...PH.threads.values()].reduce((a, t) => a + t.unread, 0); for (const e of document.querySelectorAll('.dbdg')) { e.hidden = !n; e.textContent = n > 9 ? '9+' : n; }
 }
 function phone(on) {
   if (on) ST.phoneOpens = (ST.phoneOpens || 0) + 1; $('phone').classList.toggle('on', on); $('notif').classList.remove('on');
   const g = ST.group || 'Platoon 5 · Camp Gist';
+  if (on) homeWidgets();
+  if (!on && (PH.screen === 'whot' || PH.screen === 'dash')) { if (gameStop) { gameStop(); gameStop = null; } PH.screen = 'home'; ST.phoneGame = false; }
   if (on) { let s = PH.screen; if (s === 'home' || s === 'thread') { const u = thr(g).unread ? thr(g) : [...PH.threads.values()].filter(t => t.unread).sort((a, b) => b.last - a.last)[0]; if (u) { PH.thread = u.name; s = 'thread'; } else s = 'home'; } phShow(s); }
   else { if (PH.screen === 'thread') PH.screen = 'home'; PH.thread = g; renderThread(); }
   if (on && ST.phase === 0 && ST.area === 'street') { ST.phase = 1; setObj('Get to the LGA Secretariat for clearance'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; $('arrow').style.display = 'block'; }
@@ -1087,7 +1270,7 @@ function setMute(on) { MUTED = on; if (MASTER) MASTER.gain.value = on ? 0 : 0.9;
 try { MUTED = localStorage.getItem('nysc3d-mute') === '1'; } catch (e) { }
 
 /* ---------------- input ---------------- */
-addEventListener('keydown', e => { keys[e.code] = true; audio(); if (DLG && /^Digit[1-4]$/.test(e.code)) { choose(+e.code.slice(5) - 1); return; } if (ST.drill) { const m = { ArrowRight: 0, KeyD: 0, ArrowLeft: 1, KeyA: 1, ArrowDown: 2, KeyS: 2 }[e.code]; if (m !== undefined) { drillAnswer(m); return; } } if (e.code === 'KeyE') interact(); if (e.code === 'KeyP') phone(!$('phone').classList.contains('on')); });
+addEventListener('keydown', e => { if (ST.phoneGame && e.code !== 'KeyP') return; keys[e.code] = true; audio(); if (DLG && /^Digit[1-4]$/.test(e.code)) { choose(+e.code.slice(5) - 1); return; } if (ST.drill) { const m = { ArrowRight: 0, KeyD: 0, ArrowLeft: 1, KeyA: 1, ArrowDown: 2, KeyS: 2 }[e.code]; if (m !== undefined) { drillAnswer(m); return; } } if (e.code === 'KeyE') interact(); if (e.code === 'KeyP') phone(!$('phone').classList.contains('on')); });
 addEventListener('keyup', e => keys[e.code] = false);
 const cv = renderer.domElement; const ptrs = new Map(); let pinch0 = 0;
 cv.addEventListener('pointerdown', e => {
@@ -1115,11 +1298,11 @@ let nearest = null;
 function interactables() {
   if (ST.area === 'camp') return campInteractables();
   const L = [];
-  for (const s of shopSpots) if (/MAMA TOLANI|GLORY CHOPS|EKO SWEET/.test(s.name)) L.push({ x: s.x, z: s.z, label: 'Buy something at ' + s.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), act: () => buy(s.name) });
+  for (const s of shopSpots) if (s.food) L.push({ x: s.x, z: s.z, label: 'Buy something at ' + s.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()), act: () => buy(s.name) });
   for (const v of vendorSpots) L.push({ x: v.x, z: v.z, label: 'Buy ' + v.label, act: () => buy(v.label) });
   for (const n of NPC) if (n.talk && n.area !== 'camp') L.push({ x: n.o.position.x, z: n.o.position.z, label: n.talk.label, act: n.talk.act, npc: n });
   const bus = traffic.find(v => v.kind === 'danfo' && v.stop > 0 && v.lane === 0 && Math.abs(v.x - BUSSTOP_X) < 4);
-  if (bus && !ST.riding) L.push({ x: bus.x, z: 6.8, label: `Board danfo to Secretariat (${naira(fareOf(300))})`, act: () => board(bus) });
+  if (bus && !ST.riding) L.push({ x: bus.x, z: 6.8, label: `Board ${busName()} to Secretariat (${naira(fareOf(300))})`, act: () => board(bus) });
   if (ST.ch === 3) return L.concat(yInteractables());
   if (ST.ch === 2) return cdsInteractables();
   if (ST.done) L.push(...ppaInteractables());
@@ -1154,7 +1337,7 @@ function travelMenu(dest, label) {
   const P = player.o.position, d = routeLen(P, dest), walkMin = Math.max(1, Math.round(d / 75)), name = label || dest.label || 'there';
   if (ST.area !== 'street' || d < 18) { travelGo('walk', dest, name); return; }
   phone(false);
-  ask('How are you getting to ' + name + '?', `It is about ${Math.round(d)} m away. Lagos sun is not smiling today.`, [
+  ask('How are you getting to ' + name + '?', `It is about ${Math.round(d)} m away. ${STATE().climate === 'cool' ? 'The breeze is cold today.' : 'The sun is not smiling today.'}`, [
     [`🚶🏾 Trek (free · about ${walkMin} min)`, () => travelGo('walk', dest, name)],
     [`🛺 Keke (${naira(fareOf(200))})`, () => travelGo('keke', dest, name)],
     ST.bg === 'car' ? [`🚙 Drive your own car (fuel ${naira(fareOf(300))})`, () => travelGo('own', dest, name)] : [`🚗 Ride app car (${naira(fareOf(1500))} · AC dey)`, () => travelGo('car', dest, name)],
@@ -1211,6 +1394,7 @@ function card(title, sub, ms = 2600) { const c = $('card'); c.innerHTML = `<b>${
 
 /* ---------------- time of day ---------------- */
 const pmremGen = new THREE.PMREMGenerator(renderer);
+let FOGBASE = null;
 function setTOD(seg) {
   ST.seg = seg;
   const el = { Morning: 20, Afternoon: 55, Evening: 4, Night: -9 }[seg];
@@ -1221,6 +1405,10 @@ function setTOD(seg) {
   hemi.intensity = night ? 0.18 : 0.55; hemi.color.set(night ? 0x5a6a9a : 0xe4ecff);
   renderer.toneMappingExposure = night ? 0.75 : 0.85;
   scene.fog.color.set(night ? 0x141a2a : seg === 'Evening' ? 0xd8b896 : 0xd9d6cb);
+  { const cl = ST.state ? STATE().climate : 'humid', base = FOGBASE || (FOGBASE = [scene.fog.near, scene.fog.far]); scene.fog.near = base[0]; scene.fog.far = base[1];
+    if (!night && cl === 'harmattan') { scene.fog.color.set(seg === 'Evening' ? 0xcfa77a : 0xd8c7a2); scene.fog.near = base[0] * 0.55; scene.fog.far = base[1] * 0.7; sunL.intensity *= 0.82; } // dusty harmattan haze
+    if (!night && cl === 'cool') { scene.fog.color.set(0xc9d4de); scene.fog.near = base[0] * 0.7; sunL.intensity *= 0.9; }
+    if (!night && cl === 'riverine') scene.fog.color.set(0xc6d4c4); }
   for (const l of CAMP.lights) l.intensity = night ? (l.userData.night || (l === campLamp ? 60 : 140)) : 0;
   for (const p of CAMP.crowd || []) p.hidden = !night;
   for (const p of CAMP.hostelNight || []) p.hidden = !(night && ST.area === 'camp');
@@ -1275,7 +1463,7 @@ function campInteractables() {
 }
 function gateCheck() {
   ask('Soldier at the gate', '"Corper! Where is your call-up letter?"', [
-    ['Hand over the call-up letter', () => ask('Soldier at the gate', '"Hmm. Lagos State. Okay. Open that bag. Let me see what you carry."', [
+    ['Hand over the call-up letter', () => ask('Soldier at the gate', (ST.state === 'LA' ? '"Hmm. Lagos State. Okay. Open that bag. Let me see what you carry."' : `"Hmm. ${SNAME()} State. Okay. Open that bag. Let me see what you carry."`), [
       ['Open the bag', () => ask('Soldier at the gate', '"Iron? Kettle? Ah, you want to cook inside hostel? I will pretend I did not see. Enter. Run to registration!"', [['"Thank you, sir!"', () => { ST.rep += 1; campGo(1); }]])],
       ['"Oga, abeg, ₦500 for pure water?"', () => { ST.stress = clamp(ST.stress + 10, 0, 100); ST.gateBribe = true; ask('Soldier at the gate', '"Are you trying to bribe me?! Frog jump to registration! Go!"', [['Frog jump away, quickly', () => campGo(1)]]); }],
     ])],
@@ -1283,7 +1471,7 @@ function gateCheck() {
   ]);
 }
 function register() {
-  const done = (photos) => { ST.code = 'LA/26C/' + (1000 + Math.floor(Math.random() * 8999)); ST.mins += 90;
+  const done = (photos) => { ST.code = STATE().id + '/26C/' + (1000 + Math.floor(Math.random() * 8999)); ST.mins += 90;
     ask('Registration officer', `"Right thumb here. Again. Left thumb. Again. Okay. Your state code is ${ST.code}. You are in Platoon 5. Next!"`, [['"Thank you, ma."', () => { chat('Platoon 5 · Camp Gist', 'Welcome! Add your name and state code here 👇🏾'); campGo(2); }]], SAY('Right thumb here. Again. Left thumb. Again. Okay. This is your state code. You are in Platoon 5. Next!')); };
   ask('Registration officer', '"Good morning. Call-up letter and green card."', [
     ['Hand them over', () => ask('Registration officer', '"Statement of result? Medical fitness certificate?"', [
@@ -1342,7 +1530,7 @@ function sleepNight(wasOut) {
 }
 function market(name) {
   if (/CHIDINMA/.test(name)) ask('Mama Chidinma', '"My corper! Bucket, torchlight, mosquito net. Everything you need for camp."', [['Bucket ₦1,500', () => spend(1500, 'Bucket bought. Now you can bathe like a human.', { stress: -4 })], ['Torchlight ₦800', () => spend(800, 'Torchlight bought. NEPA cannot humble you again.', { stress: -2 })], ['Just looking', () => { }]]);
-  else if (/BISI/.test(name)) ask('Aunty Bisi', '"Rice and beans with fried plantain, ₦1,200. Hot!"', [['Buy a plate ₦1,200', () => spend(1200, 'Hot food. Your soul returns to your body.', { energy: 22 })], ['Not now', () => { }]]);
+  else if (/BISI/.test(name)) ask(ZN().market, ST.state && ST.state !== 'LA' ? `"${ZN().foods[0]}, ₦1,200. Hot! Or ${ZN().foods[3].toLowerCase()} if you like."` : '"Rice and beans with fried plantain, ₦1,200. Hot!"', [['Buy a plate ₦1,200', () => spend(1200, 'Hot food. Your soul returns to your body.', { energy: 22 })], ['Not now', () => { }]]);
   else if (/KHAKI/.test(name)) ask('Tailor Musa', '"Your khaki is too big. ₦1,000 and it will fit like Agbada."', [['Adjust it ₦1,000', () => spend(1000, 'Khaki adjusted. You look sharp now.', { rep: 2 })], ['Leave it baggy', () => { }]]);
   else if (/PHOTO/.test(name)) ask('Photographer', '"One snap for your Instagram, ₦500."', [['Take a photo ₦500', () => spend(500, 'Instant print. Your mum will frame it.', { stress: -3 })], ['No thanks', () => { }]]);
   else ask('Charging stall', '"Phone charging ₦100 per hour. No stealing, we have CCTV." (There is no CCTV.)', [['Charge ₦100', () => spend(100, 'Phone charged to 76%.', {})], ['No', () => { }]]);
@@ -1386,26 +1574,52 @@ function endDrill() {
   setTimeout(() => cine('DAY 19 · 2:00 PM', 'Three weeks of drills, SAED lectures and mammy market. Then, the list.', () => { setTOD('Afternoon'); ST.mins = 14 * 60; ST.day = 19; campGo(6); }, 2600).then(() => { chat('Platoon 5 · Camp Gist', 'POSTINGS ARE OUT!!! Go and check the notice board now 😱'); chat('Emeka', 'Abeg who has seen Lagos? I don\'t want to go far'); }), 3400);
 }
 function posting() {
-  // weighted draw; Ikeja is the most common in this build
-  let r = Math.random() * POSTINGS.reduce((n, p) => n + p.w, 0), P = POSTINGS[0]; for (const p of POSTINGS) { if ((r -= p.w) < 0) { P = p; break; } }
-  if (window.__posting) P = POSTINGS.find(p => p.id === window.__posting) || P;
-  ST.post = { id: P.id, lga: P.short + ' LGA', state: 'Lagos', ppa: 'Corper Close Model School' };
+  const st = STATE(); let P = drawPosting(st.id, ST.course);
+  if (window.__posting) { const l = st.lgas.find(l => l[0].toLowerCase().replace(/\W/g, '') === window.__posting.toLowerCase().replace(/\W/g, '')); if (l) { const o = orgsFor(st, l[0], l[1]); const org = window.__org ? o.find(x => x.kind === window.__org) || o[0] : o[0]; P = { ...P, id: l[0], short: l[0], lga: l[0] + ' LGA', tier: l[1], org, sector: org.sector, kind: org.kind, ppa: org.name, prof: profileFor(st, l[0], l[1]) }; } }
+  ST.post = P; const pr = P.prof;
   const done = () => { dress('khaki'); toast('Swearing-in done, khaki on. The bus to ' + P.short + ' is outside the gate.', 4000); campGo(7); };
-  ask('Posting list', `${esc(ST.name || 'Your name')}, ${ST.code || 'LA/26C/----'}: <b>${P.short} LGA, Lagos</b> · ${P.density} density.<br>${P.blurb}<br><small>PPA: ${ST.post.ppa} · Clearance monthly at the LGA Secretariat · Rent about ${naira(P.rent)} a month</small>`, [
-    ['"God, thank you!" 🙏🏾', () => { ST.stress = clamp(ST.stress - (P.density === 'Low' ? 10 : 6), 0, 100); done(); }],
+  const lagosIkeja = st.id === 'LA' && P.short === 'Ikeja' && P.ppa === 'Corper Close Model School';
+  ask('Posting list', `${esc(ST.name || 'Your name')}, ${ST.code || st.id + '/26C/----'}: <b>${P.short} LGA, ${st.name} State</b> · ${pr.density} density.<br>${pr.blurb}<br><small>PPA: <b>${esc(P.ppa)}</b> · Clearance monthly at the ${P.short} LGA Secretariat · Rent about ${naira(pr.rent)} a month</small>`, [
+    ['"God, thank you!" 🙏🏾', () => { ST.stress = clamp(ST.stress - (pr.density === 'Low' ? 10 : 6), 0, 100); done(); }],
     ['Ask about redeployment', () => ask('Redeployment desk', '"Redeployment is for marriage, health or security reasons, with documents. Do you have any of those?"', [
       ['"No, I just don\'t like the place"', () => { toast('"Then go and serve your fatherland, corper." ' + P.short + ' it is.', 3600); done(); }],
       ['"Abeg, I know somebody…"', () => { ST.rep -= 2; ST.stress = clamp(ST.stress + 6, 0, 100); toast('The officer looks at you for a long time. You decide ' + P.short + ' is actually lovely.', 3800); done(); }],
     ])],
-  ], P.id === 'ikeja' ? SAY('Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.') : undefined);
-  chat('Platoon 5 · Camp Gist', `Who else got ${P.short}?? 🙋🏾`); setTimeout(() => chat('Emeka', pick(['They posted me to Epe 😭 is it far?', 'Alimosho! Na there my uncle dey', 'Eti-Osa! Lekki life, here I come 😎', 'Ikeja for me. The queue don already dey pain me.'])), 2200);
+  ], lagosIkeja ? SAY('Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.') : undefined);
+  const others = st.lgas.filter(l => l[0] !== P.short).sort(() => Math.random() - .5).slice(0, 3).map(l => l[0]);
+  chat('Platoon 5 · Camp Gist', `Who else got ${P.short}?? 🙋🏾`); setTimeout(() => chat('Emeka', pick([`They posted me to ${others[0]} 😭 is it far?`, `${others[1]}! Na there my uncle dey`, `${others[2]} for me. Who knows the place?`, `Abeg who has gone to ${P.short} before? How is accommodation?`])), 2200);
 }
 function leaveCamp() {
-  cine('FOUR WEEKS LATER', LGN() + ', Lagos · Monthly clearance day', () => { enterStreet(); saveGame('street'); }, 3000);
+  cine('FOUR WEEKS LATER', LGN() + ', ' + SNAME() + ' State · Monthly clearance day', () => { enterStreet(); saveGame('street'); }, 3000);
+}
+const busName = () => ST.state === 'LA' || !ST.state ? 'danfo' : STATE().zone === 'SW' ? 'korope bus' : 'shuttle bus';
+function reSign(mesh, title, sub, w, h, bg) { if (!mesh) return; const n = campSign(title, sub, w, h, bg); const old = mesh.material.map; mesh.material.map = n.material.map; mesh.material.needsUpdate = true; if (old) old.dispose(); n.geometry.dispose(); }
+function callUpLetter() {
+  const st = STATE(), z = ZONES[st.zone];
+  ask('Call-up letter', `<b>${esc(ST.name || 'Corps member')}</b>, you have been mobilised for the National Youth Service in <b>${st.name}${st.id === 'FC' ? '' : ' State'}</b> (${z.name}).<br>Report to the orientation camp at <b>${st.camp}</b>.<br><small>${st.nick ? '“' + st.nick + '” · ' : ''}Capital: ${st.capital} · ${st.lgas.length} LGAs · Languages you will hear: ${z.lang}${st.flav ? '<br>' + st.flav : ''}</small>`, [
+    ['Report to camp ▶', () => { if (st.id !== 'LA') chat('Platoon 5 · Camp Gist', `Welcome to ${st.name} camp o! ${z.greet[0]}`); }],
+  ]);
+}
+function themeCamp() { // your state's camp at the gate
+  const st = STATE(); reSign(CAMP.gateSign, `${st.name.toUpperCase()} ORIENTATION CAMP`, `${st.camp} · Fictional game`, 10.6, 1.4);
+}
+function themeStreet() { // shops, secretariat, PPA sign, buses: your LGA, not Lagos
+  const st = STATE(), z = st.zone, set = st.id === 'LA' ? null : z === 'NE' || z === 'NW' ? ZSHOPS.N : z === 'SW' ? null : ZSHOPS[z];
+  if (set) for (const { sm, i } of SHOPSIGNS) { const S = SHOPS[i], n = set[i]; const t = signTex(n[0], n[1], S[2], S[3]); const old = sm.material.map; sm.material.map = t; sm.material.needsUpdate = true; if (old) old.dispose(); }
+  if (set) for (const sp of shopSpots) sp.name = set[sp.si][0];
+  if (LGA.sign) { const old = LGA.sign.material.map; LGA.sign.material.map = ctex(1024, 256, (c, w, h) => { c.fillStyle = '#1b5e20'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.textAlign = 'center'; let fs = 76; c.font = `900 ${fs}px Arial Black, Impact`; const t = `${LGN().toUpperCase()} LOCAL GOVT. SECRETARIAT`; while (c.measureText(t).width > w - 40 && fs > 30) { fs -= 4; c.font = `900 ${fs}px Arial Black, Impact`; } c.fillText(t, w / 2, 110); c.font = '700 44px Arial'; c.fillStyle = '#ffeb3b'; c.fillText(`${st.name} State · Corps members' clearance → Hall B`, w / 2, 196); }); LGA.sign.material.needsUpdate = true; if (old) old.dispose(); }
+  const P = ST.post; if (P && P.kind === 'school') reSign(SCH.sign, P.ppa.toUpperCase(), 'Knowledge is light · Fictional school', 7.4, 1.4, '#0d47a1');
+  if (P && WORK.clinic.sign && P.kind === 'clinic') reSign(WORK.clinic.sign, P.ppa.toUpperCase(), 'Health for all · Fictional', 7, 1.2, '#00695c');
+  if (P && WORK.office.sign && P.kind === 'office') reSign(WORK.office.sign, P.ppa.toUpperCase(), P.sector === 'gov' ? 'Government office · Fictional' : 'Fictional organisation', 7, 1.2, '#283593');
+  if (st.id !== 'LA' && realModels.danfo && !realModels.danfo.userData.tinted) { // white shuttle buses outside Lagos, green in Abuja
+    realModels.danfo.userData.tinted = true;
+    realModels.danfo.traverse(m => { if (!m.isMesh || !m.material.map || !m.material.map.image) return; const im = m.material.map.image, c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.filter = st.id === 'FC' ? 'hue-rotate(70deg) saturate(1.2)' : 'saturate(0.12) brightness(1.35)'; g.drawImage(im, 0, 0); const t = new THREE.CanvasTexture(c); t.flipY = m.material.map.flipY; t.colorSpace = THREE.SRGBColorSpace; m.material.map = t; m.material.needsUpdate = true; });
+  }
+  for (const n of NPC) if (n.area !== 'camp' && Array.isArray(n.bubble) && !n.greeted && Math.random() < 0.5) { n.greeted = true; n.bubble = [pick(ZN().greet), ...n.bubble]; }
 }
 function enterStreet() {
   {
-    spawnStreet(); if (ST.outfit !== 'khaki') dress('khaki');
+    spawnStreet(); themeStreet(); if (ST.outfit !== 'khaki') dress('khaki');
     ST.area = 'street'; ST.cstep = 99; setTOD('Morning'); ST.day = 1; ST.mins = 7 * 60 + 42; ST.phase = 0; chatT = 0; story = 0;
     if (CAMP.ring) CAMP.ring.visible = false;
     for (const v of traffic) v.g.visible = true;
@@ -1417,7 +1631,7 @@ function enterStreet() {
   }
 }
 /* ---------------- save / continue (this browser only) ---------------- */
-const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles', 'queried', 'cdsDone'];
+const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['state', 'course', 'cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles', 'queried', 'cdsDone'];
 function saveGame(cp) { try { const d = { cp, g: ST.g, at: Date.now(), st: {}, y: cp === 'year' ? Object.fromEntries(Object.entries(Y).filter(([k, v]) => typeof v !== 'function' && typeof v !== 'object')) : null }; for (const k of SAVE_FIELDS) if (ST[k] !== undefined) d.st[k] = ST[k]; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { } }
 function loadSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.cp && d.g ? d : null; } catch (e) { return null; } }
 function resumeFrom(d) {
@@ -1425,7 +1639,7 @@ function resumeFrom(d) {
   for (const p of people) if (p.area === 'camp') p.hidden = true;
   if (d.cp === 'ch2') { ST.done = true; ST.ppa = 5; enterStreet(); startChapter2(); }
   else if (d.cp === 'year') { ST.done = true; ST.ppa = 5; enterStreet(); if (d.y) Object.assign(Y, d.y); startYear(!!d.y); }
-  else cine('WELCOME BACK', LGN() + ', Lagos · Monthly clearance day', () => enterStreet(), 2200);
+  else cine('WELCOME BACK', LGN() + ', ' + SNAME() + ' State · Monthly clearance day', () => enterStreet(), 2200);
 }
 window.__camp = { dress, campGo, drillAnswer, gateCheck, register, kit, bunk, socialNight, sleepNight, startDrill, posting, leaveCamp, choose, CAMP, CSTEP, setTOD };
 
@@ -1437,31 +1651,119 @@ function drawBoard(lines, sub) {
   g.font = '700 52px "Comic Sans MS", "Segoe Print", cursive'; lines.forEach((l, i) => g.fillText(l, 40, 130 + i * 72));
   SCH.boardTex.needsUpdate = true;
 }
+const PKIND = () => (ST.post && ST.post.kind) || 'school';
+const PPANAME = () => (ST.post && ST.post.ppa) || 'Corper Close Model School';
+const PPADOOR = () => PKIND() === 'school' ? SCH.gate : WORK[PKIND()].door;
+const BOSSES = { clinic: { SW: 'Matron Folake', SE: 'Matron Ngozi', SS: 'Matron Tamara', NC: 'Matron Ladi', NE: 'Matron Fatima', NW: 'Matron Hadiza' }, office: { SW: 'Mr. Bankole', SE: 'Mr. Obinna', SS: 'Mrs. Ofure', NC: 'Mr. Danladi', NE: 'Mr. Garba', NW: 'Mr. Yusuf' } };
+const BOSS = () => PKIND() === 'school' ? PRN() : BOSSES[PKIND()][(ST.state ? STATE() : { zone: 'SW' }).zone];
+const BOSSROLE = () => PKIND() === 'clinic' ? 'Matron' : PKIND() === 'office' ? (ST.post && ST.post.sector === 'gov' ? 'Head of Admin' : ST.post && ST.post.sector === 'ngo' ? 'Programme Coordinator' : 'Branch Manager') : 'Principal';
+const PPA_FLOWS = {
+  clinic: [
+    { obj: () => 'Go to your PPA: ' + PPANAME(), at: () => WORK.clinic.door, label: 'Health centre' },
+    { obj: () => 'Report to ' + BOSS() + ' at reception', at: () => WORK.clinic.spots.boss, label: 'Reception' },
+    { obj: () => 'Help triage the waiting patients', at: () => WORK.clinic.spots.triage, label: 'Waiting area' },
+    { obj: () => 'Help in the records room', at: () => WORK.clinic.spots.records, label: 'Records' },
+    { obj: () => 'See ' + BOSS() + ' before you close', at: () => WORK.clinic.spots.boss, label: 'Reception' },
+  ],
+  office: [
+    { obj: () => 'Go to your PPA: ' + PPANAME(), at: () => WORK.office.door, label: 'Office' },
+    { obj: () => 'Report to ' + BOSS() + ' (' + BOSSROLE() + ')', at: () => WORK.office.spots.boss, label: BOSSROLE() },
+    { obj: () => 'Fix the report at your desk', at: () => WORK.office.spots.desk, label: 'Your desk' },
+    { obj: () => 'Sort out the printer wahala', at: () => WORK.office.spots.printer, label: 'Printer' },
+    { obj: () => 'See ' + BOSS() + ' before you close', at: () => WORK.office.spots.boss, label: BOSSROLE() },
+  ],
+};
 const PPA_STEPS = [
-  { obj: 'Go to your PPA: Corper Close Model School', at: () => SCH.gate, label: 'Model School' },
-  { obj: 'Report to the principal, Mr. Adebayo', at: () => SCH.spots.principal, label: 'Principal' },
+  { obj: () => 'Go to your PPA: ' + PPANAME(), at: () => SCH.gate, label: 'Your school' },
+  { obj: () => 'Report to the principal, ' + PRN(), at: () => SCH.spots.principal, label: 'Principal' },
   { obj: 'Teach JSS2 Mathematics at the chalkboard', at: () => SCH.spots.board, label: 'Classroom' },
   { obj: 'Help in the staff room', at: () => SCH.spots.staff, label: 'Staff room' },
   { obj: 'See the principal before you close', at: () => SCH.spots.principal, label: 'Principal' },
 ];
-function ppaGo(i) { ST.ppa = i; if (i >= PPA_STEPS.length) return; const s = PPA_STEPS[i]; setObj(s.obj); const a = s.at(); ST.target = { x: a.x, z: a.z, label: s.label }; $('arrow').style.display = 'block'; }
+function ppaGo(i) { ST.ppa = i; const F = PPA_FLOWS[PKIND()] || PPA_STEPS; if (i >= F.length) return; const s = F[i]; setObj(typeof s.obj === 'function' ? s.obj() : s.obj); const a = s.at(); ST.target = { x: a.x, z: a.z, label: s.label }; $('arrow').style.display = 'block'; }
 function ppaInteractables() {
   const L = [];
+  if (PKIND() !== 'school') return workInteractables(L);
   if (ST.ppa === 0 && Math.hypot(player.o.position.x - LGA.x, player.o.position.z - LGA.z) < 22) L.push({ x: LGA.x - 3, z: -9.0, label: `Take a keke to your PPA (${naira(200)})`, act: kekeToPPA });
   if (ST.ppa === 0 && Math.hypot(player.o.position.x - SCH.gate.x, player.o.position.z - SCH.gate.z) < 4) { ppaGo(1); toast('Pupils in green uniforms run past you shouting "Corper! Corper!"', 3200); }
-  if (ST.ppa === 1 || ST.ppa === 4) L.push({ ...SCH.spots.principal, label: 'Talk to Mr. Adebayo (principal)', act: ST.ppa === 1 ? principal1 : principal2 });
+  if (ST.ppa === 1 || ST.ppa === 4) L.push({ ...SCH.spots.principal, label: 'Talk to ' + PRN() + ' (principal)', act: ST.ppa === 1 ? principal1 : principal2 });
   if (ST.ppa === 2 && !ST.lesson) L.push({ ...SCH.spots.board, label: 'Start teaching the lesson', act: startLesson });
-  if (ST.ppa === 3) L.push({ ...SCH.spots.staff, label: 'Help Mrs. Okon in the staff room', act: staffRoom });
+  if (ST.ppa === 3) L.push({ ...SCH.spots.staff, label: 'Help ' + TCH() + ' in the staff room', act: staffRoom });
   return L;
+}
+// ---- chapter 1 at a health centre or an office ----
+function workInteractables(L) {
+  const K = PKIND(), W = WORK[K], P = player.o.position, sp = W.spots;
+  if (ST.ppa === 0 && Math.hypot(P.x - LGA.x, P.z - LGA.z) < 22) L.push({ x: LGA.x - 3, z: -9.0, label: `Take a keke to your PPA (${naira(fareOf(200))})`, act: kekeToPPA });
+  if (ST.ppa === 0 && Math.hypot(P.x - W.door.x, P.z - W.door.z) < 4.5) { ppaGo(1); toast(K === 'clinic' ? 'Mothers with babies on their backs fill the benches. A nurse waves you in.' : 'Air conditioner humming, phones ringing, someone shouting "Who took my stapler?"', 3400); }
+  if (ST.ppa === 1) L.push({ ...sp.boss, label: 'Talk to ' + BOSS(), act: work1 });
+  if (ST.ppa === 2) L.push({ ...(K === 'clinic' ? sp.triage : sp.desk), label: K === 'clinic' ? 'Triage the waiting patients' : 'Fix the quarterly report', act: K === 'clinic' ? triage : reportFix });
+  if (ST.ppa === 3) L.push({ ...(K === 'clinic' ? sp.records : sp.printer), label: K === 'clinic' ? 'Help in the records room' : 'Sort out the printer', act: K === 'clinic' ? recordsEthics : printerEthics });
+  if (ST.ppa === 4) L.push({ ...sp.boss, label: 'See ' + BOSS() + ' before you close', act: work2 });
+  for (const n of W.staff) if (n.talk) L.push({ x: n.o.position.x, z: n.o.position.z, label: n.talk.label, act: n.talk.act });
+  return L;
+}
+function work1() {
+  const K = PKIND();
+  ask(BOSS() + ' (' + BOSSROLE() + ')', K === 'clinic'
+    ? `"Corper, welcome to ${esc(PPANAME())}. We are three nurses for this whole community. You will help with triage, records and immunisation days. Can you stand the sight of blood?"`
+    : `"So you are our new corper. Welcome to ${esc(PPANAME())}. We resume 8 AM, not 8:30. You will help with reports, customers and anything that has a printer inside it."`, [
+    ['"Yes ma/sir. I\'m ready to learn."', () => { ST.rep += 2; ppaGo(2); }],
+    ['"Do you people pay corpers allowance here?"', () => { ST.stress = clamp(ST.stress + 3, 0, 100); toast(BOSS() + ': "Let us see your work first."', 2800); ppaGo(2); }],
+  ]);
+}
+const TRIAGE = [
+  [['A child with high fever who just had a convulsion', 2], ['A man who wants his blood pressure checked "just to know"', 0], ['A woman for her routine antenatal visit', 1]],
+  [['A farmer with a deep cut that is still bleeding', 2], ['A boy who needs a school medical form signed', 0], ['An old woman with a cough for two weeks', 1]],
+  [['A pregnant woman with a severe headache and swollen legs', 2], ['A young man asking for "drip" because he is tired', 0], ['A baby due for measles vaccine', 1]],
+];
+function triage() {
+  let i = 0, ok = 0; const next = () => {
+    if (i >= TRIAGE.length) { ST.ppaScore = Math.round(ok * 5 / 3); card(ok >= 3 ? 'TRIAGE: EXCELLENT' : ok >= 2 ? 'TRIAGE: GOOD' : 'TRIAGE: ROUGH', ok >= 2 ? 'The nurses start calling you "Doctor Corper".' : 'The nurse gently re-orders the queue. Learn from it.', 3000); ppaGo(3); return; }
+    const opts = TRIAGE[i].slice().sort(() => Math.random() - .5);
+    ask(`Triage · Round ${i + 1} of 3`, 'Who should the nurse see first?', opts.map(([t, sc]) => [t, () => { if (sc === 2) ok++; toast(sc === 2 ? 'Correct. The danger signs come first.' : 'Not first. Look for danger signs: convulsion, heavy bleeding, pregnancy with severe headache.', 2600); i++; setTimeout(next, 1600); }]));
+  }; next();
+}
+function reportFix() {
+  const a = 120 + ((Math.random() * 80) | 0), b = 95 + ((Math.random() * 60) | 0), c = 60 + ((Math.random() * 50) | 0), tot = a + b + c, shown = tot + pick([10, -10, 100]);
+  let ok = 0; const Q = [
+    [`The report says July ${a} + August ${b} + September ${c} = ${shown} customers. The real total is…`, [String(tot), String(shown), String(tot + 1)]],
+    ['A customer emails at 11 PM: "Urgent!!!" What is the professional reply in the morning?', ['"Good morning. Thank you for your mail. I will resolve this today and update you by 2 PM."', '"We close at 5. Read our hours."', 'Ignore it until he calls']],
+    ['The file is called "final_final_REAL2.xlsx". What do you do?', ['Save a clean copy with a date: "Q3_Report_2026-10-02.xlsx"', 'Name it "final_final_REAL3"', 'Delete the old ones without asking']],
+  ];
+  let i = 0; const next = () => {
+    if (i >= Q.length) { ST.ppaScore = Math.round(ok * 5 / 3); card(ok >= 3 ? 'REPORT: SPOTLESS' : ok >= 2 ? 'REPORT: GOOD' : 'REPORT: ROUGH', ok >= 2 ? BOSS() + ' forwards your report to Head Office with your name on it.' : 'Your supervisor redoes half of it. Next time.', 3000); ppaGo(3); return; }
+    const [q, opts] = Q[i]; ask(`Your desk · Task ${i + 1} of 3`, q, opts.map(o => o).sort(() => Math.random() - .5).map(o => [o, () => { if (o === opts[0]) ok++; toast(o === opts[0] ? 'Good.' : 'Hmm. ' + (i === 0 ? `It is ${tot}.` : 'Not quite.'), 1800); i++; setTimeout(next, 1400); }]));
+  }; player.o.position.set(WORK.office.spots.desk.x, 0.02, WORK.office.spots.desk.z); play(player, 'type'); next();
+}
+function workTyping(msg) { ST.busy = true; play(player, 'type'); setTimeout(() => { ST.busy = false; play(player, 'idle'); toast(msg, 4200); ST.mins += 60; ppaGo(4); }, 2600); }
+function recordsEthics() {
+  ask('Records room', '"Corper, abeg help me. I need a medical fitness certificate for my new job. I never see doctor, but take ₦5,000, just stamp it."', [
+    ['"Sorry, you have to see the doctor first."', () => { ST.rep += 3; ST.honest = true; workTyping('You file 40 patient cards instead. Your hands smell of old paper. ' + BOSS() + ' saw what you did.'); }],
+    ['Take the ₦5,000 and stamp it', () => { ST.txn = 'Transfer (unknown sender)'; ST.cash += 5000; ST.rep -= 4; ST.bribeTaken = true; ST.stress = clamp(ST.stress + 8, 0, 100); workTyping('The stamp feels heavy. The alert comes. You file cards in silence.'); }],
+    ['Call ' + BOSS(), () => { ST.rep += 2; workTyping(BOSS() + ' sends him to the doctor\'s queue. "Corper, you did well."'); }],
+  ]);
+}
+function printerEthics() {
+  ask('By the printer', '"Corper, print this receipt for me. Just change ₦18,000 to ₦38,000. Accounts will refund it, we share the difference. Nobody checks."', [
+    ['"No o. I\'ll print the real one."', () => { ST.rep += 3; ST.honest = true; workTyping('You print the real receipt and unjam the printer for the whole floor. Instant office celebrity.'); }],
+    ['Do it and take your ₦10,000 share', () => { ST.txn = 'Transfer from colleague'; ST.cash += 10000; ST.rep -= 4; ST.bribeTaken = true; ST.stress = clamp(ST.stress + 8, 0, 100); workTyping('Accounts pays. Your share lands. Your stomach does a small drill.'); }],
+    ['Tell ' + BOSS(), () => { ST.rep += 2; ST.stress = clamp(ST.stress + 4, 0, 100); workTyping('A long meeting follows. The colleague does not greet you anymore.'); }],
+  ]);
+}
+function work2() {
+  ask(BOSS() + ' (' + BOSSROLE() + ')', `"Corper, ${(ST.ppaScore || 0) >= 4 ? 'you did very well today.' : 'thank you for today.'} Take this for transport. See you tomorrow, 8 AM sharp."`, [
+    [`"Thank you!" (collect ${naira(3000)})`, () => { ST.txn = PPANAME().slice(0, 28); ST.cash += 3000; ST.rep += 1; chat('Naija Trust Bank', 'Credit alert: ₦3,000.00 · ' + PPANAME().toUpperCase().slice(0, 30) + '. Bal: ' + naira(ST.cash), 'off'); ppaGo(5); ST.target = null; $('arrow').style.display = 'none'; setObj('Chapter 1 complete'); setTimeout(showSummary, 1600); }],
+  ]);
 }
 function kekeToPPA() {
   if (ST.cash < 200) { toast('Keke man: "No money, no movement."'); return; }
-  ST.txn = 'Keke fare'; ST.cash -= 200; hudSync(); rideTo({ x: SCH.gate.x + 1.5, z: -8.6 }, 'keke', 'Model School');
+  ST.txn = 'Keke fare'; ST.cash -= 200; hudSync(); const d = PPADOOR(); rideTo({ x: d.x + 1.5, z: d.z < 0 ? -8.6 : 8.6 }, 'keke', PPANAME());
 }
 function principal1() {
-  ask('Mr. Adebayo (Principal)', '"Welcome, corper. We have no Maths teacher for JSS2 since January. You will take them. The class is waiting."', [
+  ask('' + PRN() + ' (Principal)', '"Welcome, corper. We have no Maths teacher for JSS2 since January. You will take them. The class is waiting."', [
     ['"No wahala, sir. I\'m ready."', () => { ST.rep += 2; ppaGo(2); drawBoard(['Good morning, class!'], 'JSS 2 · Mathematics'); }],
-    ['"Sir, can I teach only two days a week?"', () => { ST.stress = clamp(ST.stress + 4, 0, 100); toast('Mr. Adebayo: "You are a corper, not a contractor. Classroom, now."', 3600); ppaGo(2); drawBoard(['Good morning, class!'], 'JSS 2 · Mathematics'); }],
+    ['"Sir, can I teach only two days a week?"', () => { ST.stress = clamp(ST.stress + 4, 0, 100); toast('' + PRN() + ': "You are a corper, not a contractor. Classroom, now."', 3600); ppaGo(2); drawBoard(['Good morning, class!'], 'JSS 2 · Mathematics'); }],
   ]);
 }
 function makeQ(i) {
@@ -1499,10 +1801,10 @@ function endLesson() {
   setTimeout(() => L.done ? L.done(L.ok) : ppaGo(3), 1200);
 }
 function staffRoom() {
-  ask('Mrs. Okon (Vice Principal)', '"Corper, compile JSS2 scores. Ah, and a parent called. Her son scored 38. She said you should make it 50 and she will \'appreciate you\'."', [
-    ['Refuse politely, enter the real score', () => { ST.rep += 3; ST.honest = true; typing('You type the real scores into the old computer. Mrs. Okon nods slowly. "You will go far."'); }],
+  ask('' + TCH() + ' (Vice Principal)', '"Corper, compile JSS2 scores. Ah, and a parent called. Her son scored 38. She said you should make it 50 and she will \'appreciate you\'."', [
+    ['Refuse politely, enter the real score', () => { ST.rep += 3; ST.honest = true; typing('You type the real scores into the old computer. ' + TCH() + ' nods slowly. "You will go far."'); }],
     ['Take the ₦5,000 "appreciation"', () => { ST.txn = 'MRS ADA (unknown sender)'; ST.cash += 5000; ST.rep -= 4; ST.bribeTaken = true; ST.stress = clamp(ST.stress + 8, 0, 100); typing('You change 38 to 50. The ₦5,000 alert comes. You feel it in your chest.'); chat('Naija Trust Bank', 'Credit alert: ₦5,000.00 from MRS ADA (UNKNOWN). Bal: ' + naira(ST.cash), 'off'); }],
-    ['Report it to the principal', () => { ST.rep += 2; ST.stress = clamp(ST.stress + 4, 0, 100); typing('You type the real scores. Mr. Adebayo calls the parent. You will hear about this in the staff room for weeks.'); }],
+    ['Report it to the principal', () => { ST.rep += 2; ST.stress = clamp(ST.stress + 4, 0, 100); typing('You type the real scores. ' + PRN() + ' calls the parent. You will hear about this in the staff room for weeks.'); }],
   ]);
 }
 function typing(msg) {
@@ -1511,7 +1813,7 @@ function typing(msg) {
   setTimeout(() => { ST.busy = false; play(player, 'idle'); toast(msg, 4200); ST.mins += 60; ppaGo(4); }, 2800);
 }
 function principal2() {
-  ask('Mr. Adebayo (Principal)', `"Corper, ${ST.ppaScore >= 4 ? 'the children are talking about your class!' : 'thank you for today.'} Take this small transport money. See you on Monday, not Wednesday."`, [
+  ask('' + PRN() + ' (Principal)', `"Corper, ${ST.ppaScore >= 4 ? 'the children are talking about your class!' : 'thank you for today.'} Take this small transport money. See you on Monday, not Wednesday."`, [
     ['"Thank you, sir!" (collect ₦5,000)', () => { ST.txn = 'Corper Close Model Sch'; ST.cash += 5000; ST.rep += 1; chat('Naija Trust Bank', 'Credit alert: ₦5,000.00 · CORPER CLOSE MODEL SCH. Bal: ' + naira(ST.cash), 'off'); ppaGo(5); ST.target = null; $('arrow').style.display = 'none'; setObj('Chapter 1 complete'); setTimeout(showSummary, 1600); }],
   ], ST.ppaScore >= 4 ? SAY('Corper, the children are talking about your class! Take this small transport money. See you on Monday, not Wednesday.') : SAY('Corper, thank you for today. Take this small transport money. See you on Monday, not Wednesday.'));
 }
@@ -1659,8 +1961,8 @@ function startYear(resume) {
 }
 function yKindFor() { return Y.di >= YDAYS.length * Y.WEEKS ? (Y.month >= Y.MONTHS ? 'Pop' : 'Clr') : YDAYS[Y.di % YDAYS.length]; }
 function yMorning() {
-  Y.kind = yKindFor(); Y.week = Math.min(Y.WEEKS, Math.floor(Y.di / YDAYS.length) + 1); Y.jobs = Object.keys(PPA_JOBS).sort(() => Math.random() - .5).slice(0, 3); Y.done = false; Y.task = null; Y.cdsOff = false; Y.signed = false; Y.late = false; Y.dusk = false;
-  const sub = { Mon: 'PPA day. Mr. Adebayo opens the gate at 7:30 and counts who is late.', Thu: 'CDS day. Khaki, CDS card, and whatever the group chat is saying.', Sat: 'No PPA, no CDS. Your money, your energy, your choice.', Clr: 'Last working day of the month. Thumbprint at the LGA, then the alert.', Pop: 'Twelve weeks compressed into one game. Today you pass out.' }[Y.kind];
+  Y.kind = yKindFor(); Y.week = Math.min(Y.WEEKS, Math.floor(Y.di / YDAYS.length) + 1); Y.jobs = Object.keys(PPA_JOBS).filter(k => (PPA_JOBS[k].kind || 'school') === PKIND()).sort(() => Math.random() - .5).slice(0, 3); Y.done = false; Y.task = null; Y.cdsOff = false; Y.signed = false; Y.late = false; Y.dusk = false;
+  const sub = { Mon: 'PPA day. ' + BOSS() + ' counts who is late at 8:00.', Thu: 'CDS day. Khaki, CDS card, and whatever the group chat is saying.', Sat: 'No PPA, no CDS. Your money, your energy, your choice.', Clr: 'Last working day of the month. Thumbprint at the LGA, then the alert.', Pop: 'Twelve weeks compressed into one game. Today you pass out.' }[Y.kind];
   cine(yDayLabel(), sub, () => {
     setTOD('Morning'); ST.mins = 6 * 60 + 45; ST.area = 'street'; ST.target = null; $('arrow').style.display = 'none';
     player.o.position.set(-44.2, 0.2, 14.2); player.o.rotation.y = Math.PI; cam.yaw = 0; cam.pitch = 0.3; cam.tdist = 4.2; camLook.copy(player.o.position);
@@ -1673,7 +1975,7 @@ function yMorning() {
   }, 2800).then(() => { ySetDay(); setTimeout(yEvent, 2200); });
 }
 function ySetDay() {
-  if (Y.kind === 'Mon') { setObj('Get to Model School before 8:00 AM and sign the attendance book'); ST.target = { x: SCH.gate.x, z: -9.6, label: 'Model School (PPA)' }; }
+  if (Y.kind === 'Mon') { setObj('Get to ' + PPANAME() + ' before 8:00 AM and sign the attendance book'); const d = PPADOOR(); ST.target = { x: d.x, z: d.z, label: 'Your PPA' }; }
   if (Y.kind === 'Thu') {
     Y.cdsOff = Math.random() < PF().cdsOff; const rumour = Math.random() < PF().rumour;
     if (rumour) { const says = Y.cdsOff ? 'no CDS today' : 'no CDS today'; setTimeout(() => chat(pick(['Bisi', 'Emeka', 'Kunle']), `Guys they said ${says} 👀`), 1500); setTimeout(() => chat(pick(['Seyi', 'Tolu']), 'Who said? Abeg post proof'), 4200); }
@@ -1714,7 +2016,7 @@ function ySaturday() {
 function yInteractables() {
   const L = [], P = player.o.position;
   L.push({ x: LODGE.x, z: LODGE.z, label: Y.kind === 'Pop' ? 'Your room (POP is today!)' : Y.done ? 'Sleep (end the day)' : 'Sleep early (skip the day)', act: ySleep });
-  if (Y.kind === 'Mon' && !Y.signed) L.push({ x: SCH.x + 15, z: -24, label: 'Sign the staff attendance book', act: ySignPPA });
+  if (Y.kind === 'Mon' && !Y.signed) { const sp = PKIND() === 'school' ? { x: SCH.x + 15, z: -24 } : WORK[PKIND()].spots.sign; L.push({ x: sp.x, z: sp.z, label: 'Sign the staff attendance book', act: ySignPPA }); }
   if (Y.kind === 'Mon' && Y.signed && !Y.done) for (const j of (Y.jobs || [])) { const J = PPA_JOBS[j]; L.push({ x: J.at().x, z: J.at().z, label: J.label, act: J.act }); }
   if (Y.kind === 'Thu' && !Y.signed && Math.hypot(P.x - (LGA.x + 9), P.z + 14) < 12) L.push({ x: LGA.x + 9, z: -12.4, label: Y.cdsOff ? 'Ask the security man about CDS' : 'Sign the CDS register', act: ySignCDS });
   if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, label: Y.inQ ? `Wait for your name (${Y.queue} before you)` : 'Join the clearance queue', act: yClearance });
@@ -1744,21 +2046,32 @@ const PPA_JOBS = {
   maths: { label: 'Teach JSS 2A Maths (3 questions)', at: () => SCH.spots.board, act: () => { for (const s of SCH.students) s.hidden = false; startLesson(ok => yPPADone(ok >= 2 ? 3 : 0, ok >= 2 ? 'The class went well.' : 'Rough class. Next week is another chance.'), 3); } },
   english: { label: 'Teach JSS 2A English (3 questions)', at: () => SCH.spots.board, act: engLesson },
   marking: { label: 'Mark JSS 1 exercise books', at: () => ({ x: SCH.x + 12.6, z: -26.9 }), act: () => yMarking() },
-  printer: { label: 'See Mr. Adebayo about the printer', at: () => SCH.spots.principal, act: () => yPrinter() },
+  printer: { label: 'See ' + PRN() + ' about the printer', at: () => SCH.spots.principal, act: () => yPrinter() },
   invigilate: { label: 'Invigilate the SS 2 test (Block B)', at: () => ({ x: SCH.x + 11.5, z: -32.6 }), act: () => ask('SS 2 · Biology test', 'Twenty minutes in, you notice a boy with tiny notes folded inside his calculator cover. His friend is whispering answers.', [
-    ['Seize the notes quietly, let him continue', () => yPPADone(3, 'Fair and calm. Mrs. Okon nods at you from the corridor.')],
+    ['Seize the notes quietly, let him continue', () => yPPADone(3, 'Fair and calm. ' + TCH() + ' nods at you from the corridor.')],
     ['Shout and send both of them out', () => yPPADone(1, 'The class is now terrified of you. Order restored, sort of.')],
     ['Pretend you did not see', () => yPPADone(-1, 'Half the class now has the same answers. The teacher will notice.')],
   ]) },
-  assembly: { label: 'Lead morning assembly (flagpole)', at: () => ({ x: SCH.x + 4, z: -16.8 }), act: () => ask('Morning assembly', 'The pupils line up under the sun, JSS 1 in front, SS 3 pretending not to be there. Mr. Adebayo hands you the microphone. "Corper, talk to them small."', [
+  assembly: { label: 'Lead morning assembly (flagpole)', at: () => ({ x: SCH.x + 4, z: -16.8 }), act: () => ask('Morning assembly', 'The pupils line up under the sun, JSS 1 in front, SS 3 pretending not to be there. ' + PRN() + ' hands you the microphone. "Corper, talk to them small."', [
     ['Talk about punctuality and respect', () => yPPADone(2, 'Short, clear, done. The principal looks proud.')],
     ['Tell them about your camp days and frog jumps', () => yPPADone(3, 'The pupils laugh and clap. Now everybody calls you "Corper Frog".')],
     ['Read the anthem lyrics slowly with them', () => yPPADone(2, 'Loud anthem, straight lines. The flag looks happy.')],
   ]) },
 };
+// health centre and office jobs for service-year Mondays
+Object.assign(PPA_JOBS, {
+  c_triage: { kind: 'clinic', label: 'Help triage the morning queue', at: () => WORK.clinic.spots.triage, act: () => { const r = TRIAGE[(Math.random() * TRIAGE.length) | 0].slice().sort(() => Math.random() - .5); ask('Waiting area', 'Who goes in first?', r.map(([t, sc]) => [t, () => yPPADone(sc === 2 ? 3 : 0, sc === 2 ? 'Danger signs first. The nurse nods.' : 'The nurse re-orders the queue. Look for danger signs.')])); } },
+  c_immun: { kind: 'clinic', label: 'Run the immunisation register', at: () => WORK.clinic.spots.immun, act: () => ask('Immunisation day', 'Forty-two babies, one register, and one mother who says her baby already took "this injection" at another place but has no card.', [['Check the child health card system and ask the nurse', () => yPPADone(3, 'No double dose, no missed dose. Clean register.')], ['Just give it again to be safe', () => yPPADone(-1, 'The nurse stops you. Never guess with vaccines.')], ['Send her home', () => yPPADone(0, 'She leaves without the vaccine. The nurse calls her back.')]]) },
+  c_talk: { kind: 'clinic', label: 'Give the morning health talk', at: () => WORK.clinic.spots.talk, act: () => ask('Health talk', 'Thirty mothers on the benches. Pick today\'s topic.', [['Handwashing and ORS for diarrhoea', () => yPPADone(3, 'Practical and clear. Two mothers ask for ORS packets.')], ['Sleeping under treated mosquito nets', () => yPPADone(3, 'Everybody nods. Malaria is everybody\'s enemy.')], ['Your camp drill stories', () => yPPADone(0, 'They laugh, but nobody learned anything.')]]) },
+  c_records: { kind: 'clinic', label: 'Sort the patient cards', at: () => WORK.clinic.spots.records, act: () => yPPADone(2, 'Two hundred cards in alphabetical order. Your back is now a senior citizen.') },
+  o_report: { kind: 'office', label: 'Check the weekly figures', at: () => WORK.office.spots.desk, act: () => { const a = 40 + ((Math.random() * 60) | 0), b = 30 + ((Math.random() * 60) | 0); ask('Weekly report', `Mon ${a} + Tue ${b} customers. What should the total say?`, [String(a + b), String(a + b + 10), String(a * 2)].sort(() => Math.random() - .5).map(o => [o, () => yPPADone(+o === a + b ? 3 : 0, +o === a + b ? 'Correct. Report sent before 10 AM.' : `It was ${a + b}. Your supervisor fixed it.`)])); } },
+  o_customer: { kind: 'office', label: 'Attend to the angry customer at the front desk', at: () => WORK.office.spots.front, act: () => ask('Front desk', '"Since morning I have been waiting! Is this how you treat customers?!"', [['Apologise, take his details, and get him seen in 10 minutes', () => yPPADone(3, 'He leaves smiling. He even asks for your name.')], ['"Oga, everybody is waiting too."', () => yPPADone(0, 'He asks for your manager. Your manager asks for you.')], ['Hide in the toilet', () => yPPADone(-1, 'You come back. He is still there. Angrier.')]]) },
+  o_minutes: { kind: 'office', label: 'Take minutes at the staff meeting', at: () => WORK.office.spots.meet, act: () => ask('Staff meeting', 'Ninety minutes. Three topics. One person talks for sixty of the minutes.', [['Write clear action points with names and dates', () => yPPADone(3, 'Your minutes go round the whole office. "Who wrote this?"')], ['Write everything word for word', () => yPPADone(1, 'Eleven pages. Nobody reads it.')], ['Scroll the group chat under the table', () => yPPADone(-1, 'You missed the part where they assigned you a task.')]]) },
+  o_printer: { kind: 'office', label: 'Fix the printer again', at: () => WORK.office.spots.printer, act: () => yPPADone(2, 'Paper jam, toner shake, off and on. You are the printer whisperer.') },
+});
 function ySignPPA() {
   Y.signed = true; Y.late = ST.mins > 8 * 60; if (Y.late) Y.lates++;
-  ask('Mrs. Okon', Y.late ? '"Corper, it is past eight. Mr. Adebayo has drawn the red line under your name."' : '"Good morning! You are early today. Sign there."', [['"Good morning ma."', () => { if (Y.late) { ST.rep -= 1; ST.stress = clamp(ST.stress + 4, 0, 100); } setObj('PPA jobs today: ' + Y.jobs.map(j => PPA_JOBS[j].label.split(' (')[0]).join(' · ')); ST.target = null; $('arrow').style.display = 'none'; }]]);
+  ask(PKIND() === 'school' ? TCH() : 'Front desk', Y.late ? '"Corper, it is past eight. ' + BOSS() + ' has drawn the red line under your name."' : '"Good morning! You are early today. Sign there."', [['"Good morning ma."', () => { if (Y.late) { ST.rep -= 1; ST.stress = clamp(ST.stress + 4, 0, 100); } setObj('PPA jobs today: ' + Y.jobs.map(j => PPA_JOBS[j].label.split(' (')[0]).join(' · ')); ST.target = null; $('arrow').style.display = 'none'; }]]);
 }
 function yPPADone(rep, msg) {
   for (const s of SCH.students) s.hidden = true;
@@ -1767,12 +2080,12 @@ function yPPADone(rep, msg) {
 }
 function yMarking() {
   const a = 4 + ((Math.random() * 5) | 0), b = 3 + ((Math.random() * 6) | 0), wrong = Math.random() < 0.5, w = wrong ? a * b + pick([-2, 2, 10]) : a * b;
-  ask('Exercise book · Chiamaka, JSS 1B', `Q4: ${a} × ${b} = ${w}. Is it correct?`, [['✔ Mark it right', () => yPPADone(wrong ? 0 : 2, wrong ? `You missed it: ${a} × ${b} is ${a * b}. Mrs. Okon noticed.` : 'Forty books marked. Your red pen is dying.')], ['✘ Mark it wrong', () => yPPADone(wrong ? 2 : 0, wrong ? 'Correct. Forty books marked.' : `It was right. Chiamaka will cry tomorrow.`)]]);
+  ask('Exercise book · Chiamaka, JSS 1B', `Q4: ${a} × ${b} = ${w}. Is it correct?`, [['✔ Mark it right', () => yPPADone(wrong ? 0 : 2, wrong ? `You missed it: ${a} × ${b} is ${a * b}. ${TCH()} noticed.` : 'Forty books marked. Your red pen is dying.')], ['✘ Mark it wrong', () => yPPADone(wrong ? 2 : 0, wrong ? 'Correct. Forty books marked.' : `It was right. Chiamaka will cry tomorrow.`)]]);
 }
 function yPrinter() {
-  ask('Mr. Adebayo', '"Corper, this printer is not printing the exam questions. You young people know these things."', [
+  ask('' + PRN() + '', '"Corper, this printer is not printing the exam questions. You young people know these things."', [
     ['Check the cable and paper tray', () => yPPADone(2, 'The paper was jammed. You are now the school\'s IT department.')],
-    ['"Sir, it needs a new cartridge (₦6,000)"', () => { ask('Mr. Adebayo', '"Ehn… pay for it, the school will refund you." (It will not.)', [['Pay ₦6,000', () => ySpend(6000, 'Printer cartridge · ' + LGN(), () => yPPADone(3, 'The printer works. The refund will come "next month".'))], ['"Sir, I don\'t have money"', () => yPPADone(0, 'He sighs and calls the bursar.')]]); }],
+    ['"Sir, it needs a new cartridge (₦6,000)"', () => { ask('' + PRN() + '', '"Ehn… pay for it, the school will refund you." (It will not.)', [['Pay ₦6,000', () => ySpend(6000, 'Printer cartridge · ' + LGN(), () => yPPADone(3, 'The printer works. The refund will come "next month".'))], ['"Sir, I don\'t have money"', () => yPPADone(0, 'He sighs and calls the bursar.')]]); }],
   ]);
 }
 function ySignCDS() {
@@ -1807,7 +2120,7 @@ function ySleep() {
   const missed = !Y.done && Y.kind !== 'Sat';
   const go = () => {
     if (missed) {
-      if (Y.kind === 'Mon') { Y.ppaMiss++; ST.rep -= 2; chat('Mr. Adebayo', 'Corper, you did not come to school today. I am writing it in your monthly clearance letter.', '', 'Mr. Adebayo'); }
+      if (Y.kind === 'Mon') { Y.ppaMiss++; ST.rep -= 2; chat('' + PRN() + '', 'Corper, you did not come to school today. I am writing it in your monthly clearance letter.', '', '' + PRN() + ''); }
       if (Y.kind === 'Thu' && !Y.cdsOff) { Y.cdsMiss++; ST.rep -= 3; ST.queried = true; chat('LGI (Official)', 'Corps members absent from CDS today will be queried.', 'off'); }
       if (Y.kind === 'Clr') { Y.clrMiss++; ST.stress = clamp(ST.stress + 15, 0, 100); chat('LGI (Official)', 'Corps members who did not clear this month will not receive their allowance.', 'off'); }
     }
@@ -1964,11 +2277,25 @@ function spawnStreet(T = TEX) {
   // ---- PPA school people ----
   SCH.seats.slice(0, TOUCH ? 10 : 16).forEach((st, i) => { const f = i % 2 === 1; const p = N(f ? 'fem' : 'lewis', f ? T.fPupil : (i % 4 ? T.lPupil : T.lPupil2), st.x, st.z, Math.PI, { anim: 'sit' }); p.o.scale.multiplyScalar(f ? 0.84 : 0.76); p.o.position.y = 0.14; SCH.students.push(p); });
   { const pr = N('man2', T.mPrincipal, SCH.spots.principal.x - 1.7, SCH.spots.principal.z, Math.PI / 2, { coat: true, anim: 'talk', bubble: ['Corper, punctuality is the soul of business!', 'Where is my JSS2 teacher?'] }); pr.name = 'Adebayo'; }
-  for (const t of SCH.teachers) { const p = N(t.rig, T[t.tex], t.x, t.z, t.r, { anim: t.anim, name: t.name }); p.o.position.y = t.anim === 'sit' ? 0.02 : 0.02; p.talk = { label: 'Greet ' + t.name, act() { play(p, 'wave'); setTimeout(() => play(p, t.anim), 2400); toast(t.name + ': ' + pick(ST.ppa >= 4 ? ['"Corper, well done today. The children like you."', '"Don\'t mind the principal, he likes you."', '"Have you eaten? There is puff-puff at the tuck shop."'] : ['"You are the new corper? Welcome o."', '"Mr. Adebayo is in his office, by the gate."', '"JSS2 have been without a Maths teacher since January."']), 3600); } }; }
+  for (const t of SCH.teachers) { const p = N(t.rig, T[t.tex], t.x, t.z, t.r, { anim: t.anim, name: t.name }); p.o.position.y = t.anim === 'sit' ? 0.02 : 0.02; p.talk = { label: 'Greet ' + t.name, act() { play(p, 'wave'); setTimeout(() => play(p, t.anim), 2400); toast(t.name + ': ' + pick(ST.ppa >= 4 ? ['"Corper, well done today. The children like you."', '"Don\'t mind the principal, he likes you."', '"Have you eaten? There is puff-puff at the tuck shop."'] : ['"You are the new corper? Welcome o."', '"' + PRN() + ' is in his office, by the gate."', '"JSS2 have been without a Maths teacher since January."']), 3600); } }; }
   // pupils in the yard and at the tuck shop
   [[SCH.spots.tuck.x - 1, SCH.spots.tuck.z + 0.9, 'lPupil', 'talk'], [SCH.spots.tuck.x + 0.6, SCH.spots.tuck.z + 1.2, 'fPupil', 'idle'], [SCH.x + 1.5, -21, 'lPupil2', 'argue'], [SCH.x + 2.4, -21.6, 'fPupil', 'talk'], [SCH.x - 4, -24, 'lPupil', 'wave']].forEach(([x, z, tk, an], i) => { const f = /^f/.test(tk); const p = N(f ? 'fem' : 'lewis', T[tk], x, z, rnd(0, 6), { anim: an }); p.o.scale.multiplyScalar(f ? 0.84 : 0.78); p.o.position.y = 0.02; });
   { const v = N('fem', T.civF2, SCH.spots.tuck.x, SCH.spots.tuck.z - 1.6, 0, { anim: 'idle', bubble: ['Puff-puff! Zobo! Gala!', 'Corper, buy something now!'] }); v.o.position.y = 0.02; }
   drawBoard(['Good morning, class!', 'Today: Word problems'], 'JSS 2 · Mathematics');
+  { // the health centre: matron at reception, nurses, mothers and babies on the benches
+    const c = WORK.clinic, sp = c.spots, cx = 72, cz = 17.4;
+    const m = N('fem', T.fTeacher, sp.boss.x, sp.boss.z + 0.9, Math.PI, { anim: 'idle' }); m.o.position.y = 0.02; c.staff.push(m);
+    m.talk = { label: 'Greet the matron', act() { play(m, 'wave'); setTimeout(() => play(m, 'idle'), 2400); toast(BOSS() + ': ' + pick(['"Corper, wash your hands before you touch anything."', '"Thursday is immunisation. Come early."', '"We need more hands, not more forms."']), 3400); } };
+    const n1 = N('fem', T.whiteF2, cx + 0.5, cz + 0.2, -Math.PI / 2, { anim: 'talk', bubble: ['Next patient!', 'Mama, where is your card?', 'Sit down, we will call you.'] }); n1.o.position.y = 0.02; c.staff.push(n1);
+    [[cx + 1.6, cz - 3.2, 'civF2'], [cx + 3.4, cz - 3.2, 'civF3'], [cx + 2.2, cz - 1.0, 'mCiv2'], [cx + 3.8, cz + 1.2, 'civF4'], [cx + 1.4, cz + 1.2, 'mCiv1']].slice(0, Math.max(2, Math.round(5 * PF().crowd))).forEach(([x, z, tk], i) => { const f = /F/.test(tk), p = N(f ? 'fem' : 'man2', T[tk], x, z + 0.32, Math.PI, { anim: 'sit' }); p.o.position.y = 0.0; });
+  }
+  { // the office: manager, colleagues typing, someone at the printer
+    const o = WORK.office, sp = o.spots, cx = 29, cz = -17.8;
+    const b = N('man2', T.mSuit, sp.boss.x + 1.0, sp.boss.z - 0.6, -Math.PI / 2, { coat: true, anim: 'talk' }); b.o.position.y = 0.02; o.staff.push(b);
+    b.talk = { label: 'Greet ' + 'your supervisor', act() { toast(BOSS() + ': ' + pick(['"Corper, the report is due at 12."', '"Have you sent that email?"', '"Good morning. Coffee is not free o."']), 3400); } };
+    for (const [dx, dz, tk, an] of [[-5.5, 1.2, 'mCiv1', 'type'], [0.5, 1.2, 'civF1', 'type'], [-2.5, -1.8, 'lCiv3', 'type'], [0.5, -1.8, 'civF3', 'text']]) { const f = /F/.test(tk), p = N(f ? 'fem' : tk[0] === 'm' ? 'man2' : 'lewis', T[tk], cx + dx, cz + dz, Math.PI, { anim: an }); p.o.position.y = 0.02; o.staff.push(p); }
+    const pr = N('fem', T.civF2, sp.printer.x - 0.4, sp.printer.z - 0.8, 0.6, { anim: 'argue', bubble: ['Who used the last paper?!', 'This printer has a spirit.', 'Corper, abeg come and see this thing.'] }); pr.o.position.y = 0.02;
+  }
   window.__merged2 = 0;
 }
 function N(rig, tex, x, z, ry, extra = {}) { return (() => { const p = makePerson(rig, rig === 'man2' ? { parts: { tex, hide: extra.coat ? [] : ['Coat'] }, h: 1.8, anim: extra.anim || 'idle' } : { tex, h: rig === 'fem' ? 1.65 : 1.8, anim: extra.anim || 'idle' }); p.o.position.set(x, 0.18, z); p.o.rotation.y = ry; Object.assign(p, extra); NPC.push(p); people.push(p); p.static = true; return p; })(); }
@@ -1976,7 +2303,7 @@ function N(rig, tex, x, z, ry, extra = {}) { return (() => { const p = makePerso
 function spawnWorld(T, gender) {
   TEX = T; ST.g = gender;
   player = makePerson(gender === 'f' ? 'fem' : 'lewis', { tex: T.p_mufti || (gender === 'f' ? T.civF1 : T.lMufti), h: gender === 'f' ? 1.66 : 1.78, npc: false });
-  { const b = BACKGROUNDS.find(b => b[0] === CH.bg) || BACKGROUNDS[0]; Object.assign(ST, b[3]); ST.bg = b[0]; ST.name = CH.name || 'Corper'; ST.tone = CH.tone; }
+  { const b = BACKGROUNDS.find(b => b[0] === CH.bg) || BACKGROUNDS[0]; Object.assign(ST, b[3]); ST.bg = b[0]; ST.name = CH.name || 'Corper'; ST.tone = CH.tone; ST.state = CH.state || 'LA'; ST.course = CH.course || 'education'; }
   for (const m of player.meshes) { m.castShadow = true; m.frustumCulled = false; }
   player.o.position.set(-3, 0.02, CZ + 63); player.o.rotation.y = Math.PI; player.speed = 0; ST.outfit = 'mufti'; cam.yaw = 0;
   for (const v of traffic) v.g.visible = false;
@@ -1987,7 +2314,7 @@ function spawnWorld(T, gender) {
   CAMP.dayOne = []; for (const x of [-15, -12, -8.5, -5.5]) { const o = CN('man2', T.mOfficial, x, CZ + 39.6, 0, { anim: 'type' }); CAMP.dayOne.push(o); if (x === -12) CAMP.deskNPC = o; }
   for (let i = 0; i < (TOUCH ? 6 : 10); i++) { const f = i % 3 === 0; CAMP.dayOne.push(CN(f ? 'fem' : 'lewis', f ? T.civF2 : [T.lCiv1, T.lCiv3, T.lCiv2][i % 3], -8 + (i % 2 ? 0.4 : -0.4), CZ + 43 + i * 0.95, Math.PI, { anim: i % 2 ? 'text' : 'idle' })); }
   CAMP.leavers = [];
-  for (let i = 0; i < (TOUCH ? 8 : 14); i++) { const a = rnd(-1.2, 1.2), rr = rnd(1.6, 4.2), f = i % 3 === 0, m2r = i % 3 === 2; const p = CN(f ? 'fem' : m2r ? 'man2' : 'lewis', f ? T.corperF : m2r ? (i % 2 ? T.mCorper : T.mCorper2) : [T.lCorper, T.lCorper2, T.lCorper3][i % 3], CAMP.spots.notice.x + Math.sin(a) * rr, CAMP.spots.notice.z + Math.cos(a) * rr, Math.PI + a * 0.4, { anim: pick(['text', 'argue', 'idle', 'wave', 'talk']), bubble: i === 0 ? ['Lagos! I\'m staying in Lagos!', 'Who is going to Ikeja?', 'They posted me to Kano 😭'] : undefined }); p.hidden = true; CAMP.leavers.push(p); }
+  for (let i = 0; i < (TOUCH ? 8 : 14); i++) { const a = rnd(-1.2, 1.2), rr = rnd(1.6, 4.2), f = i % 3 === 0, m2r = i % 3 === 2; const p = CN(f ? 'fem' : m2r ? 'man2' : 'lewis', f ? T.corperF : m2r ? (i % 2 ? T.mCorper : T.mCorper2) : [T.lCorper, T.lCorper2, T.lCorper3][i % 3], CAMP.spots.notice.x + Math.sin(a) * rr, CAMP.spots.notice.z + Math.cos(a) * rr, Math.PI + a * 0.4, { anim: pick(['text', 'argue', 'idle', 'wave', 'talk']), bubble: i === 0 ? [`${SNAME()}! I'm staying in ${SNAME()}!`, 'Who is going to Ikeja?', 'They posted me to Kano 😭'] : undefined }); p.hidden = true; CAMP.leavers.push(p); }
   CAMP.kitNPC = CN('lewis', T.lCiv4, CAMP.spots.kit.x + 1.2, CAMP.spots.kit.z - 1.5, -Math.PI / 2, { anim: 'talk', bubble: ['Next! Next!'] });
   CAMP.marshal = CN('man2', T.mArmy, 0, CZ - 19, 0, { bubble: ['Platoon 5, fall in!'] }); CAMP.marshal.o.position.y = 1.15;
   for (let r0 = 0; r0 < 4; r0++) for (let c0 = 0; c0 < 5; c0++) { const x = CAMP.slot.x - 2 * 1.4 + c0 * 1.4, z = CAMP.slot.z + (r0 - 1) * 1.6; if (Math.abs(x - CAMP.slot.x) < .1 && Math.abs(z - CAMP.slot.z) < .1) continue; const f = (r0 + c0) % 4 === 0, m2r = (r0 + c0) % 3 === 0; const p = CN(f ? 'fem' : m2r ? 'man2' : 'lewis', f ? T.whiteF : m2r ? T.mWhite : [T.lWhite2, T.lWhite3][c0 % 2], x, z, Math.PI); p.o.position.y = 0.12; p.hidden = true; CAMP.formation.push(p); }
@@ -2016,13 +2343,13 @@ function spawnWorld(T, gender) {
   setGroup('Platoon 5 · Camp Gist');
   campGo(0); setTOD('Morning');
   window.__merged = mergeStatic();
-  window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, interactables, cam, LGA, board, CAMP, CZ, RIGS };
+  window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK };
 }
 
 /* ---------------- maps: corner minimap + the phone's Map app (pan, zoom, pins, routes) ---------------- */
 const POIS = {
   camp: () => [['🚧', 'Camp gate', CAMP.spots.gate, '#5d4037'], ['📝', 'Registration', CAMP.spots.desk, '#1565c0'], ['🎽', 'Kit store', CAMP.spots.kit, '#6a1b9a'], ['🛏️', 'Hostel B', CAMP.spots.hostel, '#00695c'], ['🪖', 'Parade ground', { x: 0, z: CZ }, '#33691e'], ['🎤', 'Stage', CAMP.spots.stage, '#ad1457'], ['🛍️', 'Mammy market', CAMP.spots.market[2], '#ef6c00'], ['📋', 'Notice board', CAMP.spots.notice, '#455a64'], ['🏥', 'Camp clinic', CAMP.spots.clinic, '#c62828'], ['🎓', 'SAED hall', CAMP.spots.hall, '#4527a0'], ['🚌', 'Bus park', CAMP.busSpot, '#f9a825']],
-  street: () => [['🏠', 'Home · Corper Lodge', LODGE.door || LODGE, '#00695c'], ['🚌', 'Corper Close Bus Stop', { x: BUSSTOP_X, z: 9 }, '#f9a825'], ['🏛️', 'LGA Secretariat', { x: LGA.x, z: -10 }, '#1565c0'], ['🧹', 'CDS ground', { x: LGA.x + 9, z: -14 }, '#6a1b9a'], ['🏫', 'Model School (PPA)', SCH.gate, '#c62828'], ['🛒', 'Mama Tolani Provisions', shopSpots.find(s => /TOLANI/.test(s.name)) || { x: 0, z: 9 }, '#ef6c00'], ['🍛', 'Buka & speaker', { x: 46, z: 9.4 }, '#ad1457'], ['⛱️', 'Umbrella stall', vendorSpots[0], '#455a64']],
+  street: () => [['🏠', 'Home · Corper Lodge', LODGE.door || LODGE, '#00695c'], ['🚌', 'Corper Close Bus Stop', { x: BUSSTOP_X, z: 9 }, '#f9a825'], ['🏛️', 'LGA Secretariat', { x: LGA.x, z: -10 }, '#1565c0'], ['🧹', 'CDS ground', { x: LGA.x + 9, z: -14 }, '#6a1b9a'], ['🏫', PKIND() === 'school' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Model School', SCH.gate, '#c62828'], ['🏥', PKIND() === 'clinic' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Health centre', WORK.clinic.door, '#00897b'], ['🏢', PKIND() === 'office' ? PPANAME().slice(0, 30) + ' (PPA)' : 'Office complex', WORK.office.door, '#283593'], ['🛒', 'Mama Tolani Provisions', shopSpots.find(s => /TOLANI/.test(s.name)) || { x: 0, z: 9 }, '#ef6c00'], ['🍛', 'Buka & speaker', { x: 46, z: 9.4 }, '#ad1457'], ['⛱️', 'Umbrella stall', vendorSpots[0], '#455a64']],
 };
 const MAPV = { cx: 0, cz: 0, R: 70, follow: true, sel: null };
 function routePts(P, T) { // walking route: along the sidewalk, cross where you need to
@@ -2039,7 +2366,7 @@ function drawMap(g, W, H, cx, cz, R, full) {
   g.clearRect(0, 0, W, H); g.fillStyle = camp ? '#cfe3bd' : '#eceef1'; g.fillRect(0, 0, W, H);
   if (!camp) {
     rect(-HALF, -60, HALF, -11.4, '#f4efe4'); rect(-HALF, 11.4, HALF, 60, '#f4efe4'); // plots behind the sidewalks
-    rect(SCH.x - 21, -41.6, SCH.x + 21, -11.6, '#fdf1c9', '#e2c877', 1.5); rect(LGA.x - 18, -44, LGA.x + 18, -11.6, '#dcebfb', '#9dbfe6', 1.5);
+    rect(SCH.x - 21, -41.6, SCH.x + 21, -11.6, '#fdf1c9', '#e2c877', 1.5); rect(LGA.x - 18, -44, LGA.x + 18, -11.6, '#dcebfb', '#9dbfe6', 1.5); rect(64, 11.7, 80, 23.1, '#d7f0ea', '#86c7b8', 1.5); rect(20.5, -23.8, 37.5, -11.8, '#e3e6f5', '#9fa8da', 1.5);
     rect(-HALF, -11.4, HALF, -7.8, '#dfe2e6'); rect(-HALF, 7.8, HALF, 11.4, '#dfe2e6'); // sidewalks
     rect(-HALF, -7.2, HALF, 7.2, '#b9c0c9'); rect(-HALF, -6.6, HALF, 6.6, '#ffffff'); // road with casing
     g.strokeStyle = '#f2c94c'; g.lineWidth = Math.max(1, k * 0.3); g.setLineDash([k * 3, k * 3]); g.beginPath(); g.moveTo(0, Z(0)); g.lineTo(W, Z(0)); g.stroke(); g.setLineDash([]);
@@ -2054,7 +2381,7 @@ function drawMap(g, W, H, cx, cz, R, full) {
     rect(c.x0, c.z0, c.x1, c.z1, camp ? '#f3ede0' : '#d9dde3', camp ? '#b9ad95' : '#b7bdc7', 1);
   }
   if (full) {
-    if (!camp) { for (let x = Math.ceil((cx - R) / 70) * 70; x < cx + R; x += 70) label('C O R P E R   C L O S E   R O A D', x + 35, 3.4, Math.max(8, Math.min(12, k * 2.6)), '#8a9099', '500'); label('Model School', SCH.x, -30, 11, '#a17800'); label('Local Govt. Secretariat', LGA.x, -30, 11, '#1a5fb4');
+    if (!camp) { for (let x = Math.ceil((cx - R) / 70) * 70; x < cx + R; x += 70) label('C O R P E R   C L O S E   R O A D', x + 35, 3.4, Math.max(8, Math.min(12, k * 2.6)), '#8a9099', '500'); label('Model School', SCH.x, -30, 11, '#a17800'); label('Health centre', 72, 17.4, 11, '#00796b'); label('Offices', 29, -17.8, 11, '#283593'); label('Local Govt. Secretariat', LGA.x, -30, 11, '#1a5fb4');
       if (k > 3.2) for (const s of shopSpots) if (Math.abs(s.x - cx) < R) label(s.name.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).slice(0, 22), s.x, s.z + (s.side > 0 ? 5 : -5), 9, '#7a8088', '500'); }
     else { label('PARADE GROUND', 0, CZ, 10, '#77735f'); label('Camp road', 0, CZ + CAMP_HALF + 10, 10, '#8a9099', '500'); }
   }
@@ -2095,6 +2422,7 @@ function mapList() {
   $('mzin').onclick = () => { MAPV.R = Math.max(18, MAPV.R / 1.4); mapT = 0; }; $('mzout').onclick = () => { MAPV.R = Math.min(140, MAPV.R * 1.4); mapT = 0; }; $('mzme').onclick = () => { MAPV.follow = true; mapT = 0; };
 }
 $('pmapbtn').onclick = () => phShow(PH.screen === 'map' ? (thr(ST.group || 'Platoon 5 · Camp Gist').msgs.length ? 'thread' : 'home') : 'map');
+for (const b of document.querySelectorAll('#phome [data-app]')) b.onclick = () => phShow(b.dataset.app);
 /* ---------------- update loop ---------------- */
 const clock = new THREE.Clock(); let tAcc = 0, chatT = 0, story = 0;
 const tmp = new THREE.Vector3(), camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
@@ -2304,26 +2632,31 @@ boot().then(T => {
   $('cbg').innerHTML = BACKGROUNDS.map(b => `<button data-v="${b[0]}"><b>${b[1]}</b><span>${naira(b[3].cash)} · ${b[2]}</span></button>`).join('');
   const sync = () => { for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.classList.toggle('on', String(CH[key]) === b.dataset.v); };
   for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.onclick = () => { CH[key] = key === 'tone' ? +b.dataset.v : b.dataset.v; sync(); if (key !== 'bg') preview(); };
+  $('cstate').innerHTML = `<option value="rand">🎲 Random, like the real call-up letter</option>` + STATES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}${s.id === 'FC' ? '' : ' State'} · camp at ${s.camp.split(/[,(]/)[0]}</option>`).join('');
+  $('ccourse').innerHTML = COURSES.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
   try { const last = JSON.parse(localStorage.getItem('nysc3d.corper') || 'null'); if (last) { Object.assign(CH, last); $('cname').value = CH.name || ''; } } catch (e) { }
+  $('cstate').value = CH.pick || 'rand'; $('ccourse').value = CH.course || 'education';
   sync(); preview(); pvLoop();
   L.style.transition = 'opacity .7s'; L.style.opacity = 0; setTimeout(() => { if (pvOn) L.style.display = 'none'; }, 750); C.hidden = false;
   const start = async g => {
-    if (g) CH.g = g; CH.name = ($('cname').value || '').trim().slice(0, 14); try { localStorage.setItem('nysc3d.corper', JSON.stringify(CH)); } catch (e) { }
+    if (g) CH.g = g; CH.name = ($('cname').value || '').trim().slice(0, 14); CH.pick = $('cstate').value; CH.course = $('ccourse').value;
+    if (!CH.resume) CH.state = window.__state || (CH.pick === 'rand' ? STATES[(Math.random() * STATES.length) | 0].id : CH.pick);
+    try { localStorage.setItem('nysc3d.corper', JSON.stringify(CH)); } catch (e) { }
     C.hidden = true; L.style.transition = ''; L.style.display = 'grid'; L.style.opacity = 1; $('lmsg').textContent = 'Taking you to camp…'; $('lbar').style.width = '100%'; audio();
     await new Promise(r => setTimeout(r, 40));
     pvOn = false; pvTok++; if (pvP) { scene.remove(pvP.o); pvP = null; }
     try { const [a, b, c] = await Promise.all(['mufti', 'white', 'khaki'].map(k => playerTex(CH.g, k, CH.tone))); T.p_mufti = a; T.p_white = b; T.p_khaki = c; } catch (e) { }
-    spawnWorld(T, CH.g); $('hud').style.visibility = 'visible'; hudSync(); camLook.copy(player.o.position); camLook.y += 1.55; updateCamera(0.016);
+    spawnWorld(T, CH.g); themeCamp(); $('hud').style.visibility = 'visible'; hudSync(); camLook.copy(player.o.position); camLook.y += 1.55; updateCamera(0.016);
     for (const t of Object.values(T)) renderer.initTexture(t);
     try { await renderer.compileAsync(scene, camera); } catch (e) { try { renderer.compile(scene, camera); } catch (e2) { } }
     renderer.render(scene, camera); await new Promise(r => requestAnimationFrame(r));
     L.style.transition = 'opacity .9s'; L.style.opacity = 0; setTimeout(() => L.style.display = 'none', 950);
-    loop(); setTimeout(() => { ST.ready = true; }, 1600);
+    loop(); setTimeout(() => { ST.ready = true; }, 1600); if (!CH.resume) setTimeout(callUpLetter, 900);
     setTimeout(() => { const c = renderer.getContext(); if (c && c.isContextLost && c.isContextLost()) toast('Your phone ran out of graphics memory. Close other tabs and reload.', 6000); }, 4000);
   };
   go.onclick = () => start();
   const sv = loadSave(), c = $('gocont');
   if (sv) { c.hidden = false; c.textContent = `▶ Continue ${sv.st && sv.st.name ? 'as ' + sv.st.name : ''} · ${sv.cp === 'year' ? 'Service year · Month ' + ((sv.y && sv.y.month) || 1) : sv.cp === 'ch2' ? 'Chapter 2: CDS week' : 'Chapter 1: Lagos street'}`;
-    c.onclick = async () => { if (sv.st) { CH.tone = sv.st.tone ?? CH.tone; CH.bg = sv.st.bg || CH.bg; if (sv.st.name) $('cname').value = sv.st.name; } await start(sv.g); resumeFrom(sv); }; }
+    c.onclick = async () => { CH.resume = true; if (sv.st) { CH.tone = sv.st.tone ?? CH.tone; CH.bg = sv.st.bg || CH.bg; CH.state = sv.st.state || 'LA'; CH.course = sv.st.course || CH.course; if (sv.st.name) $('cname').value = sv.st.name; } await start(sv.g); resumeFrom(sv); }; }
   window.__start = start;
 }).catch(e => { $('lmsg').textContent = 'Could not load: ' + e.message; console.error(e); });

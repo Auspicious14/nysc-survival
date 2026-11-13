@@ -12,3 +12,6 @@ Music: royalty-free afrobeat tracks from Pixabay (Pixabay Content License) by Fr
 Voices: generated with YarnGPT (Nigerian-accented open TTS).
 Sky: three.js Sky shader. Buildings, roads, signs and street furniture: procedural, made for this game.
 Shop names and the "Local Govt. Secretariat" are fictional. Not an official NYSC product.
+
+Nigeria data (js/naija.js): state names, capitals, official nicknames and the 774 LGA names from the ng.states dataset by skaex (github.com/skaex/ng.states). Orientation camp locations from public listings (legit.ng, 2025); camps can move, so treat them as indicative. Urban/rural tags, costs, foods, greetings, organisations and climate notes are game design, not official data. All organisations and people in the game are fictional.
+Phone games: "Whot!" follows the common Nigerian Whot rules (Hold on, Pick two, Suspension, General market, Whot 20). Danfo Dash is an original mini-game.
