@@ -1,4 +1,4 @@
-# NYSC Survival
+# Otondo (formerly NYSC Survival)
 
 A Nigerian NYSC life game in the browser: orientation camp, the Lagos street, monthly clearance, your PPA school and CDS week.
 Fictional people and places. Not an official NYSC product.

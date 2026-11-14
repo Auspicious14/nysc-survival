@@ -1141,7 +1141,7 @@ function renderSettings() {
   const W = $('phone').dataset.wall || 'naija';
   $('psettings').innerHTML = `<h4>Wallpaper</h4><div class="walls">${[['naija', 'linear-gradient(165deg,#2fbf71,#0a3f27)'], ['lagoon', 'linear-gradient(165deg,#3bc9db,#13315c)'], ['sunset', 'linear-gradient(165deg,#ff8a3d,#5a1a3a)']].map(([k, bg]) => `<button data-w="${k}" class="${k === W ? 'on' : ''}" style="background:${bg}" aria-label="${k} wallpaper"></button>`).join('')}</div>
   <h4>General</h4><div class="grp"><button id="psnd"><span>Sound</span><span>${MUTED ? 'Off' : 'On'}</span></button><div><span>Phone</span><span>NaijaPhone 16 · 5G</span></div><div><span>Owner</span><span>${esc(ST.name || 'Corper')}</span></div><div><span>State of deployment</span><span>${STATE().name}</span></div></div>
-  <h4>About</h4><div class="grp"><div><span>NYSC Survival</span><span>Fictional game</span></div></div>`;
+  <h4>About</h4><div class="grp"><div><span>Otondo</span><span>Fictional game</span></div></div>`;
   $('psettings').querySelectorAll('.walls button').forEach(b => b.onclick = () => { $('phone').dataset.wall = b.dataset.w; try { localStorage.setItem('nysc3d.wall', b.dataset.w); } catch (e) { } renderSettings(); });
   $('psnd').onclick = () => { $('bmute').click(); renderSettings(); };
 }
