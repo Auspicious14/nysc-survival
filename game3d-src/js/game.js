@@ -1013,7 +1013,6 @@ const CHAT = [];
 const PH = { screen: 'home', thread: null, threads: new Map(), ledger: [], cash: null, acts: [], seq: 0 };
 function thr(name, kind = 'group') { let t = PH.threads.get(name); if (!t) { t = { name, kind, msgs: [], unread: 0, last: 0 }; PH.threads.set(name, t); } return t; }
 function setGroup(name) { ST.group = name; thr(name); PH.thread = name; renderThread(); if ($('phone').classList.contains('on')) phShow(PH.screen); }
-function msgHTML(m) { return `<div class="m ${m.kind}"><b>${m.from}</b>${m.text}</div>`; }
 function renderThread() { const el = $('msgs'); el.innerHTML = thr(PH.thread || ST.group || 'Platoon 5 · Camp Gist').msgs.map(msgHTML).join(''); el.scrollTop = 1e6; }
 function badge() { let n = 0; for (const t of PH.threads.values()) n += t.unread; const b = $('bdg'); b.hidden = !n; b.textContent = n > 9 ? '9+' : n; const hb = $('hbdg'); if (hb) { hb.hidden = !n; hb.textContent = b.textContent; } }
 function chat(from, text, kind = '', to) {
@@ -1034,7 +1033,9 @@ function renderChats() {
   const os = ON.net ? onlineSummary() : null;
   $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
   for (const b of $('pchats').querySelectorAll('button')) b.onclick = () => { PH.thread = b.dataset.n; phShow('thread'); };
-  if ($('onl')) $('onl').onclick = () => { thr(onThread(), 'group'); PH.thread = onThread(); phShow('thread'); };
+  if ($('onl')) $('onl').onclick = () => { PH.onlist = true; $('pchats').innerHTML = renderOnlineList() + `<button class="ogrp">💬 Open the group chat here</button>`;
+    $('pchats').querySelector('.ogrp').onclick = () => { PH.onlist = false; thr(onThread(), 'group'); PH.thread = onThread(); phShow('thread'); };
+    for (const b of $('pchats').querySelectorAll('.olist button')) b.onclick = () => { const uid = b.dataset.u.slice(0, 16); if (!uid) return; const n = dmName(uid, b.dataset.n); thr(n, 'dm').uid = uid; PH.onlist = false; PH.thread = n; phShow('thread'); }; };
 }
 function renderBank() {
   const acct = '30' + String(10000000 + ((ST.name || 'corper').split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 89999999)).slice(0, 8);
@@ -1068,7 +1069,9 @@ function phShow(s) {
   $('pback').hidden = s === 'home'; $('pmapbtn').textContent = s === 'map' ? '💬' : '🗺️'; $('pmapbtn').hidden = !['chats', 'thread', 'map', 'home'].includes(s);
   $('phdr').textContent = SCREENS[s][1] || { thread: (thr(PH.thread).kind === 'sms' ? '✉️ ' : '') + PH.thread, map: 'Maps · ' + (ST.area === 'camp' ? SNAME() + ' camp' : LGN()) }[s] || '';
   if (s === 'thread') { thr(PH.thread).unread = 0; badge(); renderThread(); }
-  $('pcomp').hidden = !(s === 'thread' && /^🟢/.test(PH.thread || ''));
+  const onl = s === 'thread' && /^🟢/.test(PH.thread || ''); $('pcomp').hidden = !onl; if (!onl) { $('pemo').hidden = true; $('prep').hidden = true; ON.reply = null; }
+  if (s === 'thread' && onl) $('pcin').placeholder = thr(PH.thread).uid ? '🔒 Private message…' : 'Message everyone here…';
+  if (s !== 'chats') PH.onlist = false;
   if (s === 'chats') renderChats(); if (s === 'bank') renderBank(); if (s === 'id') renderID();
   if (s === 'map') { MAPV.follow = true; MAPV.R = ST.area === 'camp' ? 62 : 70; MAPV.sel = null; $('pmapsheet').hidden = true; mapList(); mapT = 0; }
   if (s === 'music') renderMusic(); if (s === 'weather') renderWeather(); if (s === 'cal') renderCal(); if (s === 'photos') renderPhotos(); if (s === 'settings') renderSettings();
@@ -1151,6 +1154,10 @@ function homeWidgets() {
   const n = [...PH.threads.values()].reduce((a, t) => a + t.unread, 0); for (const e of document.querySelectorAll('.dbdg')) { e.hidden = !n; e.textContent = n > 9 ? '9+' : n; }
 }
 function phone(on) {
+  const was = $('phone').classList.contains('on');
+  if (TOUCH && on && !was) { try { history.pushState({ nyscPhone: 1 }, ''); } catch (e) { } } // Android back button closes the phone
+  if (!on && was && !phone.fromPop) { try { if (history.state && history.state.nyscPhone) history.back(); } catch (e) { } }
+  phone.fromPop = false;
   if (on) ST.phoneOpens = (ST.phoneOpens || 0) + 1; $('phone').classList.toggle('on', on); $('notif').classList.remove('on');
   const g = ST.group || 'Platoon 5 · Camp Gist';
   if (on) homeWidgets();
@@ -1159,7 +1166,8 @@ function phone(on) {
   else { if (PH.screen === 'thread') PH.screen = 'home'; PH.thread = g; renderThread(); }
   if (on && ST.phase === 0 && ST.area === 'street') { ST.phase = 1; setObj('Get to the LGA Secretariat for clearance'); ST.target = { x: LGA.x, z: LGA.z, label: 'LGA Secretariat' }; $('arrow').style.display = 'block'; }
 }
-$('pback').onclick = () => phShow(PH.screen === 'thread' ? 'chats' : 'home'); $('phomebar').onclick = () => phShow('home');
+$('pback').onclick = () => { if (PH.screen === 'chats' && PH.onlist) { PH.onlist = false; renderChats(); return; } phShow(PH.screen === 'thread' ? 'chats' : 'home'); }; $('phomebar').onclick = () => { if (PH.screen === 'home') phone(false); else phShow('home'); }; // on the home screen it takes you back to the game
+addEventListener('popstate', () => { if ($('phone').classList.contains('on')) { phone.fromPop = true; phone(false); } });
 for (const b of $('phome').querySelectorAll('[data-app]')) b.onclick = () => phShow(b.dataset.app);
 $('bphone').onclick = () => phone(!$('phone').classList.contains('on'));
 $('pclose').onclick = () => phone(false);
@@ -1244,11 +1252,16 @@ let VOICES = [];
 function loadVoices() { try { VOICES = speechSynthesis.getVoices() || []; } catch (e) { } }
 if (window.speechSynthesis) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 const FEM = /female|ezinne|zira|samantha|susan|hazel|libby|sonia|karen|moira|tessa|fiona|veena|aria|jenny|natasha|clara|leah|imani|zuri|ada/i, MAL = /\bmale\b|abeo|david|george|ryan|daniel|alex|fred|thomas|guy|mark|james|chilemba|luke|william/i;
-function pickVoice(f) {
+function pickVoice(f, who = '') {
   if (!VOICES.length) loadVoices();
   const en = VOICES.filter(v => /^en/i.test(v.lang)), ng = en.filter(v => /NG/i.test(v.lang)), pool = ng.length ? ng : en.filter(v => /(GB|ZA|KE|GH|IN|AU|IE)/i.test(v.lang)).concat(en);
-  return pool.find(v => (f ? FEM : MAL).test(v.name)) || pool[0] || null;
+  if (!pool.length) return null;
+  // one voice per character: the same speaker always gets the same voice on this device
+  const sexed = pool.filter(v => (f ? FEM : MAL).test(v.name)), from = sexed.length ? sexed : pool, h = parseInt(fnv(String(who || (f ? 'woman' : 'man')).toLowerCase().replace(/\(.*\)/, '').trim()), 16);
+  return from[h % Math.min(from.length, 4)] || from[0];
 }
+function voiceShape(f, who) { const h = parseInt(fnv('shape' + String(who || '').toLowerCase()), 16); return { pitch: (f ? 1.12 : 0.86) + ((h % 7) - 3) * 0.035, rate: 0.9 + ((h >> 4) % 5) * 0.025 }; }
+let VIDN = 0;
 const FEMALE_NAMES = /tolu|chioma|mama|aunty|nurse|mc spicy|bisi|ronke|chidinma|photographer|she|matron|mrs\.|miss |hauwa|zainab|halima|fatima|ngozi|folake|ladi|hadiza|ofure|amina|rakiya|nkechi|kemi|mummy|okon|eze|abdullahi/i;
 // Recorded Nigerian voices (YarnGPT): voice/manifest.json lists line ids; voice/<id>.mp3 holds the audio.
 const VOICE_IDS = new Set(); let voiceEl = null;
@@ -1268,8 +1281,9 @@ function speak(text, female, priority = true, who = '') {
   if (!priority && speechSynthesis.speaking) return;
   try {
     if (priority) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(t), v = pickVoice(female); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-NG';
-    u.rate = 0.92; u.pitch = female ? 1.15 : 0.88; u.volume = 1; speechSynthesis.speak(u);
+    const said = String(text).replace(/<br\s*\/?>|<\/(p|div|li|h\d)>|\n+|\s+·\s+/gi, '. ').replace(/<[^>]+>/g, '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').replace(/₦\s?([\d,]+)/g, '$1 naira').replace(/[“”"]/g, '').replace(/\s*([.!?…])\s*\.\s/g, '$1 ').replace(/\s+/g, ' ').trim(); // line breaks become sentence pauses
+    const u = new SpeechSynthesisUtterance(said || t), v = pickVoice(female, who), sh = voiceShape(female, who); if (v) { u.voice = v; u.lang = v.lang; } else u.lang = 'en-NG';
+    u.rate = sh.rate; u.pitch = sh.pitch; u.volume = 1; speechSynthesis.speak(u);
   } catch (e) { }
 }
 function speakToast(t) { const m = String(t).match(/^([^:"]{1,40}):?\s*"([^"]+)"/) || String(t).match(/"([^"]{4,})"/); if (!m) return; const who = m.length > 2 ? m[1] : '', line = m.length > 2 ? m[2] : m[1]; speak(line, FEMALE_NAMES.test(who), true, who); }
@@ -1386,7 +1400,7 @@ function ask(who, text, choices, say) {
   el.innerHTML = `<b>${who}</b><p>${text}</p><div class="ch">${choices.map((c, i) => `<button data-i="${i}"><kbd>${i + 1}</kbd>${c[0]}</button>`).join('')}</div>`;
   el.hidden = false; [...el.querySelectorAll('button')].forEach((b, i) => b.onclick = () => choose(i));
 }
-function choose(i) { const d = DLG; if (!d || !d.choices[i]) return; DLG = null; $('dlg').hidden = true; d.choices[i][1](); hudSync(); }
+function choose(i) { const d = DLG; if (!d || !d.choices[i]) return; stopVoice(); DLG = null; $('dlg').hidden = true; d.choices[i][1](); hudSync(); }
 function closeDlg() { DLG = null; $('dlg').hidden = true; }
 // Slow, film-style cut: fade to black, a title on black, change the world, hold, fade back in.
 function cine(title, sub, mid, hold = 2400) {
@@ -1604,7 +1618,7 @@ const busName = () => ST.state === 'LA' || !ST.state ? 'danfo' : STATE().zone ==
 function reSign(mesh, title, sub, w, h, bg) { if (!mesh) return; const n = campSign(title, sub, w, h, bg); const old = mesh.material.map; mesh.material.map = n.material.map; mesh.material.needsUpdate = true; if (old) old.dispose(); n.geometry.dispose(); }
 function callUpLetter() {
   const st = STATE(), z = ZONES[st.zone];
-  ask('Call-up letter', `<b>${esc(ST.name || 'Corps member')}</b>, you have been mobilised for the National Youth Service in <b>${st.name}${st.id === 'FC' ? '' : ' State'}</b> (${z.name}).<br>Report to the orientation camp at <b>${st.camp}</b>.<br><small>${st.nick ? '“' + st.nick + '” · ' : ''}Capital: ${st.capital} · ${st.lgas.length} LGAs · Languages you will hear: ${z.lang}${st.flav ? '<br>' + st.flav : ''}</small>`, [
+  ask('Call-up letter', `<b>${esc(ST.name || 'Corps member')}</b>, you have been mobilised for the National Youth Service in <b>${st.name}${st.id === 'FC' ? '' : ' State'}</b> (${z.name}).<br>Report to the orientation camp at <b>${st.camp}</b>.<br><small>${st.nick ? '“' + st.nick + '” · ' : ''}Capital: ${st.capital} · ${st.lgas.length} LGAs · Languages you will hear: ${z.lang}${st.flav ? '<br>' + st.flav : ''}</small><br><small>Course: ${(COURSES.find(c => c[0] === ST.course) || [, ''])[1]} · Background: ${(BACKGROUNDS.find(b => b[0] === ST.bg) || [, ''])[1]}</small>`, [
     ['Report to camp ▶', () => { if (st.id !== 'LA') chat('Platoon 5 · Camp Gist', `Welcome to ${st.name} camp o! ${z.greet[0]}`); }],
   ]);
 }
@@ -2313,13 +2327,13 @@ function N(rig, tex, x, z, ry, extra = {}) { return (() => { const p = makePerso
 function spawnWorld(T, gender) {
   TEX = T; ST.g = gender;
   player = makePerson(gender === 'f' ? 'fem' : 'lewis', { tex: T.p_mufti || (gender === 'f' ? T.civF1 : T.lMufti), h: gender === 'f' ? 1.66 : 1.78, npc: false });
-  { const b = BACKGROUNDS.find(b => b[0] === CH.bg) || BACKGROUNDS[0]; Object.assign(ST, b[3]); ST.bg = b[0]; ST.name = CH.name || 'Corper'; ST.tone = CH.tone; ST.state = CH.state || 'LA'; ST.course = CH.course || 'education'; }
+  { const b = BACKGROUNDS.find(b => b[0] === (CH.bg === 'rand' ? CH.bgRoll : CH.bg)) || BACKGROUNDS[0]; Object.assign(ST, b[3]); ST.bg = b[0]; ST.name = CH.name || 'Corper'; ST.tone = CH.tone; ST.state = CH.state || 'LA'; ST.course = CH.course || 'education'; }
   for (const m of player.meshes) { m.castShadow = true; m.frustumCulled = false; }
   player.o.position.set(-3, 0.02, CZ + 63); player.o.rotation.y = Math.PI; player.speed = 0; ST.outfit = 'mufti'; cam.yaw = 0;
   for (const v of traffic) v.g.visible = false;
   // ---- camp people ----
   const CN = (rig, tex, x, z, ry, extra = {}) => { const p = N(rig, tex, x, z, ry, extra); p.area = 'camp'; p.o.position.y = 0.02; return p; };
-  CAMP.gateNPC = CN('man2', T.mArmy, -1.5, CZ + CAMP_HALF + 2.4, 0, { talk: null, bubble: ['Corper! Where is your call-up letter?'] });
+  CAMP.gateNPC = CN('man2', T.mArmy, -1.5, CZ + CAMP_HALF + 2.4, 0, { talk: null, name: 'Soldier at the gate', bubble: ['Corper! Where is your call-up letter?'] });
   CN('man2', T.mArmy, 6.6, CZ + CAMP_HALF + 2.0, -0.3, { anim: 'idle' });
   CAMP.dayOne = []; for (const x of [-15, -12, -8.5, -5.5]) { const o = CN('man2', T.mOfficial, x, CZ + 39.6, 0, { anim: 'type' }); CAMP.dayOne.push(o); if (x === -12) CAMP.deskNPC = o; }
   for (let i = 0; i < (TOUCH ? 6 : 10); i++) { const f = i % 3 === 0; CAMP.dayOne.push(CN(f ? 'fem' : 'lewis', f ? T.civF2 : [T.lCiv1, T.lCiv3, T.lCiv2][i % 3], -8 + (i % 2 ? 0.4 : -0.4), CZ + 43 + i * 0.95, Math.PI, { anim: i % 2 ? 'text' : 'idle' })); }
@@ -2336,7 +2350,7 @@ function spawnWorld(T, gender) {
   // social night crowd (only visible at night)
   CAMP.crowd = [];
   for (let i = 0; i < (TOUCH ? 8 : 14); i++) { const f = i % 2 === 0; const p = CN(f ? 'fem' : 'lewis', f ? T.whiteF : T.lWhite2, -18 + rnd(-5, 5), CZ - 37 + rnd(0, 6), Math.PI + rnd(-.4, .4), { anim: f ? 'dance' : 'wave' }); p.hidden = true; CAMP.crowd.push(p); }
-  const mc = CN('fem', T.civF2, -18, CZ - 43.5, 0, { anim: 'dance', bubble: ['Make some noise for Platoon 5!', 'Who get the energy?!', 'DJ, play Afrobeats!'] }); mc.o.position.y = 1.2; mc.hidden = true; CAMP.crowd.push(mc);
+  const mc = CN('fem', T.civF2, -18, CZ - 43.5, 0, { anim: 'dance', name: 'MC Spicy', bubble: ['Make some noise for Platoon 5!', 'Who get the energy?!', 'DJ, play Afrobeats!'] }); mc.o.position.y = 1.2; mc.hidden = true; CAMP.crowd.push(mc);
   // night in Hostel B: not everybody is a party person. Some sleep, some gist, one is charging a phone.
   CAMP.hostelNight = [];
   for (const [x, z, top, tk] of [[-44.9, 7.2, 1, 'lWhite2'], [-39.1, 4.6, 0, 'lWhite3'], [-39.1, 9.8, 1, 'lWhite'], [-44.9, 25.4, 0, 'lWhite2'], [-39.1, 28.0, 0, 'lWhite3'], [-44.9, 30.6, 1, 'lWhite']].slice(0, TOUCH ? 4 : 6)) {
@@ -2353,8 +2367,8 @@ function spawnWorld(T, gender) {
   setGroup('Platoon 5 · Camp Gist');
   campGo(0); setTOD('Morning');
   window.__merged = mergeStatic();
-  window.__ON = { ON, onSay, onWave, onlineSummary, onRoomName };
-  $('pcomp').onsubmit = e => { e.preventDefault(); const i = $('pcin'); if (i.value.trim()) onSay(i.value); i.value = ''; };
+  window.__ON = { ON, onSay, onSend, onWave, onlineSummary, onRoomName, STICKERS, dmName, thr, PH, setReply, phShow };
+  $('pcomp').onsubmit = e => { e.preventDefault(); const i = $('pcin'); if (i.value.trim()) onSend({ t: i.value }); i.value = ''; $('pemo').hidden = true; };
   window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK, osm: () => ({ OSM, OSMG, camera }) };
 }
 
@@ -2376,7 +2390,7 @@ function lookDir(x, z) { const P = player.o.position, a = Math.atan2(x - P.x, z 
 /* ---------------- online corpers: same state camp, same LGA street, same PPA ---------------- */
 // Positions, outfits and short messages travel as presence through the artifact's room (or between tabs locally).
 // Everything received is untrusted text from another player: escaped, length-capped, mutable.
-const ON = { net: null, starting: false, room: null, rname: '', joining: '', remotes: new Map(), sayN: 0, emN: 0, say: null, em: null, sendT: 0, lobT: 0, lastKey: '', muted: new Set(), lobby: [] };
+const ON = { net: null, starting: false, room: null, rname: '', joining: '', remotes: new Map(), sayN: 0, emN: 0, say: null, em: null, sendT: 0, lobT: 0, lastKey: '', muted: new Set(), mutedU: new Set(), lobby: [] };
 const slug = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 28) || 'x';
 const cleanTxt = (t, n = 120) => String(t || '').replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯]/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
 const BADW = /\b(fuck|shit|bitch|bastard|ashawo|olodo|mumu|idiot|stupid|nigga)\w*/gi;
@@ -2387,7 +2401,7 @@ function myPPA() { return (ST.post && ST.post.ppa) || ''; }
 async function startOnline() {
   if (ON.starting) return; ON.starting = true;
   ON.net = await connectNet(); if (!ON.net) return;
-  ON.net.lobby.onPeers(c => { ON.lobby = c.peers.filter(p => !p.isMe && p.kind === 'viewer' && p.presence && p.presence.v === 1); if (PH.screen === 'chats') renderChats(); });
+  ON.net.lobby.onPeers(c => { ON.lobby = c.peers.filter(p => !p.isMe && p.kind === 'viewer' && p.presence && p.presence.v === 1); onMessages(); if (PH.screen === 'chats' && !PH.onlist) renderChats(); });
 }
 async function onJoin(name) {
   if (ON.joining === name) return; ON.joining = name;
@@ -2424,11 +2438,10 @@ async function makeRemote(peer) {
   r.tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tagTex(tame(s.nm || 'Corper') || 'Corper', (s.org ? tame(s.org, 30) : rel), col), depthWrite: false })); r.tag.scale.set(1.7, 0.42, 1); r.tag.renderOrder = 5; scene.add(r.tag);
 }
 function dropRemote(r) { r.gone = true; if (r.p) scene.remove(r.p.o); for (const k of ['tag', 'bub']) if (r[k]) { scene.remove(r[k]); r[k].material.map.dispose(); r[k].material.dispose(); } }
-function remoteSay(r, t) {
-  if (ON.muted.has(r.peer) || !t) return; const nm = tame(r.s.nm || 'Corper');
+function remoteBubble(r, t) {
+  if (ON.muted.has(r.peer) || ON.mutedU.has(r.s.uid) || !t) return;
   if (r.bub) { scene.remove(r.bub); r.bub.material.map.dispose(); r.bub.material.dispose(); }
   r.bub = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex(t), depthWrite: false })); r.bub.scale.set(2.2, 0.69, 1); r.bub.renderOrder = 6; scene.add(r.bub); r.bubT = 7;
-  thr(onThread(), 'group'); chat(esc(nm) + ' 🟢', esc(t), '', onThread());
 }
 function updateOnline(dt) {
   if (!ST.ready || window.__noNet) return;
@@ -2436,12 +2449,12 @@ function updateOnline(dt) {
   const want = onRoomName(); if (want !== ON.rname) onJoin(want);
   const P = player.o.position;
   // lobby: who is where (for the online list)
-  ON.lobT -= dt; if (ON.lobT <= 0) { ON.lobT = 3; const lp = { v: 1, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), st: ST.state || 'LA', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA() }; const k = JSON.stringify(lp); if (k !== ON.lobKey) { ON.lobKey = k; ON.net.lobby.presence(lp); } }
+  ON.lobT -= dt; if (ON.lobT <= 0) { ON.lobT = 1.5; const lp = { v: 1, uid: ON.uid, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), st: ST.state || 'LA', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(), msgs: ON.out.slice(-6) }; const k = JSON.stringify(lp); if (k !== ON.lobKey) { ON.lobKey = k; ON.net.lobby.presence(lp); } }
   if (!ON.room) return;
   // me, about 8 times a second while moving, every 2 s otherwise
   ON.sendT -= dt; const sp = player.speed || 0;
-  const me = { v: 1, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), g: ST.g === 'f' ? 'f' : 'm', tone: CH.tone, o: ST.outfit || 'mufti', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(),
-    x: Math.round(P.x * 10) / 10, z: Math.round(P.z * 10) / 10, ry: Math.round(player.o.rotation.y * 100) / 100, sp: sp > 4.2 ? 2 : sp > 0.3 ? 1 : 0, say: ON.say, em: ON.em, rd: ST.riding ? 1 : 0 };
+  const me = { v: 1, uid: ON.uid, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), g: ST.g === 'f' ? 'f' : 'm', tone: CH.tone, o: ST.outfit || 'mufti', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(),
+    x: Math.round(P.x * 10) / 10, z: Math.round(P.z * 10) / 10, ry: Math.round(player.o.rotation.y * 100) / 100, sp: sp > 4.2 ? 2 : sp > 0.3 ? 1 : 0, em: ON.em, rd: ST.riding ? 1 : 0 };
   const key = JSON.stringify(me);
   if (key !== ON.lastKey && ON.sendT <= 0 || ON.sendT < -2) { ON.sendT = 0.125; ON.lastKey = key; ON.room.presence(me); }
   // everyone else in this room
@@ -2454,7 +2467,6 @@ function updateOnline(dt) {
     if (!r) { makeRemote(peer); continue; }
     if (r.loading) continue;
     r.s = s; if (Number.isFinite(s.x) && Number.isFinite(s.z)) { r.tx = clamp(s.x, -2000, 2000); r.tz = clamp(s.z, -2000, 2000); } if (Number.isFinite(s.ry)) r.ry = s.ry;
-    if (s.say && s.say.n !== r.sayN) { r.sayN = s.say.n; remoteSay(r, tame(s.say.t)); }
     if (s.em && s.em.n !== r.emN) { r.emN = s.em.n; r.emT = 2.6; play(r.p, r.p.acts.wave ? 'wave' : 'dance'); }
   }
   for (const [k, r] of ON.remotes) if (!seen.has(k)) { dropRemote(r); ON.remotes.delete(k); }
@@ -2472,7 +2484,6 @@ function updateOnline(dt) {
     if (r.bub) { r.bubT -= dt; r.bub.position.set(o.position.x, o.position.y + (r.g === 'f' ? 2.6 : 2.72), o.position.z); if (r.bubT <= 0) { scene.remove(r.bub); r.bub.material.map.dispose(); r.bub.material.dispose(); r.bub = null; } }
   }
 }
-function onSay(t) { t = tame(t); if (!t) return; ON.say = { t, n: ++ON.sayN, at: Date.now() }; ON.sendT = 0; thr(onThread(), 'group'); chat('You', esc(t), 'me', onThread()); }
 function onWave() { ON.em = { k: 'wave', n: ++ON.emN }; ON.sendT = 0; play(player, player.acts.wave ? 'wave' : 'dance'); setTimeout(() => play(player, 'idle'), 2200); }
 function onlineInteractables(L) {
   if (!player || !ON.room) return;
@@ -2483,12 +2494,13 @@ function onlineInteractables(L) {
 }
 function onlineMenu(r) {
   const nm = esc(tame(r.s.nm || 'Corper')), z = ZN(), org = r.s.org ? esc(tame(r.s.org, 40)) : '';
-  ask(nm + ' · online corper', `${nm} is another player, ${r.rel}${org ? ' (PPA: ' + org + ')' : ''}. Whatever you say shows above your head and in the 🟢 Online chat for everyone here.`, [
+  ask(nm + ' · online corper', `${nm} is another player, ${r.rel}${org ? ' (PPA: ' + org + ')' : ''}. What you say to everyone shows above your head and in the 🟢 Online chat here. Private messages only reach them.`, [
     ['👋 Wave', () => { onWave(); }],
     [`"${z.greet || 'How far'}! Omo, how far?"`, () => onSay(`${z.greet || 'How far'}! Omo, how far?`)],
     ['"Which PPA dem post you?"', () => onSay(myPPA() ? `Which PPA dem post you? I dey ${myPPA()}.` : 'Which PPA dem post you?')],
     ['"Is there CDS this week?"', () => onSay('Abeg, is there CDS this week? Group chat don confuse me.')],
-    ['💬 Type a message…', () => { openThread(onThread(), 'group'); setTimeout(() => { const i = $('pcin'); if (i) i.focus(); }, 300); }],
+    ['💬 Type a message to everyone here…', () => { openThread(onThread(), 'group'); setTimeout(() => { const i = $('pcin'); if (i) i.focus(); }, 300); }],
+    ...(r.s.uid ? [['🔒 Message ' + nm + ' privately', () => { const n = dmName(String(r.s.uid).slice(0, 16), tame(r.s.nm || 'Corper', 24)); thr(n, 'dm').uid = String(r.s.uid).slice(0, 16); openThread(n, 'dm'); setTimeout(() => { const i = $('pcin'); if (i) i.focus(); }, 300); }]] : []),
     [ON.muted.has(r.peer) ? '🔊 Unmute' : '🔇 Mute ' + nm, () => { if (ON.muted.has(r.peer)) ON.muted.delete(r.peer); else { ON.muted.add(r.peer); if (r.bub) r.bub.visible = false; } toast(ON.muted.has(r.peer) ? `${tame(r.s.nm || 'Corper')} is muted. You won't see their messages.` : 'Unmuted.'); }],
   ], ' ');
 }
@@ -2496,6 +2508,96 @@ function onlineSummary() {
   const L = ON.lobby, st = ST.state || 'LA', lga = ST.post && ST.post.lga, org = myPPA();
   const inState = L.filter(p => p.presence.st === st), inLga = lga ? inState.filter(p => p.presence.lga === lga) : [], atPPA = org ? inLga.filter(p => p.presence.org === org) : [];
   return { all: L.length, inState: inState.length, inLga: inLga.length, atPPA: atPPA.length, here: [...ON.remotes.values()].filter(r => r.p).length };
+}
+/* ---------------- online chat: group per place, private messages, replies, emojis, stickers ---------------- */
+// Messages ride in each player's lobby presence (last few only), so every transport carries them the same way.
+// "Private" means only the person you wrote to sees it in the game; it is not encrypted.
+const STICKERS = { omo: ['Omo! 😩', '#ff7043'], nawa: ['Na wa o', '#7e57c2'], abeg: ['Abeg 🙏🏾', '#26a69a'], nowahala: ['No wahala 👌🏾', '#43a047'], sapa: ['Sapa is real 💸', '#8d6e63'], pop: ['POP loading… 🎓', '#1e88e5'], cds: ['CDS wey? 🤔', '#f9a825'], clear: ['Clearance don start? 🏃🏾', '#e53935'], cast: ['E don cast 😂', '#ec407a'], soft: ['Soft life only ✨', '#ab47bc'], chop: ['Wetin we go chop? 🍲', '#ef6c00'], allow: ['Allow am 🤲🏾', '#00897b'] };
+const EMOJIS = '😂🤣😅😩😭🙏🏾👌🏾👍🏾👏🏾🔥💯❤️😍🥰😎🤔😴🥵🥶😡🤦🏾‍♂️🤦🏾‍♀️🤷🏾‍♂️🤷🏾‍♀️💪🏾🙌🏾👀🎉🇳🇬💸🍲🍚🥤🚌🛺📚🏫🏥☕🎶⚽'.match(/\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*|🇳🇬/gu);
+ON.uid = (() => { try { let u = sessionStorage.getItem('nysc3d.uid'); if (!u) { u = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('nysc3d.uid', u); } return u; } catch (e) { return Math.random().toString(36).slice(2, 12); } })();
+ON.out = []; ON.seenMsg = new Set(); ON.mid = 0; ON.reply = null; ON.dms = new Map(); // uid → thread name
+const dmName = (uid, nm) => { const have = ON.dms.get(uid); if (have) return have; let n = '🟢 ' + nm; for (const [u, t] of ON.dms) if (t === n && u !== uid) n += ' · ' + uid.slice(0, 3); ON.dms.set(uid, n); return n; };
+function onSend(o) { // o: { t } or { st }
+  const T = PH.thread || '', th = thr(T), to = th.uid || null;
+  const m = { id: ON.uid + '.' + (++ON.mid), ch: to ? 'dm' : ON.rname, to, at: Date.now() };
+  if (o.st && STICKERS[o.st]) m.st = o.st; else { m.t = tame(o.t); if (!m.t) return; }
+  if (ON.reply) m.re = { id: ON.reply.id, nm: cleanTxt(ON.reply.nm, 24), t: cleanTxt(ON.reply.t, 60) };
+  ON.out.push(m); if (ON.out.length > 6) ON.out.shift(); ON.lobT = 0; ON.lobKey = '';
+  if (!to && m.t) { ON.say = { t: m.t, n: ++ON.sayN, at: m.at }; ON.sendT = 0; }
+  addMsg(T, { from: 'You', kind: 'me', online: 1, id: m.id, t: m.t, st: m.st, re: m.re });
+  setReply(null);
+}
+function onSay(t) { if (!ON.net) return; const T = onThread(); thr(T, 'group'); const keep = PH.thread; PH.thread = T; onSend({ t }); PH.thread = keep; }
+function addMsg(name, m) {
+  const t = thr(name, m.dm ? 'dm' : 'group'); if (m.uid && m.dm) t.uid = m.uid;
+  t.msgs.push(m); if (t.msgs.length > 200) t.msgs.shift(); t.last = ++PH.seq;
+  const open = $('phone').classList.contains('on') && PH.screen === 'thread' && PH.thread === name;
+  if (open) { $('msgs').insertAdjacentHTML('beforeend', msgHTML(m)); $('msgs').scrollTop = 1e6; }
+  else if (m.kind !== 'me') { t.unread++; badge(); notify(name, m.from, m.st ? STICKERS[m.st][0] : m.t); }
+  if (PH.screen === 'chats') renderChats();
+}
+function notify(name, from, text) { const n = $('notif'); if (!n) return; $('nsrc').textContent = 'CORPER CONNECT · ' + name; $('ntext').innerHTML = `<b>${from}:</b> ${esc(text.slice(0, 90))}`; n.dataset.thread = name; n.classList.add('on'); clearTimeout(chat.t); chat.t = setTimeout(() => n.classList.remove('on'), 4200); beep(); }
+function onMessages() { // read everyone's recent messages from the lobby
+  for (const p of ON.lobby) {
+    const s = p.presence, nm = tame(s.nm || 'Corper', 24); if (!Array.isArray(s.msgs) || ON.mutedU.has(s.uid)) continue;
+    for (const m of s.msgs.slice(-6)) {
+      if (!m || typeof m.id !== 'string' || ON.seenMsg.has(m.id)) continue; ON.seenMsg.add(m.id);
+      if (Date.now() - (m.at || 0) > 120000) continue; // old news from before you arrived
+      const base = { from: esc(nm) + ' 🟢', kind: '', online: 1, id: m.id.slice(0, 40), uid: String(s.uid || '').slice(0, 16), nm, t: m.t ? tame(m.t) : '', st: STICKERS[m.st] ? m.st : '', re: m.re && typeof m.re === 'object' ? { id: String(m.re.id || '').slice(0, 40), nm: tame(m.re.nm, 24), t: tame(m.re.t, 60) } : null };
+      if (m.ch === 'dm') { if (m.to === ON.uid) addMsg(dmName(base.uid, nm), { ...base, dm: 1 }); }
+      else if (m.ch === ON.rname) { addMsg(onThread(), base); const r = [...ON.remotes.values()].find(r => r.s.uid === s.uid); if (r && r.p) remoteBubble(r, base.st ? STICKERS[base.st][0] : base.t); }
+    }
+  }
+}
+function msgHTML(m) {
+  if (!m.online) return `<div class="m ${m.kind}"><b>${m.from}</b>${m.text}</div>`;
+  const q = m.re ? `<div class="q"><b>${esc(m.re.nm)}</b>${esc(m.re.t)}</div>` : '';
+  const body = m.st ? `<div class="stk" style="--sc:${STICKERS[m.st][1]}">${STICKERS[m.st][0]}</div>` : esc(m.t);
+  return `<div class="m ${m.kind} on" data-id="${esc(m.id)}"><i class="rpl">↩</i><b>${m.from}</b>${q}${body}</div>`;
+}
+function setReply(m) {
+  ON.reply = m ? { id: m.id, nm: m.kind === 'me' ? 'You' : m.nm, t: m.st ? STICKERS[m.st][0] : m.t } : null;
+  const b = $('prep'); b.hidden = !m; if (m) { b.querySelector('span').innerHTML = `<b>${esc(ON.reply.nm)}</b>${esc(ON.reply.t)}`; $('pcin').focus(); }
+}
+function findMsg(id) { const t = thr(PH.thread); return t.msgs.find(m => m.id === id); }
+function msgMenu(el, m) {
+  document.querySelectorAll('#msgs .mm').forEach(x => x.remove());
+  const mine = m.kind === 'me', canDM = !mine && m.uid && !thr(PH.thread).uid;
+  el.insertAdjacentHTML('afterend', `<div class="mm${mine ? ' me' : ''}"><button data-a="r">↩ Reply</button>${canDM ? '<button data-a="d">💬 Message privately</button>' : ''}${!mine && m.uid ? '<button data-a="x">🔇 Mute</button>' : ''}</div>`);
+  const mm = el.nextElementSibling;
+  mm.querySelector('[data-a="r"]').onclick = () => { mm.remove(); setReply(m); };
+  const d = mm.querySelector('[data-a="d"]'); if (d) d.onclick = () => { mm.remove(); const n = dmName(m.uid, m.nm); thr(n, 'dm').uid = m.uid; PH.thread = n; phShow('thread'); };
+  const x = mm.querySelector('[data-a="x"]'); if (x) x.onclick = () => { mm.remove(); ON.mutedU.add(m.uid); toast(`${m.nm} is muted.`); };
+}
+// swipe a message to the right to reply (like WhatsApp); tap it for more
+(() => {
+  const box = $('msgs'); let sw = null;
+  box.addEventListener('pointerdown', e => { const el = e.target.closest('.m.on'); if (!el) return; sw = { el, x: e.clientX, y: e.clientY, dx: 0, id: e.pointerId }; });
+  box.addEventListener('pointermove', e => { if (!sw || e.pointerId !== sw.id) return; const dx = e.clientX - sw.x, dy = Math.abs(e.clientY - sw.y); if (dy > 24 && Math.abs(dx) < 20) { sw.el.style.transform = ''; sw = null; return; } sw.dx = Math.max(0, Math.min(90, dx)); sw.el.style.transform = `translateX(${sw.dx}px)`; sw.el.classList.toggle('sw', sw.dx > 55); });
+  const end = e => { if (!sw) return; const { el, dx } = sw; sw = null; el.style.transform = ''; el.classList.remove('sw'); const m = findMsg(el.dataset.id); if (!m) return; if (dx > 55) setReply(m); else if (dx < 6) msgMenu(el, m); };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', () => { if (sw) { sw.el.style.transform = ''; sw = null; } });
+  box.addEventListener('dblclick', e => { const el = e.target.closest('.m.on'); const m = el && findMsg(el.dataset.id); if (m) setReply(m); });
+})();
+// emoji and sticker tray
+(() => {
+  const tray = $('pemo');
+  const draw = tab => {
+    tray.dataset.tab = tab;
+    tray.innerHTML = `<div class="tabs"><button data-t="e" class="${tab === 'e' ? 'on' : ''}">😊 Emoji</button><button data-t="s" class="${tab === 's' ? 'on' : ''}">🏷️ Stickers</button></div><div class="grid ${tab}">` +
+      (tab === 'e' ? EMOJIS.map(e => `<button data-e="${e}">${e}</button>`).join('') : Object.entries(STICKERS).map(([k, [t, c]]) => `<button data-s="${k}" class="stk" style="--sc:${c}">${t}</button>`).join('')) + '</div>';
+    tray.querySelectorAll('[data-t]').forEach(b => b.onclick = () => draw(b.dataset.t));
+    tray.querySelectorAll('[data-e]').forEach(b => b.onclick = () => { const i = $('pcin'); const p = i.selectionStart ?? i.value.length; i.value = (i.value.slice(0, p) + b.dataset.e + i.value.slice(p)).slice(0, 120); i.focus(); });
+    tray.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { onSend({ st: b.dataset.s }); tray.hidden = true; });
+  };
+  $('pemob').onclick = () => { tray.hidden = !tray.hidden; if (!tray.hidden) draw(tray.dataset.tab || 'e'); };
+  $('prep').querySelector('button').onclick = () => setReply(null);
+})();
+function renderOnlineList() { // everyone online, closest to you first
+  const st = ST.state || 'LA', lga = ST.post && ST.post.lga, org = myPPA();
+  const rank = p => (org && p.presence.org === org ? 0 : lga && p.presence.lga === lga ? 1 : p.presence.st === st ? 2 : 3);
+  const L = ON.lobby.slice().sort((a, b) => rank(a) - rank(b));
+  const tag = ['at your PPA', 'in your LGA', 'in your state', ''];
+  return `<div class="olist"><div class="oh">🟢 Online now</div>` + (L.length ? L.map(p => { const s = p.presence, r = rank(p), where = s.ar === 'camp' ? (STATES.find(x => x.id === s.st) || {}).name + ' camp' : (s.lga || ''); return `<button data-u="${esc(String(s.uid || ''))}" data-n="${esc(tame(s.nm || 'Corper', 24))}"><i>${r === 0 ? '🟡' : r === 1 ? '🟢' : '🔵'}</i><span><b>${esc(tame(s.nm || 'Corper', 24))}</b><small>${esc(tame(where, 40))}${tag[r] ? ' · ' + tag[r] : ''}${s.org ? ' · ' + esc(tame(s.org, 36)) : ''}</small></span><em>Message</em></button>`; }).join('') : '<p>Nobody else is online right now.</p>') + '</div>';
 }
 /* ---------------- maps: corner minimap + the phone's Map app (pan, zoom, pins, routes) ---------------- */
 const POIS = {
@@ -2689,7 +2791,7 @@ function updateUI(dt) {
   // conductor bubble
   let cd = null, bd = 18; for (const n of NPC) if (n.bubble && player && !n.hidden) { const d = n.o.position.distanceTo(player.o.position); if (d < bd) { bd = d; cd = n; } } bubT -= dt; if (!cd) bub.style.display = 'none';
   if (cd) { tmp.copy(cd.o.position); tmp.y += 2.15; tmp.project(camera); const vis = tmp.z < 1 && cd.o.position.distanceTo(camera.position) < 30;
-    if (bubT <= 0) { bubT = 3.2; bubI++; } const btxt = cd.bubble[bubI % cd.bubble.length]; if (btxt !== bub.textContent) { bub.textContent = btxt; cd.said = cd.said || new Set(); if (ST.ready && (ST.drill || (player && cd.o.position.distanceTo(player.o.position) < 6 && !cd.said.has(btxt))) && btxt !== '…' && !DLG && !ST.busy) { cd.said.add(btxt); speak(btxt, cd.rig === 'fem', !!ST.drill, cd.name || (cd.rig === 'fem' ? 'woman' : 'man')); } }
+    if (bubT <= 0) { bubT = 3.2; bubI++; } const btxt = cd.bubble[bubI % cd.bubble.length]; if (btxt !== bub.textContent) { bub.textContent = btxt; cd.said = cd.said || new Set(); if (ST.ready && (ST.drill || (player && cd.o.position.distanceTo(player.o.position) < 6 && !cd.said.has(btxt))) && btxt !== '…' && !DLG && !ST.busy) { cd.said.add(btxt); speak(btxt, cd.rig === 'fem', !!ST.drill, cd.name || (cd.vid = cd.vid || ((cd.rig === 'fem' ? 'woman ' : 'man ') + (++VIDN % 5)))); } }
     bub.style.display = vis ? 'block' : 'none'; bub.style.left = ((tmp.x + 1) / 2 * innerWidth) + 'px'; bub.style.top = ((1 - tmp.y) / 2 * innerHeight) + 'px'; }
   // objective arrow
   const T0 = ST.target; if (T0 && player && !ST.drill) { const d = Math.round(Math.hypot(T0.x - player.o.position.x, T0.z - player.o.position.z)); const a = Math.atan2(T0.x - player.o.position.x, T0.z - player.o.position.z) - Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)); const arrows = ['⬆️', '↗️', '➡️', '↘️', '⬇️', '↙️', '⬅️', '↖️']; const k = ((Math.round(-a / (Math.PI / 4)) % 8) + 8) % 8; const tx = `${arrows[k]} ${T0.label} · ${d} m${ST.area === 'street' && d > 18 && !ST.riding ? ' · 🛺 tap to ride' : ''}`; if ($('arrow').textContent !== tx) $('arrow').textContent = tx; }
@@ -2745,8 +2847,8 @@ window.__step = (n = 1, dt = 1 / 30) => { for (let i = 0; i < n; i++) sim(dt); r
 let wall = performance.now();
 function loop() {
   const now = performance.now(), raw = (now - wall) / 1000; wall = now;
-  const dt = Math.min(0.05, raw);
-  if (player) sim(dt);
+  // slow phones: run the world in small steps so walking speed is the same at 15 fps as at 60 fps
+  if (player) { let rem = Math.min(raw, 0.2); const n = Math.ceil(rem / 0.05); for (let i = 0; i < n; i++) sim(rem / n); }
   renderer.render(scene, camera);
   frames++; fpsT += raw; if (fpsT > 1) { window.__fps = frames / fpsT; window.__calls = renderer.info.render.calls; window.__tris = renderer.info.render.triangles; frames = 0; fpsT = 0; }
   requestAnimationFrame(loop);
@@ -2786,17 +2888,18 @@ boot().then(T => {
     camera.position.set(pvPos.x + ox, narrow ? 1.5 : 1.3, pvPos.z + (narrow ? 5.2 : 3.7)); camera.lookAt(pvPos.x + ox, narrow ? 0.15 : 0.95, pvPos.z); sky.position.copy(camera.position);
     sunL.position.copy(pvPos).addScaledVector(sun, 80); sunL.target.position.copy(pvPos); renderer.render(scene, camera); requestAnimationFrame(pvLoop); }
   // creator controls
-  $('cbg').innerHTML = BACKGROUNDS.map(b => `<button data-v="${b[0]}"><b>${b[1]}</b><span>${naira(b[3].cash)} · ${b[2]}</span></button>`).join('');
+  $('cbg').innerHTML = `<button data-v="rand"><b>🎲 Surprise me</b><span>Life picks for you</span></button>` + BACKGROUNDS.map(b => `<button data-v="${b[0]}"><b>${b[1]}</b><span>${naira(b[3].cash)} · ${b[2]}</span></button>`).join('');
   const sync = () => { for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.classList.toggle('on', String(CH[key]) === b.dataset.v); };
   for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.onclick = () => { CH[key] = key === 'tone' ? +b.dataset.v : b.dataset.v; sync(); if (key !== 'bg') preview(); };
   $('cstate').innerHTML = `<option value="rand">🎲 Random, like the real call-up letter</option>` + STATES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}${s.id === 'FC' ? '' : ' State'} · camp at ${s.camp.split(/[,(]/)[0]}</option>`).join('');
-  $('ccourse').innerHTML = COURSES.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
+  $('ccourse').innerHTML = `<option value="rand">🎲 Random</option>` + COURSES.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
   try { const last = JSON.parse(localStorage.getItem('nysc3d.corper') || 'null'); if (last) { Object.assign(CH, last); $('cname').value = CH.name || ''; } } catch (e) { }
-  $('cstate').value = CH.pick || 'rand'; $('ccourse').value = CH.course || 'education';
+  if (!CH.bgPick) CH.bg = 'rand'; $('cstate').value = CH.pick || 'rand'; $('ccourse').value = CH.coursePick || 'rand';
   sync(); preview(); pvLoop();
   L.style.transition = 'opacity .7s'; L.style.opacity = 0; setTimeout(() => { if (pvOn) L.style.display = 'none'; }, 750); C.hidden = false;
   const start = async g => {
-    if (g) CH.g = g; CH.name = ($('cname').value || '').trim().slice(0, 14); CH.pick = $('cstate').value; CH.course = $('ccourse').value;
+    if (g) CH.g = g; CH.name = ($('cname').value || '').trim().slice(0, 14); CH.pick = $('cstate').value; CH.coursePick = $('ccourse').value; CH.bgPick = CH.bg;
+    if (!CH.resume) { CH.course = CH.coursePick === 'rand' ? COURSES[(Math.random() * COURSES.length) | 0][0] : CH.coursePick; CH.bgRoll = CH.bg === 'rand' ? BACKGROUNDS[(Math.random() * BACKGROUNDS.length) | 0][0] : CH.bg; }
     if (!CH.resume) CH.state = window.__state || (CH.pick === 'rand' ? STATES[(Math.random() * STATES.length) | 0].id : CH.pick);
     try { localStorage.setItem('nysc3d.corper', JSON.stringify(CH)); } catch (e) { }
     C.hidden = true; L.style.transition = ''; L.style.display = 'grid'; L.style.opacity = 1; $('lmsg').textContent = 'Taking you to camp…'; $('lbar').style.width = '100%'; audio();

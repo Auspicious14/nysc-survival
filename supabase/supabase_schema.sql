@@ -135,3 +135,11 @@ language sql security definer set search_path = public as $$
   delete from public.messages where ts < ((extract(epoch from now()) * 1000)::bigint - 172800000);
 $$;
 revoke all on function public.prune_messages() from public, anon, authenticated;
+
+-- ---- keep-alive (stops the free project from pausing) -----------------------
+-- /api/keepalive (Vercel Cron, daily) reads this one-row table.
+create table if not exists public.keepalive (id int primary key default 1, note text default 'NYSC Survival keep-alive');
+insert into public.keepalive (id) values (1) on conflict (id) do nothing;
+alter table public.keepalive enable row level security;
+drop policy if exists "keepalive readable" on public.keepalive;
+create policy "keepalive readable" on public.keepalive for select to anon, authenticated using (true);

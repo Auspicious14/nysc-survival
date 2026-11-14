@@ -84,12 +84,19 @@ def expand(text, who, female):
             if boss: t = t.replace('{BOSS}', boss); w = w.replace('{BOSS}', boss)
             add(t, w, female or bool(re.search(r'mrs|matron|ofure', w, re.I)), z, 1 if z == 'SW' else 2)
 
-for c in cap: expand(c['text'], c.get('who', ''), c.get('female', False))
+for c in cap:
+    expand(c['text'], c.get('who', ''), c.get('female', False))
+    if 'Lagos State' in c['text'] and '{' not in c['text']:  # the same line in every other state
+        for code, name in STATES:
+            if code != 'LA': add(c['text'].replace('Lagos State', name + ('' if code == 'FC' else ' State')), c.get('who', ''), c.get('female', False), ZONE_OF.get(code, ''), 3)
 for m in re.finditer(r"bubble:\s*\[([^\]]+)\]", src):  # bubbles the walk could not reach
     for b in re.findall(r"'((?:[^'\\]|\\.)*)'", m.group(1)): add(b.replace("\\'", "'"), 'bubble', False, '', 2)
 for c in ['RIGHT… TURN!', 'LEFT… TURN!', 'ABOUT… TURN!', 'PLATOON 5… ATTENTION!', 'STAND… AT EASE!']: add(c, 'marshal', False, '', 1)
 for m in re.finditer(r"SAY\('((?:[^'\\]|\\.)*)'\)", src): add(m.group(1).replace("\\'", "'"), '', False, '', 1)
 
+REDO = {'39989918', '554fb5dd', '62fd098e', 'bc634aea', '2d93020f', 'ae459f34', '02cd84f2', 'db3def8f', '1372b90c'}  # old or faulty takes: the notebook deletes and remakes them
+for i in REDO:
+    if i in lines: lines[i]['redo'] = True
 out = sorted(lines.values(), key=lambda l: (l['voice'], l['prio'], l['id']))
 json.dump(out, open(OUT, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(out), 'lines,', sum(len(l['text']) for l in out), 'characters →', OUT, '| by priority:', {p: sum(1 for l in out if l['prio'] == p) for p in (1, 2, 3)})

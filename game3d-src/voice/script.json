@@ -32,21 +32,24 @@
   "text": "ABOUT… TURN!",
   "voice": "Algenib",
   "style": "Speaker: a Nigerian army drill marshal shouting commands on the parade ground. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "554fb5dd",
   "text": "RIGHT… TURN!",
   "voice": "Algenib",
   "style": "Speaker: a Nigerian army drill marshal shouting commands on the parade ground. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "62fd098e",
   "text": "LEFT… TURN!",
   "voice": "Algenib",
   "style": "Speaker: a Nigerian army drill marshal shouting commands on the parade ground. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "c094ecc7",
@@ -284,7 +287,8 @@
   "text": "Corper! Where is your call-up letter?",
   "voice": "Fenrir",
   "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "de17a3e6",
@@ -299,6 +303,258 @@
   "voice": "Fenrir",
   "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
+ },
+ {
+  "id": "0020785c",
+  "text": "Hmm. Katsina State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "00d2a16c",
+  "text": "Hmm. Rivers State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "0531c018",
+  "text": "Hmm. Kano State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "06ce070a",
+  "text": "Hmm. Abia State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "1e69720f",
+  "text": "Hmm. Kaduna State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "2463d88f",
+  "text": "Hmm. Zamfara State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "270ebbd6",
+  "text": "Hmm. Jigawa State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "3016be82",
+  "text": "Hmm. Sokoto State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "3157ac73",
+  "text": "Hmm. Gombe State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "3642d402",
+  "text": "Hmm. Akwa Ibom State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "3948c5c1",
+  "text": "Hmm. Plateau State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "41484178",
+  "text": "Hmm. Taraba State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "488589f1",
+  "text": "Hmm. Delta State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "498d57e9",
+  "text": "Hmm. Nasarawa State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "4a748a32",
+  "text": "Hmm. Yobe State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "546b8c4d",
+  "text": "Hmm. Edo State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "594472c9",
+  "text": "Hmm. Ebonyi State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "75ed1cd8",
+  "text": "Hmm. Oyo State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "7617960b",
+  "text": "Hmm. Kogi State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "8b04ae29",
+  "text": "Hmm. Ondo State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "8ee7f977",
+  "text": "Hmm. Bauchi State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "960bc941",
+  "text": "Hmm. Enugu State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "9c018795",
+  "text": "Hmm. Adamawa State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "ac307b22",
+  "text": "Hmm. Osun State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "b36c168f",
+  "text": "Hmm. Borno State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "c0acc613",
+  "text": "Hmm. FCT. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "c5724e4a",
+  "text": "Hmm. Imo State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "c58edc0a",
+  "text": "Hmm. Kebbi State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "d70592db",
+  "text": "Hmm. Anambra State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "d9149d14",
+  "text": "Hmm. Niger State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "e652746a",
+  "text": "Hmm. Benue State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "eca096d3",
+  "text": "Hmm. Ekiti State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "f05b7775",
+  "text": "Hmm. Cross River State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "f3a75e77",
+  "text": "Hmm. Kwara State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "fb5011fe",
+  "text": "Hmm. Ogun State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
+ },
+ {
+  "id": "fc432ee4",
+  "text": "Hmm. Bayelsa State. Okay. Open that bag. Let me see what you carry.",
+  "voice": "Fenrir",
+  "style": "Speaker: a strict Nigerian soldier at the camp gate, firm and loud. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 3
  },
  {
   "id": "a7543ffc",
@@ -452,7 +708,8 @@
   "text": "Data finished in the middle of the group chat drama. 1,000 naira for 1.5GB?",
   "voice": "Iapetus",
   "style": "Speaker: a calm Nigerian storyteller narrating a game. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "e43d466e",
@@ -508,7 +765,8 @@
   "text": "The pupils line up under the sun, JSS 1 in front, SS 3 pretending not to be there. Malam Sani hands you the microphone. Corper, talk to them small.",
   "voice": "Iapetus",
   "style": "Speaker: a calm Nigerian storyteller narrating a game. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 2,
+  "redo": true
  },
  {
   "id": "26922c2f",
@@ -564,14 +822,16 @@
   "text": "Make some noise for Platoon 5!",
   "voice": "Leda",
   "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "ae459f34",
   "text": "Who get the energy?!",
   "voice": "Leda",
   "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  },
  {
   "id": "bb186cbb",
@@ -865,6 +1125,7 @@
   "text": "Platoon 5! Where are my people?! We need one person for the dance competition!",
   "voice": "Zubenelgenubi",
   "style": "Speaker: a hype Nigerian party MC. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 1,
+  "redo": true
  }
 ]

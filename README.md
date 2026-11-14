@@ -5,7 +5,7 @@ Fictional people and places. Not an official NYSC product.
 
 - **/play** – the 3D game (source in `game3d-src/`, served from `public/game3d/`)
 - **/classic** – the earlier single-file game (`game-src/nysc-survival-v2.html`)
-- **/** – landing page
+- **/** – landing page: a static, dependency-free scroll story at `public/landing/index.html` (served at `/` by a rewrite in `next.config.mjs`); screenshots in `public/landing/img/` are real gameplay captures
 
 ## Run it
 
@@ -25,6 +25,11 @@ The 3D game meets other players through Supabase Realtime **broadcast channels**
 In Supabase → Realtime → Settings, public channels must be allowed (the default). Channels: `nysc3d:lobby`, `nysc3d:camp-<state>`, `nysc3d:town-<state>-<lga>`.
 Each player sends ~5 updates a second while moving and one every 2 s when still; the free plan's Realtime message quota is plenty for testing with friends.
 Without config the game falls back to the claude.ai room (as an artifact) or to tabs of the same browser.
+
+Chat: group chat per place, private messages, swipe-to-reply, emojis and original Naija stickers, all carried in each player's lobby presence (nothing stored). "Private" means only the recipient's game shows it; it is not end-to-end encrypted.
+
+### Keeping the free Supabase project awake
+Supabase pauses free projects after 7 days without activity. `vercel.json` schedules a daily Vercel Cron call to `/api/keepalive`, which reads the one-row `keepalive` table (run the bottom of `supabase/supabase_schema.sql` once). Optional: set `CRON_SECRET` in Vercel to lock the route. Backup: `.github/workflows/supabase-keepalive.yml` pings every 3 days if you add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as GitHub Actions secrets.
 
 ## The 3D game (`game3d-src/`)
 

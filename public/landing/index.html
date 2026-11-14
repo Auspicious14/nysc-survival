@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NYSC Survival · the service year, as a game</title>
+<meta name="description" content="A 3D Nigerian game about the service year: call-up letter, orientation camp, group-chat rumours, clearance, your PPA and the road to POP. Real streets from all 36 states and the FCT. Play free in your browser.">
+<meta property="og:title" content="NYSC Survival">
+<meta property="og:description" content="Survive the service year. Camp, CDS, clearance, PPA, group-chat wahala. Play free in your browser.">
+<meta property="og:image" content="/landing/img/landmark.jpg">
+<meta name="theme-color" content="#0b1a12">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#0b1a12;--bg2:#10241a;--ink:#f6f1e4;--mute:#b9c3b8;--khaki:#c9b78a;--g:#1f9d55;--g2:#38d47f;--sun:#ff8a3d;--line:rgba(246,241,228,.14);--card:rgba(255,255,255,.05);
+  --disp:'Bricolage Grotesque','Avenir Next Condensed','Arial Narrow',system-ui,sans-serif;--body:Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}a{color:inherit}
+.wrap{padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));max-width:1240px;margin:0 auto}
+h1,h2,h3{font-family:var(--disp);letter-spacing:-.02em;line-height:1.02;margin:0;text-wrap:balance}
+.kick{font:600 12px/1 var(--body);letter-spacing:.18em;text-transform:uppercase;color:var(--khaki)}
+.lead{font-size:clamp(17px,1.6vw,20px);color:var(--mute);max-width:56ch}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:16px 26px;border-radius:999px;background:var(--g);color:#fff;font:700 16px var(--body);text-decoration:none;box-shadow:0 10px 40px -10px rgba(31,157,85,.7),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .25s cubic-bezier(.2,.9,.2,1),box-shadow .25s;will-change:transform}
+.btn:hover{box-shadow:0 16px 50px -10px rgba(56,212,127,.8),inset 0 1px 0 rgba(255,255,255,.25)}.btn.ghost{background:transparent;border:1px solid var(--line);box-shadow:none}
+.btn svg{width:18px;height:18px}
+/* grain + vignette */
+.grain{position:fixed;inset:-50%;pointer-events:none;z-index:50;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");animation:grain 1s steps(6) infinite}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-4%,3%)}40%{transform:translate(3%,-5%)}60%{transform:translate(-2%,6%)}80%{transform:translate(5%,2%)}100%{transform:translate(0,0)}}
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:40;padding-top:env(safe-area-inset-top,0px);transition:background .4s,backdrop-filter .4s,border-color .4s;border-bottom:1px solid transparent}
+nav.s{background:rgba(11,26,18,.72);backdrop-filter:blur(14px) saturate(1.4);border-color:var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:10px;font:800 18px var(--disp);text-decoration:none}.logo i{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--g) 0 50%,#fff 50% 100%);display:block;position:relative;box-shadow:0 0 0 1px rgba(255,255,255,.2)}
+nav .links{display:flex;gap:26px;align-items:center;font-size:14px;color:var(--mute)}nav .links a{text-decoration:none}nav .links a:hover{color:var(--ink)}nav .btn{padding:10px 18px;font-size:14px}
+@media (max-width:720px){nav .links a:not(.btn){display:none}}
+.prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--g2),var(--sun));z-index:41;transform-origin:0 50%;transform:scaleX(var(--sp,0))}
+/* hero */
+.hero{position:relative;min-height:100svh;display:grid;place-items:center;overflow:hidden;isolation:isolate}
+.hero .bg{position:absolute;inset:-6%;z-index:-2;background:url(img/landmark.jpg) center/cover;transform:scale(calc(1.08 + var(--hp,0)*.12)) translateY(calc(var(--hp,0)*8%));filter:saturate(1.1) brightness(.55);animation:kb 18s ease-in-out infinite alternate}
+@keyframes kb{to{background-position:60% 40%}}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 80% at 50% 30%,transparent 0,rgba(11,26,18,.55) 55%,var(--bg) 100%),linear-gradient(180deg,rgba(11,26,18,.2),var(--bg) 96%)}
+.hero .in{text-align:center;padding:120px 0 80px;display:grid;justify-items:center;gap:26px}
+.hero h1{font-size:clamp(46px,9vw,128px);font-weight:800}
+.hero h1 .w{display:inline-block;overflow:hidden;vertical-align:bottom;padding-bottom:.06em}.hero h1 .w>span{display:inline-block;transform:translateY(110%);animation:up 1s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes up{to{transform:none}}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--g2),var(--khaki));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lead{text-align:center;opacity:0;animation:fade 1s .9s forwards}.hero .ctas{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;opacity:0;animation:fade 1s 1.1s forwards}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+/* the letter */
+.letter{perspective:1200px;width:min(440px,88vw);margin:96px 0 6px;opacity:0;animation:fade .9s .2s forwards}
+.env{position:relative;height:150px;transform-style:preserve-3d}
+.env .back{position:absolute;inset:0;border-radius:10px;background:linear-gradient(160deg,#d9c99b,#b9a571);box-shadow:0 30px 60px -20px rgba(0,0,0,.7)}
+.env .flap{position:absolute;left:0;right:0;top:0;height:90px;transform-origin:50% 0;transform:rotateX(0);background:linear-gradient(180deg,#cdbc8b,#bba86f);clip-path:polygon(0 0,100% 0,50% 100%);animation:flap 1s 1.2s cubic-bezier(.6,0,.2,1) forwards;z-index:3;backface-visibility:hidden}
+@keyframes flap{to{transform:rotateX(180deg);z-index:0}}
+.env .front{position:absolute;inset:0;border-radius:10px;z-index:2;background:linear-gradient(160deg,#d6c592,#c2ae76);clip-path:polygon(0 0,50% 58%,100% 0,100% 100%,0 100%)}
+.paper{position:absolute;left:6%;right:6%;top:12px;height:180px;background:#fbf7ec;color:#1d2a20;border-radius:6px;z-index:1;padding:16px 18px;text-align:left;font-size:12.5px;line-height:1.5;box-shadow:0 8px 20px rgba(0,0,0,.25);animation:rise 1.2s 2s cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes rise{to{transform:translateY(-118px);z-index:4}}
+.paper small{display:block;font:600 9.5px var(--body);letter-spacing:.14em;color:#6b7a62}.paper b{font:800 22px var(--disp);display:block;color:var(--g);margin:2px 0 4px;min-height:1.1em}
+.paper .stamp{position:absolute;right:12px;bottom:12px;border:2px solid #c0392b;color:#c0392b;font:800 10px var(--body);letter-spacing:.1em;padding:3px 6px;transform:rotate(-8deg) scale(2);opacity:0;animation:stamp .35s 3.6s cubic-bezier(.3,1.6,.5,1) forwards}
+@keyframes stamp{to{opacity:.85;transform:rotate(-8deg) scale(1)}}
+.scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--mute);display:grid;justify-items:center;gap:8px;letter-spacing:.14em;text-transform:uppercase}
+.scroll i{width:1px;height:42px;background:linear-gradient(var(--ink),transparent);animation:drip 1.8s infinite}@keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+/* ticker */
+.ticker{border-block:1px solid var(--line);overflow:hidden;white-space:nowrap;padding:18px 0;background:var(--bg2)}
+.ticker div{display:inline-flex;gap:48px;animation:tick 40s linear infinite;font:700 clamp(18px,2.4vw,28px) var(--disp);color:var(--khaki)}.ticker span:nth-child(even){color:var(--ink);opacity:.5}
+@keyframes tick{to{transform:translateX(-50%)}}
+/* story chapters (sticky scenes) */
+.scene{position:relative}.scene .stick{position:sticky;top:0;height:100svh;overflow:hidden;display:grid;align-items:center}
+.ch-num{font:800 clamp(80px,14vw,200px)/.8 var(--disp);color:transparent;-webkit-text-stroke:1px rgba(246,241,228,.16);position:absolute;right:max(20px,4vw);top:84px;pointer-events:none}
+.split{display:grid;grid-template-columns:1fr 1.15fr;gap:clamp(24px,5vw,72px);align-items:center}
+@media (max-width:860px){.split{grid-template-columns:1fr;gap:14px}.stick{align-items:start!important;padding-top:80px}
+  .scene .copy h2{font-size:clamp(30px,8.6vw,44px);margin:8px 0 10px}.scene .copy .lead{font-size:15px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #chat .phone{width:min(210px,56vw)}#chat .meter{display:none}.steps{min-height:7.5em}.steps p{font-size:15px}.counter{margin-top:6px}.counter b{font-size:22px}.counter div{padding:8px 12px}
+  #naija .map{max-width:330px}.float.wide{display:none}.float{width:34%}.lmk{margin-top:12px;gap:6px}.lmk span{font-size:12px;padding:5px 9px}.ch-num{top:70px;font-size:72px}}
+.copy h2{font-size:clamp(36px,5.4vw,76px);font-weight:800;margin:14px 0 18px}
+.steps{position:relative;min-height:9.5em}.steps p{position:absolute;inset:0 0 auto;margin:0;opacity:0;transform:translateY(16px);transition:opacity .5s,transform .5s;font-size:clamp(17px,1.5vw,19px);color:var(--mute)}.steps p.on{opacity:1;transform:none}.steps p b{color:var(--ink)}
+.frame{position:relative;aspect-ratio:16/10;border-radius:22px;overflow:hidden;box-shadow:0 40px 100px -30px rgba(0,0,0,.8),0 0 0 1px var(--line);background:#000;max-width:100%}
+.frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.08);transition:opacity .8s,transform 1.6s cubic-bezier(.2,.9,.2,1)}.frame img.on{opacity:1;transform:scale(1)}
+.frame .cap{position:absolute;left:14px;bottom:14px;background:rgba(11,26,18,.75);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px}
+.counter{display:flex;gap:18px;margin-top:22px}.counter div{border:1px solid var(--line);border-radius:14px;padding:12px 16px;background:var(--card)}.counter b{font:800 30px var(--disp);display:block;font-variant-numeric:tabular-nums}.counter span{font-size:12px;color:var(--mute)}
+/* group chat */
+.phone{width:min(330px,80vw);aspect-ratio:9/19;border-radius:46px;background:#121212;padding:12px;box-shadow:0 0 0 2px #3a3a3a,0 0 0 6px #1b1b1b,0 50px 120px -30px rgba(0,0,0,.9);margin:auto;position:relative}
+.phone::before{content:"";position:absolute;top:20px;left:50%;width:92px;height:26px;margin-left:-46px;background:#000;border-radius:20px;z-index:2}
+.phone .scr{position:absolute;inset:12px;border-radius:36px;overflow:hidden;background:#efeae2;display:flex;flex-direction:column}
+.phone .top{background:#1a7f4a;color:#fff;padding:52px 16px 12px;font:600 14px var(--body)}.phone .top small{display:block;opacity:.8;font-weight:400;font-size:11.5px}
+.phone .msgs{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:7px;justify-content:flex-end;overflow:hidden}
+.bub{max-width:82%;background:#fff;color:#111;border-radius:14px 14px 14px 4px;padding:7px 10px;font-size:13px;line-height:1.35;box-shadow:0 1px 1px rgba(0,0,0,.08);opacity:0;transform:translateY(16px) scale(.96);transition:opacity .35s,transform .45s cubic-bezier(.2,1.4,.4,1);transform-origin:0 100%}
+.bub.on{opacity:1;transform:none}.bub b{display:block;font-size:11px;color:#1a9d52}.bub.r b{color:#c2185b}.bub.o{border:2px solid #1a73e8}.bub.o b{color:#1a73e8}
+.bub .tag{display:inline-block;font:700 9.5px var(--body);letter-spacing:.06em;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:1px}.tag.rum{background:#ffe0e6;color:#c2185b}.tag.off{background:#e3f0ff;color:#1a73e8}
+.meter{margin-top:24px;max-width:420px}.meter .bar{height:10px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden}.meter .bar i{display:block;height:100%;width:calc(var(--rp,0)*100%);background:linear-gradient(90deg,var(--g2),#ffca28,#ff5252);transition:width .3s}
+.meter div{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-top:6px}
+/* map */
+.map{position:relative;aspect-ratio:1/0.86;max-width:560px;width:100%;margin:auto}
+.map svg{width:100%;height:100%;overflow:visible}
+.map .dot{fill:var(--khaki);opacity:.35;transition:opacity .4s,r .4s}.map .dot.lit{opacity:1;fill:var(--g2)}
+.map .lbl{font:600 11px var(--body);fill:var(--mute);opacity:0;transition:opacity .4s}.map .lbl.lit{opacity:1}
+.map path.route{fill:none;stroke:var(--sun);stroke-width:2.5;stroke-dasharray:6 7;stroke-linecap:round}
+.map .ring{fill:none;stroke:var(--g2);stroke-width:1.5;opacity:.6;transform-box:fill-box;transform-origin:center;animation:ring 2.2s infinite}
+@keyframes ring{from{transform:scale(.5);opacity:.8}to{transform:scale(3.2);opacity:0}}
+.lmk{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.lmk span{border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:13px;background:var(--card);opacity:0;transform:translateY(10px);transition:.5s}.lmk span.on{opacity:1;transform:none}
+.float.wide{width:52%}.float .cap{position:absolute;left:10px;bottom:10px;background:rgba(11,26,18,.75);border:1px solid var(--line);border-radius:10px;padding:5px 9px;font-size:12px}
+.float{position:absolute;width:30%;border-radius:16px;overflow:hidden;box-shadow:0 30px 70px -20px rgba(0,0,0,.9),0 0 0 1px var(--line)}
+/* horizontal PPA reel */
+.reel .stick{align-items:center}.track{display:flex;gap:26px;padding-left:max(20px,calc((100vw - 1240px)/2 + 20px));will-change:transform}
+.card{flex:0 0 min(78vw,520px);border-radius:24px;overflow:hidden;position:relative;background:var(--bg2);border:1px solid var(--line)}
+.card .pic{aspect-ratio:16/10;background-size:cover;background-position:center}.card .pic.emo{display:grid;place-items:center;font-size:96px;background:radial-gradient(circle at 30% 20%,rgba(56,212,127,.35),transparent 60%),var(--bg2)}
+.card .t{padding:18px 22px 22px}.card h3{font-size:28px;margin-bottom:6px}.card p{margin:0;color:var(--mute);font-size:15px}
+.card .chip{position:absolute;top:14px;left:14px;background:rgba(11,26,18,.75);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12px;backdrop-filter:blur(6px)}
+.reelhead{position:absolute;top:96px;left:0;right:0}
+/* online */
+.online{padding:140px 0;position:relative;overflow:hidden}
+.crowd{position:relative;height:360px;margin-top:40px}
+.av{position:absolute;display:grid;justify-items:center;gap:6px;transition:transform 1.2s cubic-bezier(.2,.9,.2,1),opacity .8s;opacity:0}.av.on{opacity:1}
+.av i{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font:800 20px var(--disp);color:#fff;box-shadow:0 10px 30px -10px rgba(0,0,0,.8),0 0 0 3px var(--bg)}
+.av .nt{background:rgba(15,23,32,.85);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;white-space:nowrap}.av .nt::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);margin-right:6px}
+.av .say{position:absolute;bottom:100%;margin-bottom:8px;background:#fff;color:#111;font-size:12.5px;border-radius:12px;padding:6px 10px;white-space:nowrap;opacity:0;transform:translateY(6px) scale(.9);transition:.35s cubic-bezier(.2,1.4,.4,1)}.av .say.on{opacity:1;transform:none}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:18px}.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);margin-right:7px}
+/* features grid */
+.feat{padding:120px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:44px}@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.tile{border:1px solid var(--line);border-radius:20px;padding:24px;background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);position:relative;overflow:hidden;transform-style:preserve-3d;transition:transform .2s}
+.tile::after{content:"";position:absolute;inset:0;background:radial-gradient(300px circle at var(--mx,50%) var(--my,50%),rgba(56,212,127,.14),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none}.tile:hover::after{opacity:1}
+.tile .ic{font-size:30px}.tile h3{font-size:22px;margin:12px 0 8px}.tile p{margin:0;color:var(--mute);font-size:15px}
+/* POP */
+.pop{position:relative;padding:160px 0 120px;text-align:center;overflow:hidden}
+.pop h2{font-size:clamp(44px,8vw,120px);font-weight:800}
+.badges{height:120px;position:relative;margin:34px auto 38px;perspective:900px;width:min(560px,90vw)}
+.badge{position:absolute;inset:0;display:grid;place-items:center;border-radius:20px;border:1px solid var(--line);background:linear-gradient(135deg,rgba(201,183,138,.18),rgba(31,157,85,.15));font:800 clamp(22px,3.4vw,38px) var(--disp);backface-visibility:hidden;transform:rotateX(90deg);opacity:0;transition:transform .7s cubic-bezier(.2,.9,.2,1),opacity .4s}
+.badge.on{transform:none;opacity:1}.badge.out{transform:rotateX(-90deg);opacity:0}
+.badge small{display:block;font:500 13px var(--body);color:var(--mute);margin-top:4px}
+#confetti{position:absolute;inset:0;pointer-events:none}
+footer{border-top:1px solid var(--line);padding:40px 0 calc(40px + env(safe-area-inset-bottom,0px));color:var(--mute);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+/* reveal */
+.rv{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.2,.9,.2,1),transform .9s cubic-bezier(.2,.9,.2,1)}.rv.in{opacity:1;transform:none}
+.words .wd{display:inline-block;opacity:0;transform:translateY(.5em) rotate(2deg);transition:opacity .6s,transform .7s cubic-bezier(.2,.9,.2,1)}.words.in .wd{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.hero h1 .w>span,.paper,.env .flap{transform:none!important}.paper{transform:translateY(-118px)!important}.rv,.words .wd,.bub,.av,.lmk span,.badge.on{opacity:1!important;transform:none!important}.steps p{position:static;opacity:1;transform:none;margin-bottom:10px}.frame img{opacity:0}.frame img:first-child{opacity:1}.grain{display:none}}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="prog" aria-hidden="true"></div>
+<nav id="nav"><div class="wrap"><a class="logo" href="#top" aria-label="NYSC Survival home"><i></i>NYSC Survival</a><div class="links"><a href="#camp">Camp</a><a href="#chat">Group chat</a><a href="#naija">Real Nigeria</a><a href="#online">Online</a><a class="btn" href="/play">Play now</a></div></div></nav>
+
+<header class="hero" id="top">
+  <div class="bg" aria-hidden="true"></div>
+  <div class="wrap in">
+    <div class="letter" aria-hidden="true"><div class="env"><div class="back"></div><div class="paper"><small>CALL-UP LETTER · MOBILISATION</small>You have been mobilised to<b id="slot">…</b>Report to the orientation camp. Come with your white canvas.<span class="stamp">POSTED</span></div><div class="front"></div><div class="flap"></div></div></div>
+    <h1><span class="w"><span>Survive</span></span> <span class="w"><span style="animation-delay:.08s">the</span></span> <span class="w"><span style="animation-delay:.16s"><em>service&nbsp;year.</em></span></span></h1>
+    <p class="lead">Camp, clearance, CDS, your PPA and a group chat that never sleeps. A 3D Nigerian game you play in the browser, set on real streets in all 36 states and the FCT.</p>
+    <div class="ctas"><a class="btn mag" href="/play">Play free now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn ghost" href="#camp">See the story</a></div>
+  </div>
+  <div class="scroll" aria-hidden="true"><i></i>Scroll</div>
+</header>
+
+<div class="ticker" aria-hidden="true"><div><span>Where is your call-up letter?</span><span>Platoon 5!</span><span>Is there CDS tomorrow?</span><span>Clearance don start</span><span>Mammy market</span><span>Sapa is real</span><span>POP loading…</span><span>LGI just posted</span><span>Where is your call-up letter?</span><span>Platoon 5!</span><span>Is there CDS tomorrow?</span><span>Clearance don start</span><span>Mammy market</span><span>Sapa is real</span><span>POP loading…</span><span>LGI just posted</span></div></div>
+
+<!-- CHAPTER 1 · CAMP -->
+<section class="scene" id="camp" data-scene style="height:320vh">
+  <div class="stick"><span class="ch-num" aria-hidden="true">01</span>
+    <div class="wrap split">
+      <div class="copy"><span class="kick">Chapter one · Orientation camp</span><h2>Twenty-one days in khaki.</h2>
+        <div class="steps" data-steps>
+          <p class="on">A soldier at the gate wants your <b>call-up letter</b>. Your bag is next. That kettle? He will pretend he didn't see it.</p>
+          <p>Thumbprint, passport photos, kit. Then the parade ground: <b>“Platoon 5… attention!”</b> Right turn, left turn, about turn, until the bugle says otherwise.</p>
+          <p>Twenty-one days later, <b>your posting</b>: a new LGA, a new street, a PPA you have never heard of, and a danfo conductor shouting your bus stop.</p>
+        </div>
+        <div class="counter"><div><b data-count>1</b><span>Day in camp</span></div><div><b data-count2>0</b><span>Hours of sleep</span></div></div>
+      </div>
+      <div class="frame" data-frames><img src="img/gate.jpg" alt="The camp gate at dawn, a soldier waiting for call-up letters" class="on"><img src="img/parade.jpg" alt="Corpers in khaki lined up on the parade ground" loading="lazy"><img src="img/street.jpg" alt="Leaving camp for the street of your posting" loading="lazy"><span class="cap" data-cap>Camp gate · 6:42 AM</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- CHAPTER 2 · GROUP CHAT -->
+<section class="scene" id="chat" data-scene style="height:300vh">
+  <div class="stick"><span class="ch-num" aria-hidden="true">02</span>
+    <div class="wrap split">
+      <div class="copy"><span class="kick">Chapter two · Corper Connect</span><h2>Not every message is true.</h2>
+        <p class="lead">Your phone buzzes all day. Rumours, outdated gist, a CDS executive, then the LGI. Decide who to trust, or go and check for yourself. Skip CDS on a rumour and you will hear about it.</p>
+        <div class="meter"><div class="bar"><i></i></div><div><span>Calm</span><span>Rumour level</span><span>Wahala</span></div></div>
+      </div>
+      <div class="phone" aria-label="A group chat filling with messages"><div class="scr"><div class="top">Ikeja LGA Corpers<small>842 members · you, Tolu, Emeka, and others</small></div><div class="msgs" data-msgs>
+        <div class="bub"><b>Emeka</b>Guys, is there CDS tomorrow? 🤔</div>
+        <div class="bub"><b>Chioma</b>Who has confirmed?</div>
+        <div class="bub r"><b>Unknown number <span class="tag rum">RUMOUR</span></b>They said no CDS. Stay home 😴</div>
+        <div class="bub"><b>Tolu</b>Omo I'm already here 🏃🏾‍♀️</div>
+        <div class="bub"><b>Emeka</b>Wait for official announcement abeg</div>
+        <div class="bub o"><b>LGI <span class="tag off">OFFICIAL</span></b>CDS holds as scheduled. Attendance will be taken.</div>
+        <div class="bub"><b>Tolu</b>😂😂 Who stayed home?</div>
+      </div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CHAPTER 3 · REAL NIGERIA -->
+<section class="scene" id="naija" data-scene style="height:300vh">
+  <div class="stick"><span class="ch-num" aria-hidden="true">03</span>
+    <div class="wrap split">
+      <div class="copy"><span class="kick">Chapter three · Posting</span><h2>Thirty-seven states. Real streets.</h2>
+        <p class="lead">You don't pick your state. Your call-up letter does. Then camp posts you to an LGA and a PPA. Every street is built from real map data, with real roads, real buildings and the landmarks on the skyline.</p>
+        <div class="lmk" data-lmk><span>⛰️ Olumo Rock</span><span>🕌 Kano Central Mosque</span><span>⛰️ Aso Rock</span><span>🏢 Cocoa House</span><span>🏟️ Teslim Balogun</span><span>⛰️ Zuma Rock</span><span>🏰 Kofar Mata</span></div>
+      </div>
+      <div style="position:relative">
+        <div class="map" data-map aria-label="Map of Nigeria's state capitals lighting up"><svg viewBox="0 0 560 480" id="mapsvg"></svg></div>
+        <div class="float wide" data-float2 style="left:-4%;top:-14%"><img src="img/landmark.jpg" alt="Olumo Rock on the skyline behind a real Abeokuta street in the game" loading="lazy"><span class="cap">Olumo Rock · Abeokuta</span></div>
+        <div class="float" data-float style="right:-2%;bottom:-12%"><img src="img/phonemap.jpg" alt="The in-game phone map showing real Ikeja streets around Allen Avenue" loading="lazy"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHAPTER 4 · PPA (horizontal) -->
+<section class="scene reel" id="ppa" data-scene data-reel style="height:360vh">
+  <div class="stick">
+    <div class="wrap reelhead"><span class="kick">Chapter four · Your PPA</span><h2 style="font-size:clamp(34px,5vw,68px);margin-top:12px">Where you serve changes everything.</h2></div>
+    <div class="track" data-track style="margin-top:120px">
+      <article class="card"><div class="pic" style="background-image:url(img/town.jpg)"></div><span class="chip">🏫 School</span><div class="t"><h3>Model school</h3><p>Teach English to SS2, mark 60 scripts, survive the principal's assembly speech.</p></div></article>
+      <article class="card"><div class="pic emo">🏥</div><span class="chip">Health centre</span><div class="t"><h3>Primary health centre</h3><p>Triage queues, immunisation days, records that must not "go missing".</p></div></article>
+      <article class="card"><div class="pic emo">🏢</div><span class="chip">Office</span><div class="t"><h3>Office complex</h3><p>Reports, customers, minutes, and a printer that only works when it wants.</p></div></article>
+      <article class="card"><div class="pic" style="background-image:url(img/street.jpg)"></div><span class="chip">🧾 Clearance</span><div class="t"><h3>Monthly clearance</h3><p>Queue at the LGA, thumbprint, wait for the LGI. Your allowance depends on it.</p></div></article>
+      <article class="card"><div class="pic" style="background-image:url(img/phonehome.jpg)"></div><span class="chip">📱 Side hustle</span><div class="t"><h3>Your phone</h3><p>Bank, maps, camera, music, Whot! and Danfo Dash for when the queue doesn't move.</p></div></article>
+    </div>
+  </div>
+</section>
+
+<!-- CHAPTER 5 · ONLINE -->
+<section class="online" id="online">
+  <div class="wrap">
+    <span class="kick rv">Chapter five · Online</span>
+    <h2 class="words" style="font-size:clamp(36px,5.4vw,76px);margin-top:14px;max-width:16ch">You are not serving alone.</h2>
+    <p class="lead rv" style="margin-top:18px">Meet real players from your state camp, your LGA and your PPA. Wave, gist, send stickers, reply like WhatsApp, or message someone privately.</p>
+    <div class="legend rv"><span style="--c:#ffca28">Same PPA</span><span style="--c:#66bb6a">Same LGA</span><span style="--c:#42a5f5">Same state camp</span></div>
+    <div class="crowd" data-crowd aria-label="Players with name tags chatting"></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="feat"><div class="wrap">
+  <span class="kick rv">Everything in the box</span>
+  <h2 class="words" style="font-size:clamp(34px,5vw,64px);margin-top:14px;max-width:18ch">Small world. Plenty of wahala.</h2>
+  <div class="grid">
+    <div class="tile rv"><div class="ic">🗺️</div><h3>Real map data</h3><p>Streets, buildings and landmarks from OpenStreetMap, rebuilt in 3D around your posting.</p></div>
+    <div class="tile rv"><div class="ic">🎙️</div><h3>Nigerian voices</h3><p>Soldiers, matrons, conductors and your mummy, each with their own voice.</p></div>
+    <div class="tile rv"><div class="ic">💬</div><h3>Corper Connect</h3><p>Group chats, rumours, official notices, private messages, emojis and stickers.</p></div>
+    <div class="tile rv"><div class="ic">💸</div><h3>Money that runs out</h3><p>Allowance, rent, transport fares and food prices that change with your state.</p></div>
+    <div class="tile rv"><div class="ic">🧑🏾‍🤝‍🧑🏾</div><h3>Your corper, your way</h3><p>Pick your look, or let life pick your state, your course and your background.</p></div>
+    <div class="tile rv"><div class="ic">📱</div><h3>Plays on your phone</h3><p>Joystick, big buttons, no download. Works on budget Androids too.</p></div>
+  </div>
+</div></section>
+
+<!-- POP -->
+<section class="pop" id="pop"><canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <span class="kick rv">The end of the year</span>
+    <h2 class="words" style="margin-top:14px">See you at POP.</h2>
+    <p class="lead rv" style="margin:18px auto 0;text-align:center">At the end, the game tells you what kind of corper you were. Based on what you actually did.</p>
+    <div class="badges" data-badges>
+      <div class="badge">The Clearance Warrior<small>Never missed a thumbprint</small></div>
+      <div class="badge">The Information Plug<small>Always knew before the LGI</small></div>
+      <div class="badge">The Side-Hustle Minister<small>Allowance was just a bonus</small></div>
+      <div class="badge">The Social Corper<small>Knew everybody at camp</small></div>
+      <div class="badge">The PPA Legend<small>The principal still calls</small></div>
+      <div class="badge">The "I Just Want POP" Corper<small>Low stress. High results.</small></div>
+    </div>
+    <a class="btn mag rv" href="/play" style="font-size:18px;padding:18px 32px">Start your service year <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+  </div>
+</section>
+
+<footer><div class="wrap"><div>© 2026 NYSC Survival · Built by Uthman Abdulganiyu.<br>A fictional game. Not affiliated with or endorsed by the National Youth Service Corps.</div><div>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL) · <a href="/classic">Classic version</a> · <a href="/play">Play</a></div></div></footer>
+
+<script>
+(() => {
+  const RM = matchMedia('(prefers-reduced-motion: reduce)').matches, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  // hero: the call-up letter spins through the states and lands on one
+  const STATES = ['Abia','Adamawa','Akwa Ibom','Anambra','Bauchi','Bayelsa','Benue','Borno','Cross River','Delta','Ebonyi','Edo','Ekiti','Enugu','FCT Abuja','Gombe','Imo','Jigawa','Kaduna','Kano','Katsina','Kebbi','Kogi','Kwara','Lagos','Nasarawa','Niger','Ogun','Ondo','Osun','Oyo','Plateau','Rivers','Sokoto','Taraba','Yobe','Zamfara'];
+  const pickState = STATES[Math.floor(Math.random() * STATES.length)], slot = $('#slot');
+  if (RM) slot.textContent = pickState + (pickState.startsWith('FCT') ? '' : ' State'); else { let i = 0, d = 40; const spin = () => { slot.textContent = STATES[i++ % STATES.length]; d *= 1.09; if (d < 260) setTimeout(spin, d); else slot.textContent = pickState + (pickState.startsWith('FCT') ? '' : ' State'); }; setTimeout(spin, 2300); }
+  // split headings into words for staggered reveals
+  for (const h of $$('.words')) { h.innerHTML = h.textContent.split(' ').map((w, i) => `<span class="wd" style="transition-delay:${i * 60}ms">${w}</span>`).join(' '); }
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .18, rootMargin: '0px 0px -8% 0px' });
+  $$('.rv,.words').forEach((el, i) => { el.style.transitionDelay = el.classList.contains('tile') ? (i % 3) * 90 + 'ms' : el.style.transitionDelay; io.observe(el); });
+  // magnetic buttons + spotlight tiles
+  if (!RM && matchMedia('(hover:hover)').matches) {
+    for (const b of $$('.mag')) { b.addEventListener('pointermove', e => { const r = b.getBoundingClientRect(); b.style.transform = `translate(${(e.clientX - r.left - r.width / 2) * .18}px,${(e.clientY - r.top - r.height / 2) * .3}px)`; }); b.addEventListener('pointerleave', () => b.style.transform = ''); }
+    for (const t of $$('.tile')) t.addEventListener('pointermove', e => { const r = t.getBoundingClientRect(); t.style.setProperty('--mx', (e.clientX - r.left) + 'px'); t.style.setProperty('--my', (e.clientY - r.top) + 'px'); t.style.transform = `perspective(700px) rotateX(${(.5 - (e.clientY - r.top) / r.height) * 6}deg) rotateY(${((e.clientX - r.left) / r.width - .5) * 6}deg)`; }), t.addEventListener('pointerleave', () => t.style.transform = '');
+  }
+  // the map: state capitals, projected from latitude/longitude
+  const CAP = [['AB',5.53,7.49],['AD',9.21,12.46],['AK',4.99,8.0],['AN',6.22,7.08],['BA',10.32,9.84],['BE',7.73,8.54],['BO',11.84,13.15],['BY',4.93,6.27],['CR',4.98,8.34],['DT',6.19,6.73],['EB',6.32,8.11],['ED',6.34,5.62],['EK',7.62,5.22],['EN',6.44,7.52],['FC',9.06,7.47],['GB',10.28,11.16],['IM',5.49,7.03],['JG',11.69,9.34],['KB',12.46,4.2],['KD',10.52,7.44],['KG',7.8,6.74],['KN',11.99,8.52],['KT',12.99,7.6],['KW',8.5,4.55],['LA',6.6,3.35],['NG',9.62,6.55],['NR',8.5,8.51],['OD',7.25,5.19],['OG',7.16,3.35],['OS',7.76,4.58],['OY',7.39,3.88],['PL',9.92,8.9],['RV',4.77,7.02],['SO',13.06,5.24],['TR',8.89,11.36],['YB',11.75,11.96],['ZA',12.17,6.66]];
+  const NAMES = { LA: 'Lagos', FC: 'Abuja', KN: 'Kano', OG: 'Abeokuta', KW: 'Ilorin', RV: 'Port Harcourt', PL: 'Jos', SO: 'Sokoto', BO: 'Maiduguri', EN: 'Enugu', NR: 'Lafia', OY: 'Ibadan', CR: 'Calabar' };
+  const X = lo => 30 + (lo - 2.6) / (14.7 - 2.6) * 500, Y = la => 450 - (la - 4.2) / (13.9 - 4.2) * 420, svg = $('#mapsvg'), NS = 'http://www.w3.org/2000/svg';
+  // faint grid of dots for the country's shape (roughly), then the capitals on top
+  // Nigeria's outline, roughly (lon, lat), for the dot-matrix map
+  const NG = [[2.69,6.37],[2.72,7.8],[2.76,9.05],[3.6,10.3],[3.6,11.7],[3.8,12.6],[4.15,13.47],[5.5,13.87],[6.85,13.62],[8.0,13.3],[9.6,12.8],[10.7,13.37],[12.0,13.33],[13.3,13.56],[13.62,13.72],[14.2,13.05],[14.6,12.2],[14.2,11.2],[13.6,10.2],[13.25,9.05],[12.8,8.6],[12.0,7.5],[11.4,6.6],[10.6,6.95],[9.8,6.2],[8.9,5.0],[8.5,4.6],[7.0,4.4],[6.0,4.3],[5.3,5.0],[4.5,6.2],[3.4,6.4]];
+  const inNG = (lo, la) => { let c = false; for (let i = 0, j = NG.length - 1; i < NG.length; j = i++) { const [xi, yi] = NG[i], [xj, yj] = NG[j]; if ((yi > la) !== (yj > la) && lo < (xj - xi) * (la - yi) / (yj - yi) + xi) c = !c; } return c; };
+  let g = `<path d="M${NG.map(([lo, la]) => X(lo).toFixed(1) + ' ' + Y(la).toFixed(1)).join('L')}Z" fill="rgba(31,157,85,.06)" stroke="rgba(246,241,228,.18)" stroke-width="1"/>`;
+  for (let la = 4.3; la < 13.9; la += .36) for (let lo = 2.7; lo < 14.7; lo += .36) if (inNG(lo, la)) g += `<circle cx="${X(lo).toFixed(1)}" cy="${Y(la).toFixed(1)}" r="1.2" fill="rgba(246,241,228,.14)"/>`;
+  const start = CAP.find(c => c[0] === 'FC');
+  svg.innerHTML = g + `<path class="route" id="route" d=""/>` + CAP.map(([id, la, lo]) => `<circle class="dot" data-id="${id}" cx="${X(lo)}" cy="${Y(la)}" r="4.5"/>${NAMES[id] ? `<text class="lbl" data-id="${id}" x="${X(lo) + 8}" y="${Y(la) + 4}">${NAMES[id]}</text>` : ''}`).join('') + `<circle class="ring" id="ring" cx="0" cy="0" r="6"/>`;
+  const dots = $$('.dot', svg), lbls = $$('.lbl', svg), order = dots.map((d, i) => [Math.hypot(d.cx.baseVal.value - X(start[2]), d.cy.baseVal.value - Y(start[1])), d]).sort((a, b) => a[0] - b[0]).map(v => v[1]);
+  const target = CAP.find(c => c[0] === 'LA'), route = $('#route'), ring = $('#ring');
+  const via = CAP.find(c => c[0] === 'KW');
+  route.setAttribute('d', `M${X(start[2])} ${Y(start[1])} Q ${X(via[2]) + 30} ${Y(via[1]) - 60} ${X(target[2])} ${Y(target[1])}`);
+  const rlen = route.getTotalLength(); route.style.strokeDasharray = `6 7`; route.style.strokeDashoffset = 0;
+  ring.setAttribute('cx', X(target[2])); ring.setAttribute('cy', Y(target[1]));
+  // online crowd
+  const PEOPLE = [['Ada', '#e57373', '#ffca28', 'Omo, which PPA?'], ['Tunde', '#64b5f6', '#66bb6a', 'Clearance don start 🏃🏾'], ['Zainab', '#ba68c8', '#42a5f5', 'Who dey Platoon 5?'], ['Chidi', '#4db6ac', '#66bb6a', 'CDS na Thursday abeg'], ['Halima', '#ffb74d', '#ffca28', '😂😂'], ['Ebiere', '#81c784', '#42a5f5', 'Mammy market now?'], ['Seyi', '#f06292', '#66bb6a', 'POP loading… 🎓']];
+  const crowd = $('[data-crowd]');
+  crowd.innerHTML = PEOPLE.map(([n, bg, c, s], i) => `<div class="av" style="--c:${c};left:${8 + i * 12.5}%;top:${[120, 40, 190, 80, 210, 30, 140][i]}px"><div class="say">${s}</div><i style="background:${bg}">${n[0]}</i><span class="nt">${n}</span></div>`).join('');
+  const avs = $$('.av', crowd); let crowdOn = false, sayI = 0;
+  new IntersectionObserver(es => { if (es[0].isIntersecting && !crowdOn) { crowdOn = true; avs.forEach((a, i) => setTimeout(() => a.classList.add('on'), i * 140)); setInterval(() => { if (RM) return; avs.forEach(a => a.querySelector('.say').classList.remove('on')); avs[sayI++ % avs.length].querySelector('.say').classList.add('on'); avs.forEach((a, i) => a.style.transform = `translate(${Math.sin(Date.now() / 1400 + i) * 14}px,${Math.cos(Date.now() / 1700 + i * 2) * 10}px)`); }, 1500); } }, { threshold: .3 }).observe(crowd);
+  // POP: badges flip, confetti once
+  const badges = $$('.badge'); let bi = 0; badges[0].classList.add('on');
+  setInterval(() => { if (RM) return; const a = badges[bi % badges.length], b = badges[++bi % badges.length]; a.classList.remove('on'); a.classList.add('out'); setTimeout(() => a.classList.remove('out'), 700); b.classList.add('on'); }, 2200);
+  const cv = $('#confetti'), cx = cv.getContext('2d'); let parts = [], popped = false;
+  const burst = () => { const r = cv.getBoundingClientRect(); cv.width = r.width * devicePixelRatio; cv.height = r.height * devicePixelRatio; const cols = ['#38d47f', '#ffffff', '#c9b78a', '#ff8a3d', '#1f9d55']; for (let i = 0; i < 180; i++) parts.push({ x: cv.width / 2, y: cv.height * .35, vx: (Math.random() - .5) * 18 * devicePixelRatio, vy: (-Math.random() * 16 - 4) * devicePixelRatio, r: (3 + Math.random() * 5) * devicePixelRatio, c: cols[i % 5], a: Math.random() * 6, s: Math.random() * .3 - .15 }); };
+  const confetti = () => { cx.clearRect(0, 0, cv.width, cv.height); parts = parts.filter(p => p.y < cv.height + 40); for (const p of parts) { p.vy += .45 * devicePixelRatio; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.s; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.a); cx.fillStyle = p.c; cx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); cx.restore(); } if (parts.length) requestAnimationFrame(confetti); };
+  new IntersectionObserver(es => { if (es[0].isIntersecting && !popped && !RM) { popped = true; burst(); confetti(); } }, { threshold: .45 }).observe($('#pop'));
+  // scroll engine: each sticky scene gets a 0..1 progress
+  const scenes = $$('[data-scene]'), nav = $('#nav'), prog = $('.prog'), hero = $('.hero');
+  const frames = $('[data-frames]'), caps = ['Camp gate · 6:42 AM', 'Parade ground · Platoon 5', 'Leaving camp · your posting'], steps = $$('[data-steps] p');
+  const msgs = $$('[data-msgs] .bub'), meter = $('.meter'), lmk = $$('[data-lmk] span'), track = $('[data-track]'), flt = $('[data-float]'), flt2 = $('[data-float2]');
+  let last = -1;
+  const frame = () => {
+    const y = scrollY, H = innerHeight;
+    if (y !== last) {
+      last = y; nav.classList.toggle('s', y > 40); prog.style.setProperty('--sp', Math.min(1, y / (document.documentElement.scrollHeight - H)));
+      hero.style.setProperty('--hp', Math.min(1, y / H));
+      for (const s of scenes) {
+        const r = s.getBoundingClientRect(), p = Math.min(1, Math.max(0, -r.top / (r.height - H)));
+        if (r.bottom < -H || r.top > H * 2) continue;
+        if (s.id === 'camp') { const k = Math.min(2, Math.floor(p * 3)); $$('img', frames).forEach((im, i) => im.classList.toggle('on', i === k)); steps.forEach((st, i) => st.classList.toggle('on', i === k)); $('[data-cap]').textContent = caps[k]; $('[data-count]').textContent = Math.max(1, Math.round(p * 21)); $('[data-count2]').textContent = Math.round(p * 31); }
+        if (s.id === 'chat') { const n = Math.round(p * (msgs.length + 1.5)); msgs.forEach((m, i) => m.classList.toggle('on', i < n)); const rumour = n < 3 ? n * .18 : n < 6 ? .55 + (n - 3) * .14 : n === 6 ? .12 : .2; meter.style.setProperty('--rp', Math.min(1, rumour)); }
+        if (s.id === 'naija') { const n = Math.round(p * 1.25 * order.length); order.forEach((d, i) => d.classList.toggle('lit', i < n)); lbls.forEach(l => { const d = dots.find(d => d.dataset.id === l.dataset.id); l.classList.toggle('lit', d.classList.contains('lit')); }); route.style.strokeDashoffset = 0; route.style.opacity = p > .55 ? 1 : 0; route.style.strokeDasharray = `${rlen * Math.min(1, Math.max(0, (p - .55) / .35))} ${rlen}`; ring.style.display = p > .88 ? '' : 'none'; lmk.forEach((l, i) => l.classList.toggle('on', p > .15 + i * .08)); if (flt) { flt.style.transform = `translateY(${(1 - p) * 120}px) rotate(${(1 - p) * 6}deg)`; flt.style.opacity = Math.min(1, Math.max(0, p * 2.2 - .4)); } if (flt2) { flt2.style.transform = `translateY(${(1 - p) * -60}px) rotate(${(p - .5) * -4}deg)`; flt2.style.opacity = Math.min(1, p * 3); } }
+        if (s.dataset.reel !== undefined) { const max = track.scrollWidth - innerWidth + 40; track.style.transform = `translateX(${-p * Math.max(0, max)}px)`; }
+      }
+    }
+    requestAnimationFrame(frame);
+  };
+  if (RM) { msgs.forEach(m => m.classList.add('on')); dots.forEach(d => d.classList.add('lit')); lbls.forEach(l => l.classList.add('lit')); lmk.forEach(l => l.classList.add('on')); for (const s of scenes) s.style.height = 'auto'; for (const s of $$('.stick')) { s.style.position = 'relative'; s.style.height = 'auto'; s.style.padding = '110px 0'; } track.style.flexWrap = 'wrap'; }
+  else requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
