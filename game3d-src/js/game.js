@@ -8,7 +8,7 @@ import { mergeGeometries } from './BufferGeometryUtils.js';
 import { STATES, ZONES } from './naija.js';
 import { mountWhot, mountDash } from './phonegames.js';
 import { loadOSM, buildOSM, drawOSMMap } from './osmworld.js';
-import { connectNet } from './net.js';
+import { connectNet, statsClient } from './net.js';
 
 const $ = id => document.getElementById(id);
 const TOUCH = matchMedia('(hover:none)').matches || innerWidth < 760;
@@ -1031,7 +1031,8 @@ function openThread(name, kind) { thr(name, kind); PH.thread = name; if (!$('pho
 function renderChats() {
   const ts = [...PH.threads.values()].sort((a, b) => b.last - a.last);
   const os = ON.net ? onlineSummary() : null;
-  $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
+  const gs = STATS.d, fmt = n => Number(n || 0).toLocaleString('en-NG');
+  $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${gs ? fmt(Math.max(gs.online, os.all + 1)) + ' playing now' : os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${gs ? `${fmt(gs.state_online)} online in ${esc(STATE().name)} · ${fmt(gs.players)} corpers have played` + (os.atPPA ? ` · ${os.atPPA} at your PPA` : '') : os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
   for (const b of $('pchats').querySelectorAll('button')) b.onclick = () => { PH.thread = b.dataset.n; phShow('thread'); };
   if ($('onl')) $('onl').onclick = () => { PH.onlist = true; $('pchats').innerHTML = renderOnlineList() + `<button class="ogrp">💬 Open the group chat here</button>`;
     $('pchats').querySelector('.ogrp').onclick = () => { PH.onlist = false; thr(onThread(), 'group'); PH.thread = onThread(); phShow('thread'); };
@@ -2443,8 +2444,16 @@ function remoteBubble(r, t) {
   if (r.bub) { scene.remove(r.bub); r.bub.material.map.dispose(); r.bub.material.dispose(); }
   r.bub = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex(t), depthWrite: false })); r.bub.scale.set(2.2, 0.69, 1); r.bub.renderOrder = 6; scene.add(r.bub); r.bubT = 7;
 }
+const STATS = { c: undefined, t: 0, d: null };
+function updateStats(dt) { // website: count players and show a glimpse of who is playing
+  if (STATS.c === undefined) STATS.c = statsClient(); if (!STATS.c) return;
+  STATS.t -= dt; if (STATS.t > 0) return; STATS.t = 60;
+  const st = ST.state || 'LA'; STATS.c.ping(st, (ST.post && ST.post.lga) || '', ST.area);
+  STATS.c.stats(st).then(d => { if (d) { STATS.d = d; if (PH.screen === 'chats' && !PH.onlist) renderChats(); } });
+}
 function updateOnline(dt) {
   if (!ST.ready || window.__noNet) return;
+  updateStats(dt);
   if (!ON.net) { startOnline(); return; }
   const want = onRoomName(); if (want !== ON.rname) onJoin(want);
   const P = player.o.position;

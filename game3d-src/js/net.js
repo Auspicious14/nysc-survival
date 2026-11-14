@@ -81,3 +81,17 @@ function pipeNet(kind, open, opt = {}) {
   };
   return { kind, lobby: mk('lobby'), join: async name => mk(name) };
 }
+
+// Player counts (website only, through Supabase): one anonymous id per device, no names.
+export function statsClient() {
+  const C = window.NYSC_CONFIG;
+  if (!C || !C.supabaseUrl || !C.supabaseAnonKey || /YOUR-/.test(C.supabaseUrl + C.supabaseAnonKey)) return null;
+  const H = { apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + C.supabaseAnonKey, 'Content-Type': 'application/json' };
+  const rpc = (fn, body) => fetch(`${C.supabaseUrl}/rest/v1/rpc/${fn}`, { method: 'POST', headers: H, body: JSON.stringify(body) }).then(r => r.ok ? r.json() : null).catch(() => null);
+  let pid = null; try { pid = localStorage.getItem('nysc3d.pid'); if (!pid) { pid = 'p' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); localStorage.setItem('nysc3d.pid', pid); } } catch (e) { pid = 'p' + Math.random().toString(36).slice(2, 14); }
+  let first = true;
+  return {
+    ping: (state, lga, area) => { const b = { p_uid: pid, p_state: state, p_lga: lga || '', p_area: area || '', p_new_session: first }; first = false; return rpc('track_player', b); },
+    stats: state => rpc('public_stats', { p_state: state }),
+  };
+}

@@ -28,6 +28,12 @@ Without config the game falls back to the claude.ai room (as an artifact) or to 
 
 Chat: group chat per place, private messages, swipe-to-reply, emojis and original Naija stickers, all carried in each player's lobby presence (nothing stored). "Private" means only the recipient's game shows it; it is not end-to-end encrypted.
 
+### Player stats (admin) and live counts
+Run the **PLAYER STATS** part of `supabase/supabase_schema.sql`, then set your admin key with the commented `insert into public.app_secrets …` line (12+ characters).
+- `/admin` – your dashboard: online now, total players, today/week/new, hours played, players and online per state, top LGAs, new players per day. Asks for the admin key.
+- Players see a glimpse: Corper Connect shows how many are playing now and how many in their state; the landing page shows a live "playing now" pill.
+- The game pings once a minute with a random per-device id, state, LGA and area. No names or personal data are stored.
+
 ### Keeping the free Supabase project awake
 Supabase pauses free projects after 7 days without activity. `vercel.json` schedules a daily Vercel Cron call to `/api/keepalive`, which reads the one-row `keepalive` table (run the bottom of `supabase/supabase_schema.sql` once). Optional: set `CRON_SECRET` in Vercel to lock the route. Backup: `.github/workflows/supabase-keepalive.yml` pings every 3 days if you add `SUPABASE_URL` and `SUPABASE_ANON_KEY` as GitHub Actions secrets.
 

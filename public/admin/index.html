@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Players · Admin</title>
+<style>
+:root{--bg:#0b1a12;--panel:#11241a;--ink:#f3efe4;--mute:#9fb0a2;--line:rgba(243,239,228,.12);--g:#38d47f;--g2:#1f9d55;--k:#c9b78a;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px max(16px,env(safe-area-inset-right,0px)) 60px max(16px,env(safe-area-inset-left,0px))}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}h1{margin:0;font-size:22px}h1 small{display:block;font-size:12.5px;color:var(--mute);font-weight:400}
+.st{font-size:12.5px;color:var(--mute)}.st i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g);margin-right:6px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px}.kpi span{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.08em}.kpi b{display:block;font-size:30px;font-variant-numeric:tabular-nums;margin-top:2px}.kpi.hot b{color:var(--g)}
+.grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;min-width:0}.panel h2{margin:0 0 12px;font-size:15px}
+.bars{display:grid;gap:7px}.row{display:grid;grid-template-columns:110px 1fr 74px;align-items:center;gap:10px;font-size:13.5px}.row .n{color:var(--mute);text-align:right;font-variant-numeric:tabular-nums}
+.bar{height:16px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}.bar i{position:absolute;inset:0 auto 0 0;background:var(--g2);border-radius:5px}.bar u{position:absolute;inset:0 auto 0 0;background:var(--g);border-radius:5px;text-decoration:none}
+table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:500;font-size:12px}td.n{text-align:right;font-variant-numeric:tabular-nums}
+.chart{overflow-x:auto}svg text{fill:var(--mute);font-size:10px}
+form{display:flex;gap:8px;flex-wrap:wrap;max-width:460px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}form h2{flex-basis:100%;margin:0 0 4px;font-size:18px}form p{flex-basis:100%;margin:0 0 8px;color:var(--mute);font-size:13.5px}
+input{flex:1;min-width:0;background:#0b1a12;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 12px;font:inherit}button{background:var(--g2);color:#fff;border:0;border-radius:10px;padding:11px 16px;font:600 14px inherit;cursor:pointer}button.ghost{background:none;border:1px solid var(--line)}
+.err{color:#ff8a80;flex-basis:100%;font-size:13px}.legend{display:flex;gap:14px;font-size:12px;color:var(--mute);margin:-4px 0 10px}.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--c);margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <form id="login" hidden><h2>Player stats</h2><p>Enter the admin key you saved in Supabase (table <code>app_secrets</code>, name <code>admin_key</code>).</p><input id="key" type="password" autocomplete="current-password" placeholder="Admin key" required><button>Open</button><div class="err" id="err"></div></form>
+  <div id="dash" hidden>
+    <header><h1>NYSC Survival · players<small>Anonymous counts from the 3D game on this website. Online = played in the last 3 minutes.</small></h1><div><span class="st" id="upd"></span> <button class="ghost" id="out">Lock</button></div></header>
+    <div class="kpis" id="kpis"></div>
+    <div class="grid">
+      <section class="panel"><h2>Players by state</h2><div class="legend"><span style="--c:var(--g2)">All time</span><span style="--c:var(--g)">Online now</span></div><div class="bars" id="states"></div></section>
+      <div style="display:grid;gap:16px;align-content:start">
+        <section class="panel"><h2>New players per day (last 30 days)</h2><div class="chart" id="daily"></div></section>
+        <section class="panel"><h2>Top LGAs</h2><table><thead><tr><th>LGA</th><th>State</th><th class="n">Players</th><th class="n">Online</th></tr></thead><tbody id="lgas"></tbody></table></section>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="/game/config.js"></script>
+<script>
+const NAMES = {AB:'Abia',AD:'Adamawa',AK:'Akwa Ibom',AN:'Anambra',BA:'Bauchi',BY:'Bayelsa',BE:'Benue',BO:'Borno',CR:'Cross River',DT:'Delta',EB:'Ebonyi',ED:'Edo',EK:'Ekiti',EN:'Enugu',FC:'FCT',GB:'Gombe',IM:'Imo',JG:'Jigawa',KD:'Kaduna',KN:'Kano',KT:'Katsina',KB:'Kebbi',KG:'Kogi',KW:'Kwara',LA:'Lagos',NR:'Nasarawa',NG:'Niger',OG:'Ogun',OD:'Ondo',OS:'Osun',OY:'Oyo',PL:'Plateau',RV:'Rivers',SO:'Sokoto',TR:'Taraba',YB:'Yobe',ZA:'Zamfara'};
+const $ = id => document.getElementById(id), C = window.NYSC_CONFIG || {}, f = n => Number(n || 0).toLocaleString('en-NG');
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let key = ''; try { key = sessionStorage.getItem('nysc.admin') || ''; } catch (e) { }
+async function load() {
+  if (!C.online) { $('err').textContent = 'Supabase is not configured on this site (/game/config.js).'; $('login').hidden = false; return; }
+  const r = await fetch(C.supabaseUrl + '/rest/v1/rpc/admin_stats', { method: 'POST', headers: { apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + C.supabaseAnonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key }) }).catch(() => null);
+  if (!r || !r.ok) { $('dash').hidden = true; $('login').hidden = false; $('err').textContent = r ? (r.status === 404 ? 'admin_stats is missing: run the PLAYER STATS part of supabase_schema.sql.' : 'Wrong key, or the key is not set in app_secrets.') : 'Could not reach Supabase.'; return false; }
+  const d = await r.json(); $('login').hidden = true; $('dash').hidden = false; render(d); return true;
+}
+function render(d) {
+  $('upd').innerHTML = '<i></i>Updated ' + new Date().toLocaleTimeString();
+  const k = [['Online now', d.online, 1], ['Total players', d.players], ['Played today', d.today], ['This week', d.week], ['New today', d.new_today], ['Hours played', Math.round(d.minutes / 60)], ['Sessions', d.sessions]];
+  $('kpis').innerHTML = k.map(([l, v, hot]) => `<div class="kpi${hot ? ' hot' : ''}"><span>${l}</span><b>${f(v)}</b></div>`).join('');
+  const st = d.by_state || [], max = Math.max(1, ...st.map(s => s.players));
+  $('states').innerHTML = st.length ? st.map(s => `<div class="row"><span>${esc(NAMES[s.state] || s.state)}</span><div class="bar"><i style="width:${s.players / max * 100}%"></i><u style="width:${s.online / max * 100}%"></u></div><span class="n">${f(s.players)} · <b style="color:var(--g)">${f(s.online)}</b></span></div>`).join('') : '<p class="st">No players yet.</p>';
+  $('lgas').innerHTML = (d.top_lgas || []).map(l => `<tr><td>${esc(l.lga)}</td><td>${esc(NAMES[l.state] || l.state)}</td><td class="n">${f(l.players)}</td><td class="n">${f(l.online)}</td></tr>`).join('') || '<tr><td colspan="4" class="st">No posted players yet.</td></tr>';
+  const days = []; for (let i = 29; i >= 0; i--) { const t = new Date(Date.now() - i * 864e5); days.push(t.toISOString().slice(0, 10)); }
+  const byDay = Object.fromEntries((d.daily || []).map(x => [String(x.day).slice(0, 10), x.new_players])), vals = days.map(x => byDay[x] || 0), m = Math.max(1, ...vals), W = 560, H = 150, bw = W / 30;
+  $('daily').innerHTML = `<svg viewBox="0 0 ${W} ${H + 18}" width="100%" role="img" aria-label="New players per day">${vals.map((v, i) => `<rect x="${i * bw + 2}" y="${H - v / m * H}" width="${bw - 4}" height="${Math.max(v ? 2 : 0, v / m * H)}" rx="3" fill="#1f9d55"><title>${days[i]}: ${v}</title></rect>`).join('')}<text x="0" y="${H + 14}">${days[0].slice(5)}</text><text x="${W}" y="${H + 14}" text-anchor="end">today</text><text x="${W - 2}" y="${H + 14}" dx="-46" text-anchor="end">peak ${m}/day</text></svg>`;
+}
+$('login').onsubmit = async e => { e.preventDefault(); key = $('key').value.trim(); if (await load()) { try { sessionStorage.setItem('nysc.admin', key); } catch (er) { } } };
+$('out').onclick = () => { key = ''; try { sessionStorage.removeItem('nysc.admin'); } catch (e) { } $('dash').hidden = true; $('login').hidden = false; };
+if (key) load(); else $('login').hidden = false;
+setInterval(() => { if (key && !$('dash').hidden) load(); }, 30000);
+</script>
+</body>
+</html>

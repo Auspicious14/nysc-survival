@@ -36,7 +36,7 @@ nav .links{display:flex;gap:26px;align-items:center;font-size:14px;color:var(--m
 .prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--g2),var(--sun));z-index:41;transform-origin:0 50%;transform:scaleX(var(--sp,0))}
 /* hero */
 .hero{position:relative;min-height:100svh;display:grid;place-items:center;overflow:hidden;isolation:isolate}
-.hero .bg{position:absolute;inset:-6%;z-index:-2;background:url(img/landmark.jpg) center/cover;transform:scale(calc(1.08 + var(--hp,0)*.12)) translateY(calc(var(--hp,0)*8%));filter:saturate(1.1) brightness(.55);animation:kb 18s ease-in-out infinite alternate}
+.hero .bg{position:absolute;inset:-6%;z-index:-2;background:url(/landing/img/landmark.jpg) center/cover;transform:scale(calc(1.08 + var(--hp,0)*.12)) translateY(calc(var(--hp,0)*8%));filter:saturate(1.1) brightness(.55);animation:kb 18s ease-in-out infinite alternate}
 @keyframes kb{to{background-position:60% 40%}}
 .hero::after{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 80% at 50% 30%,transparent 0,rgba(11,26,18,.55) 55%,var(--bg) 100%),linear-gradient(180deg,rgba(11,26,18,.2),var(--bg) 96%)}
 .hero .in{text-align:center;padding:120px 0 80px;display:grid;justify-items:center;gap:26px}
@@ -58,6 +58,8 @@ nav .links{display:flex;gap:26px;align-items:center;font-size:14px;color:var(--m
 .paper small{display:block;font:600 9.5px var(--body);letter-spacing:.14em;color:#6b7a62}.paper b{font:800 22px var(--disp);display:block;color:var(--g);margin:2px 0 4px;min-height:1.1em}
 .paper .stamp{position:absolute;right:12px;bottom:12px;border:2px solid #c0392b;color:#c0392b;font:800 10px var(--body);letter-spacing:.1em;padding:3px 6px;transform:rotate(-8deg) scale(2);opacity:0;animation:stamp .35s 3.6s cubic-bezier(.3,1.6,.5,1) forwards}
 @keyframes stamp{to{opacity:.85;transform:rotate(-8deg) scale(1)}}
+.live{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);background:rgba(11,26,18,.55);backdrop-filter:blur(8px);border-radius:999px;padding:8px 14px;font-size:13.5px;color:var(--mute);opacity:0;animation:fade 1s 1.4s forwards}.live[hidden]{display:none}.live i{width:8px;height:8px;border-radius:50%;background:var(--g2);box-shadow:0 0 0 0 rgba(56,212,127,.7);animation:pulse 1.8s infinite}.live b{color:var(--ink)}
+@keyframes pulse{to{box-shadow:0 0 0 10px rgba(56,212,127,0)}}
 .scroll{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--mute);display:grid;justify-items:center;gap:8px;letter-spacing:.14em;text-transform:uppercase}
 .scroll i{width:1px;height:42px;background:linear-gradient(var(--ink),transparent);animation:drip 1.8s infinite}@keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
 /* ticker */
@@ -148,6 +150,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
     <h1><span class="w"><span>Survive</span></span> <span class="w"><span style="animation-delay:.08s">the</span></span> <span class="w"><span style="animation-delay:.16s"><em>service&nbsp;year.</em></span></span></h1>
     <p class="lead">Camp, clearance, CDS, your PPA and a group chat that never sleeps. A 3D Nigerian game you play in the browser, set on real streets in all 36 states and the FCT.</p>
     <div class="ctas"><a class="btn mag" href="/play">Play free now <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn ghost" href="#camp">See the story</a></div>
+    <div class="live" id="live" hidden><i></i><span id="livet"></span></div>
   </div>
   <div class="scroll" aria-hidden="true"><i></i>Scroll</div>
 </header>
@@ -166,7 +169,7 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
         </div>
         <div class="counter"><div><b data-count>1</b><span>Day in camp</span></div><div><b data-count2>0</b><span>Hours of sleep</span></div></div>
       </div>
-      <div class="frame" data-frames><img src="img/gate.jpg" alt="The camp gate at dawn, a soldier waiting for call-up letters" class="on"><img src="img/parade.jpg" alt="Corpers in khaki lined up on the parade ground" loading="lazy"><img src="img/street.jpg" alt="Leaving camp for the street of your posting" loading="lazy"><span class="cap" data-cap>Camp gate · 6:42 AM</span></div>
+      <div class="frame" data-frames><img src="/landing/img/gate.jpg" alt="The camp gate at dawn, a soldier waiting for call-up letters" class="on"><img src="/landing/img/parade.jpg" alt="Corpers in khaki lined up on the parade ground" loading="lazy"><img src="/landing/img/street.jpg" alt="Leaving camp for the street of your posting" loading="lazy"><span class="cap" data-cap>Camp gate · 6:42 AM</span></div>
     </div>
   </div>
 </section>
@@ -202,8 +205,8 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
       </div>
       <div style="position:relative">
         <div class="map" data-map aria-label="Map of Nigeria's state capitals lighting up"><svg viewBox="0 0 560 480" id="mapsvg"></svg></div>
-        <div class="float wide" data-float2 style="left:-4%;top:-14%"><img src="img/landmark.jpg" alt="Olumo Rock on the skyline behind a real Abeokuta street in the game" loading="lazy"><span class="cap">Olumo Rock · Abeokuta</span></div>
-        <div class="float" data-float style="right:-2%;bottom:-12%"><img src="img/phonemap.jpg" alt="The in-game phone map showing real Ikeja streets around Allen Avenue" loading="lazy"></div>
+        <div class="float wide" data-float2 style="left:-4%;top:-14%"><img src="/landing/img/landmark.jpg" alt="Olumo Rock on the skyline behind a real Abeokuta street in the game" loading="lazy"><span class="cap">Olumo Rock · Abeokuta</span></div>
+        <div class="float" data-float style="right:-2%;bottom:-12%"><img src="/landing/img/phonemap.jpg" alt="The in-game phone map showing real Ikeja streets around Allen Avenue" loading="lazy"></div>
       </div>
     </div>
   </div>
@@ -214,11 +217,11 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
   <div class="stick">
     <div class="wrap reelhead"><span class="kick">Chapter four · Your PPA</span><h2 style="font-size:clamp(34px,5vw,68px);margin-top:12px">Where you serve changes everything.</h2></div>
     <div class="track" data-track style="margin-top:120px">
-      <article class="card"><div class="pic" style="background-image:url(img/town.jpg)"></div><span class="chip">🏫 School</span><div class="t"><h3>Model school</h3><p>Teach English to SS2, mark 60 scripts, survive the principal's assembly speech.</p></div></article>
+      <article class="card"><div class="pic" style="background-image:url(/landing/img/town.jpg)"></div><span class="chip">🏫 School</span><div class="t"><h3>Model school</h3><p>Teach English to SS2, mark 60 scripts, survive the principal's assembly speech.</p></div></article>
       <article class="card"><div class="pic emo">🏥</div><span class="chip">Health centre</span><div class="t"><h3>Primary health centre</h3><p>Triage queues, immunisation days, records that must not "go missing".</p></div></article>
       <article class="card"><div class="pic emo">🏢</div><span class="chip">Office</span><div class="t"><h3>Office complex</h3><p>Reports, customers, minutes, and a printer that only works when it wants.</p></div></article>
-      <article class="card"><div class="pic" style="background-image:url(img/street.jpg)"></div><span class="chip">🧾 Clearance</span><div class="t"><h3>Monthly clearance</h3><p>Queue at the LGA, thumbprint, wait for the LGI. Your allowance depends on it.</p></div></article>
-      <article class="card"><div class="pic" style="background-image:url(img/phonehome.jpg)"></div><span class="chip">📱 Side hustle</span><div class="t"><h3>Your phone</h3><p>Bank, maps, camera, music, Whot! and Danfo Dash for when the queue doesn't move.</p></div></article>
+      <article class="card"><div class="pic" style="background-image:url(/landing/img/street.jpg)"></div><span class="chip">🧾 Clearance</span><div class="t"><h3>Monthly clearance</h3><p>Queue at the LGA, thumbprint, wait for the LGI. Your allowance depends on it.</p></div></article>
+      <article class="card"><div class="pic" style="background-image:url(/landing/img/phonehome.jpg)"></div><span class="chip">📱 Side hustle</span><div class="t"><h3>Your phone</h3><p>Bank, maps, camera, music, Whot! and Danfo Dash for when the queue doesn't move.</p></div></article>
     </div>
   </div>
 </section>
@@ -268,6 +271,15 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
 
 <footer><div class="wrap"><div>© 2026 NYSC Survival · Built by Uthman Abdulganiyu.<br>A fictional game. Not affiliated with or endorsed by the National Youth Service Corps.</div><div>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL) · <a href="/classic">Classic version</a> · <a href="/play">Play</a></div></div></footer>
 
+<script src="/game/config.js"></script>
+<script>
+// live player counts from the game (Supabase), if configured
+(() => { const C = window.NYSC_CONFIG; if (!C || !C.online) return;
+  fetch(C.supabaseUrl + '/rest/v1/rpc/public_stats', { method: 'POST', headers: { apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + C.supabaseAnonKey, 'Content-Type': 'application/json' }, body: '{}' })
+    .then(r => r.ok ? r.json() : null).then(d => { if (!d || !d.players) return; const f = n => Number(n).toLocaleString('en-NG');
+      document.getElementById('livet').innerHTML = `<b>${f(d.online)}</b> corper${d.online === 1 ? '' : 's'} playing now · <b>${f(d.players)}</b> have served`; document.getElementById('live').hidden = false; }).catch(() => { });
+})();
+</script>
 <script>
 (() => {
   const RM = matchMedia('(prefers-reduced-motion: reduce)').matches, $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
