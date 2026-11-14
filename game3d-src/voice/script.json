@@ -1,22 +1,15 @@
 [
  {
-  "id": "2c7715c7",
-  "text": "Corper, print this receipt for me. Just change 18,000 naira to 38,000 naira. Accounts will refund it, we share the difference. Nobody checks.",
+  "id": "bb1e10e0",
+  "text": "Gala! Gala! Buy your Gala!",
   "voice": "Achird",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
  {
-  "id": "a7c77d70",
-  "text": "Corper, the children are talking about your class! Take this small transport money. See you on Monday, not Wednesday.",
+  "id": "d37a9bf2",
+  "text": "Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.",
   "voice": "Achird",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "24b27bdc",
-  "text": "Your khaki is too big. 1,000 naira and it will fit like Agbada.",
-  "voice": "Algenib",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
@@ -59,10 +52,87 @@
   "prio": 1
  },
  {
-  "id": "d37a9bf2",
-  "text": "Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.",
+  "id": "1971c0ef",
+  "text": "Charge your phone here! Hundred naira!",
   "voice": "Algieba",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "1fa5a737",
+  "text": "Medium don finish since morning. Na only large and extra large remain. Which one you want?",
+  "voice": "Algieba",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "4704cc95",
+  "text": "Small don finish since morning. Na only large and extra large remain. Which one you want?",
+  "voice": "Algieba",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "4be05081",
+  "text": "Next! Corper, what is your size?",
+  "voice": "Algieba",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "9fc20ce0",
+  "text": "Large khaki, white shorts, white T-shirts, crested vest, jungle boots, canvas. Sign here. Next!",
+  "voice": "Algieba",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "eef679f2",
+  "text": "Extra large khaki, white shorts, white T-shirts, crested vest, jungle boots, canvas. Sign here. Next!",
+  "voice": "Algieba",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "24b27bdc",
+  "text": "Your khaki is too big. 1,000 naira and it will fit like Agbada.",
+  "voice": "Alnilam",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "58c48f2f",
+  "text": "Redeployment is for marriage, health or security reasons, with documents. Do you have any of those?",
+  "voice": "Alnilam",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "597a5a3f",
+  "text": "My corper! Bucket, torchlight, mosquito net. Everything you need for camp.",
+  "voice": "Aoede",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "d71b23d1",
+  "text": "Corper, buy puff-puff! E still dey hot!",
+  "voice": "Aoede",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "111575ac",
+  "text": "Corper, come and teach my son Maths on Saturday, I go pay.",
+  "voice": "Autonoe",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "693a15af",
+  "text": "Pure water! Cold pure water!",
+  "voice": "Callirrhoe",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
  {
@@ -73,20 +143,6 @@
   "prio": 1
  },
  {
-  "id": "513242a9",
-  "text": "Right thumb here. Again. Left thumb. Again. Okay. This is your state code. You are in Platoon 5. Next!",
-  "voice": "Charon",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "52fc0a56",
-  "text": "Statement of result? Medical fitness certificate?",
-  "voice": "Charon",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
   "id": "54f55b16",
   "text": "Corper, you did well.",
   "voice": "Charon",
@@ -94,38 +150,10 @@
   "prio": 1
  },
  {
-  "id": "560e2f8b",
-  "text": "Four passport photographs, white background.",
-  "voice": "Charon",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "58c48f2f",
-  "text": "Redeployment is for marriage, health or security reasons, with documents. Do you have any of those?",
-  "voice": "Charon",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
   "id": "7c091c78",
   "text": "Corper, thank you for today. Take this small transport money. See you on Monday, not Wednesday.",
   "voice": "Charon",
   "style": "Speaker: an experienced Nigerian school principal, firm but fatherly. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "8997e40e",
-  "text": "Good morning. Call-up letter and green card.",
-  "voice": "Charon",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "8b3fe08a",
-  "text": "Go to the clinic tent, they will sign it. Come back to me, don't join the queue again.",
-  "voice": "Charon",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
  {
@@ -262,8 +290,15 @@
   "prio": 2
  },
  {
-  "id": "597a5a3f",
-  "text": "My corper! Bucket, torchlight, mosquito net. Everything you need for camp.",
+  "id": "2c7715c7",
+  "text": "Corper, print this receipt for me. Just change 18,000 naira to 38,000 naira. Accounts will refund it, we share the difference. Nobody checks.",
+  "voice": "Enceladus",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "2a27e0cd",
+  "text": "One snap for your Instagram, 500 naira.",
   "voice": "Erinome",
   "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
@@ -797,16 +832,9 @@
   "prio": 1
  },
  {
-  "id": "06853459",
-  "text": "Corper! Instant passport, 500 naira. Stand here, look here. Don't smile.",
-  "voice": "Leda",
-  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "1862cc0c",
-  "text": "Puff-puff! Zobo! Gala!",
-  "voice": "Leda",
+  "id": "af6a553e",
+  "text": "Agege bread! Hot Agege bread!",
+  "voice": "Laomedeia",
   "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
@@ -818,22 +846,6 @@
   "prio": 1
  },
  {
-  "id": "2d93020f",
-  "text": "Make some noise for Platoon 5!",
-  "voice": "Leda",
-  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1,
-  "redo": true
- },
- {
-  "id": "ae459f34",
-  "text": "Who get the energy?!",
-  "voice": "Leda",
-  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1,
-  "redo": true
- },
- {
   "id": "bb186cbb",
   "text": "Aunty corper, what is the answer?",
   "voice": "Leda",
@@ -841,60 +853,200 @@
   "prio": 1
  },
  {
-  "id": "efaa464f",
-  "text": "Who used the last paper?!",
-  "voice": "Leda",
-  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "52b1a44f",
-  "text": "Then go and serve your fatherland, corper.",
-  "voice": "Orus",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
-  "id": "2a27e0cd",
-  "text": "One snap for your Instagram, 500 naira.",
+  "id": "543d9f1d",
+  "text": "Rice and beans with fried plantain, 1,200 naira. Hot!",
   "voice": "Pulcherrima",
   "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
  {
-  "id": "1fa5a737",
-  "text": "Medium don finish since morning. Na only large and extra large remain. Which one you want?",
-  "voice": "Sadaltager",
+  "id": "01de92c3",
+  "text": "Last stop! Last stop! Enter with your change!",
+  "voice": "Rasalgethi",
+  "style": "Speaker: a fast-talking Lagos bus conductor. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "52b1a44f",
+  "text": "Then go and serve your fatherland, corper.",
+  "voice": "Sadachbia",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1
  },
  {
-  "id": "4704cc95",
-  "text": "Small don finish since morning. Na only large and extra large remain. Which one you want?",
-  "voice": "Sadaltager",
+  "id": "00335629",
+  "text": "Corper, buy something now!",
+  "voice": "Sadachbia",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 2
  },
  {
-  "id": "4be05081",
-  "text": "Next! Corper, what is your size?",
-  "voice": "Sadaltager",
+  "id": "1654ac50",
+  "text": "Abeg show me the official post!",
+  "voice": "Sadachbia",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 2
  },
  {
-  "id": "9fc20ce0",
-  "text": "Large khaki, white shorts, white T-shirts, crested vest, jungle boots, canvas. Sign here. Next!",
-  "voice": "Sadaltager",
+  "id": "232add62",
+  "text": "You don collect alert?",
+  "voice": "Sadachbia",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 2
  },
  {
-  "id": "eef679f2",
-  "text": "Extra large khaki, white shorts, white T-shirts, crested vest, jungle boots, canvas. Sign here. Next!",
-  "voice": "Sadaltager",
+  "id": "3615df88",
+  "text": "Sit down, we will call you.",
+  "voice": "Sadachbia",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
+  "prio": 2
+ },
+ {
+  "id": "544ec33a",
+  "text": "Na rumour! LGI never talk am!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "56eba02d",
+  "text": "Platoon 5 will win the dance tomorrow, watch.",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "5f2f774c",
+  "text": "Mama, where is your card?",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "69baa29b",
+  "text": "This printer has a spirit.",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "6de319a3",
+  "text": "DJ, play Afrobeats!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "7dec4977",
+  "text": "Omo, this camp food ehn… my stomach is doing drill.",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "7efbf07e",
+  "text": "Enter with your change o!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "8be9b2c1",
+  "text": "Secretariat! Secretariat! Enter quick!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "8d5a8a67",
+  "text": "Tomorrow parade by 5 o. Sleep early!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "94814aab",
+  "text": "Where is my JSS2 teacher?",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "96a2d7d7",
+  "text": "Secretariat! Secretariat!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "9714b6a7",
+  "text": "Next! Next!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "9f938ae7",
+  "text": "Corper! How far?",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "a07758b3",
+  "text": "Corper, abeg come and see this thing.",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "abe02c74",
+  "text": "Abeg who off the light?!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "b32f5026",
+  "text": "One chance remain!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "b92ffe35",
+  "text": "Who said no clearance without CDS card?!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "c4794cbf",
+  "text": "Who get charger? My phone don die.",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "c4eb71d4",
+  "text": "Platoon 5, fall in!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "d2b96080",
+  "text": "Next patient!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
+ },
+ {
+  "id": "e84af6ca",
+  "text": "Corper, punctuality is the soul of business!",
+  "voice": "Sadachbia",
+  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 2
  },
  {
   "id": "2117ffc0",
@@ -918,13 +1070,6 @@
   "prio": 1
  },
  {
-  "id": "543d9f1d",
-  "text": "Rice and beans with fried plantain, 1,200 naira. Hot!",
-  "voice": "Sulafat",
-  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 1
- },
- {
   "id": "ca6f459b",
   "text": "Corper, welcome. We are three nurses for this whole community. You will help with triage, records and immunisation days. Can you stand the sight of blood?",
   "voice": "Sulafat",
@@ -932,179 +1077,46 @@
   "prio": 1
  },
  {
-  "id": "00335629",
-  "text": "Corper, buy something now!",
+  "id": "513242a9",
+  "text": "Right thumb here. Again. Left thumb. Again. Okay. This is your state code. You are in Platoon 5. Next!",
   "voice": "Umbriel",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 1
  },
  {
-  "id": "1654ac50",
-  "text": "Abeg show me the official post!",
+  "id": "52fc0a56",
+  "text": "Statement of result? Medical fitness certificate?",
   "voice": "Umbriel",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 1
  },
  {
-  "id": "232add62",
-  "text": "You don collect alert?",
+  "id": "560e2f8b",
+  "text": "Four passport photographs, white background.",
   "voice": "Umbriel",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 1
  },
  {
-  "id": "3615df88",
-  "text": "Sit down, we will call you.",
+  "id": "8997e40e",
+  "text": "Good morning. Call-up letter and green card.",
   "voice": "Umbriel",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 1
  },
  {
-  "id": "544ec33a",
-  "text": "Na rumour! LGI never talk am!",
+  "id": "8b3fe08a",
+  "text": "Go to the clinic tent, they will sign it. Come back to me, don't join the queue again.",
   "voice": "Umbriel",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 1
  },
  {
-  "id": "56eba02d",
-  "text": "Platoon 5 will win the dance tomorrow, watch.",
+  "id": "a7c77d70",
+  "text": "Corper, the children are talking about your class! Take this small transport money. See you on Monday, not Wednesday.",
   "voice": "Umbriel",
   "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "5f2f774c",
-  "text": "Mama, where is your card?",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "69baa29b",
-  "text": "This printer has a spirit.",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "6de319a3",
-  "text": "DJ, play Afrobeats!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "7dec4977",
-  "text": "Omo, this camp food ehn… my stomach is doing drill.",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "7efbf07e",
-  "text": "Enter with your change o!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "8be9b2c1",
-  "text": "Secretariat! Secretariat! Enter quick!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "8d5a8a67",
-  "text": "Tomorrow parade by 5 o. Sleep early!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "94814aab",
-  "text": "Where is my JSS2 teacher?",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "96a2d7d7",
-  "text": "Secretariat! Secretariat!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "9714b6a7",
-  "text": "Next! Next!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "9f938ae7",
-  "text": "Corper! How far?",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "a07758b3",
-  "text": "Corper, abeg come and see this thing.",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "abe02c74",
-  "text": "Abeg who off the light?!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "b32f5026",
-  "text": "One chance remain!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "b92ffe35",
-  "text": "Who said no clearance without CDS card?!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "c4794cbf",
-  "text": "Who get charger? My phone don die.",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "c4eb71d4",
-  "text": "Platoon 5, fall in!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "d2b96080",
-  "text": "Next patient!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
- },
- {
-  "id": "e84af6ca",
-  "text": "Corper, punctuality is the soul of business!",
-  "voice": "Umbriel",
-  "style": "Speaker: a Nigerian man talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
-  "prio": 2
+  "prio": 1
  },
  {
   "id": "faf84541",
@@ -1114,8 +1126,45 @@
   "prio": 1
  },
  {
-  "id": "111575ac",
-  "text": "Corper, come and teach my son Maths on Saturday, I go pay.",
+  "id": "06853459",
+  "text": "Corper! Instant passport, 500 naira. Stand here, look here. Don't smile.",
+  "voice": "Zephyr",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "1862cc0c",
+  "text": "Puff-puff! Zobo! Gala!",
+  "voice": "Zephyr",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "2d93020f",
+  "text": "Make some noise for Platoon 5!",
+  "voice": "Zephyr",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1,
+  "redo": true
+ },
+ {
+  "id": "ae459f34",
+  "text": "Who get the energy?!",
+  "voice": "Zephyr",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1,
+  "redo": true
+ },
+ {
+  "id": "b51efac2",
+  "text": "Recharge card dey! MTN, Glo, Airtel!",
+  "voice": "Zephyr",
+  "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
+  "prio": 1
+ },
+ {
+  "id": "efaa464f",
+  "text": "Who used the last paper?!",
   "voice": "Zephyr",
   "style": "Speaker: a Nigerian woman talking casually. Accent: a natural Nigerian English accent, the way an everyday Lagos person talks. Delivery: a real person in a real conversation, not a radio presenter; natural pace; Pidgin words said the way Nigerians say them.",
   "prio": 1

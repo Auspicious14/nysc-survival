@@ -28,6 +28,15 @@ Without config the game falls back to the claude.ai room (as an artifact) or to 
 
 Chat: group chat per place, private messages, swipe-to-reply, emojis and original Naija stickers, all carried in each player's lobby presence (nothing stored). "Private" means only the recipient's game shows it; it is not end-to-end encrypted.
 
+### Performance, data and installing
+- **Graphics: Auto / Lite / High** (Phone → Settings). Auto measures the first seconds of play and switches slow phones to Lite (lower resolution, no shadows, shorter draw distance).
+- Big textures are WebP; voice clips load only when spoken; music streams. First visit ≈ 11–12 MB over the wire (Vercel compresses the model text files), later visits mostly come from the cache.
+- Installable as an app: `public/manifest.webmanifest` + `public/sw.js` (pages network-first, game files cached and refreshed in the background).
+
+### Sharing
+- Share cards (1080×1920, made for WhatsApp Status/TikTok) from the chapter results and from My NYSC; WhatsApp button, native share on phones, save image, copy link.
+- Invite links: `/play?state=NR&lga=Lafia` open the game in your friend's state and post them to the same LGA.
+
 ### Player stats (admin) and live counts
 Run the **PLAYER STATS** part of `supabase/supabase_schema.sql`, then set your admin key with the commented `insert into public.app_secrets …` line (12+ characters).
 - `/admin` – your dashboard: online now, total players, today/week/new, hours played, players and online per state, top LGAs, new players per day. Asks for the admin key.

@@ -45,6 +45,8 @@ FIXED = [(r'soldier|security', 'Fenrir', 'a strict Nigerian soldier at the camp 
          (r'mr\. bankole|mr\. obinna|mr\. danladi|mr\. garba|mr\. yusuf|manager|head of admin', 'Schedar', 'a Nigerian office manager, polite but busy'),
          (r'ofure|coordinator', 'Achernar', 'a Nigerian office manager, polite but busy'), (r'front desk|receptionist|nurse', 'Despina', 'a Nigerian receptionist')]
 
+RESERVED = {v for _, v, _ in FIXED} | {'Iapetus'}  # named characters keep their voice to themselves
+MALE = [v for v in MALE if v not in RESERVED]; FEMALE = [v for v in FEMALE if v not in RESERVED]
 NARRATOR = re.compile(r'hostel|your phone|room|letter|list|·|question|task|round|test|assembly|day$|area|talk|report|meeting|book|contribution|saturday|stall', re.I)
 def pick_voice(who, female, text):
     w = (who or '').lower()
@@ -92,6 +94,10 @@ for c in cap:
 for m in re.finditer(r"bubble:\s*\[([^\]]+)\]", src):  # bubbles the walk could not reach
     for b in re.findall(r"'((?:[^'\\]|\\.)*)'", m.group(1)): add(b.replace("\\'", "'"), 'bubble', False, '', 2)
 for c in ['RIGHT… TURN!', 'LEFT… TURN!', 'ABOUT… TURN!', 'PLATOON 5… ATTENTION!', 'STAND… AT EASE!']: add(c, 'marshal', False, '', 1)
+for t, who, fem in [('Pure water! Cold pure water!', 'pure water seller', True), ('Gala! Gala! Buy your Gala!', 'gala hawker', False), ('Recharge card dey! MTN, Glo, Airtel!', 'recharge card seller', True),
+                    ('Agege bread! Hot Agege bread!', 'bread seller', True), ('Last stop! Last stop! Enter with your change!', 'conductor', False), ('Corper, buy puff-puff! E still dey hot!', 'puff-puff seller', True),
+                    ('Charge your phone here! Hundred naira!', 'phone charging man', False)]:
+    add(t, who, fem, '', 1)  # street hawkers, played softly in the background
 for m in re.finditer(r"SAY\('((?:[^'\\]|\\.)*)'\)", src): add(m.group(1).replace("\\'", "'"), '', False, '', 1)
 
 REDO = {'39989918', '554fb5dd', '62fd098e', 'bc634aea', '2d93020f', 'ae459f34', '02cd84f2', 'db3def8f', '1372b90c'}  # old or faulty takes: the notebook deletes and remakes them

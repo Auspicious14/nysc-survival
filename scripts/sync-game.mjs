@@ -15,7 +15,7 @@ function copyDir(src, dst) {
 if (fs.existsSync("game3d-src")) {
   copyDir("game3d-src", "public/game3d");
   const body = fs.readFileSync("game3d-src/index.html", "utf8");
-  fs.writeFileSync("public/game3d/index.html", `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<script src="/game/config.js"></script>\n</head>\n<body>\n${body}\n</body>\n</html>\n`);
+  fs.writeFileSync("public/game3d/index.html", `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n<script src="/game/config.js"></script>\n<script>if (\"serviceWorker\" in navigator) addEventListener(\"load\", () => navigator.serviceWorker.register(\"/sw.js\").catch(() => {}));</script>\n</head>\n<body>\n${body}\n</body>\n</html>\n`);
   console.log("3D game synced → public/game3d/");
 }
 if (fs.existsSync("game-src/nysc-survival-v2.html")) {

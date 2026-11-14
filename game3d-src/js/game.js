@@ -86,6 +86,23 @@ renderer.toneMappingExposure = 0.85;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.prepend(renderer.domElement);
+// graphics quality: Auto picks Lite on slow phones (measured in the first seconds of play); players can choose in Settings
+const GFX = { mode: (() => { try { return localStorage.getItem('nysc3d.gfx') || 'auto'; } catch (e) { return 'auto'; } })(), lite: false, probe: [], probed: false };
+GFX.lite = GFX.mode === 'lite' || (GFX.mode === 'auto' && TOUCH && (navigator.deviceMemory || 8) <= 3);
+function applyGfx(lite, announce) {
+  GFX.lite = lite;
+  renderer.setPixelRatio(lite ? Math.min(devicePixelRatio, 0.75) : Math.min(devicePixelRatio, TOUCH ? 1.15 : 1.75)); renderer.setSize(innerWidth, innerHeight);
+  if (typeof sunL !== 'undefined') sunL.castShadow = !lite;
+  if (typeof setTOD === 'function' && ST.seg) setTOD(ST.seg);
+  if (announce) toast(lite ? '⚡ Lite graphics on for smoother play. Change it in Phone → Settings.' : '✨ High graphics on.', 3800);
+}
+if (GFX.lite) renderer.setPixelRatio(Math.min(devicePixelRatio, 0.75));
+function probeGfx(raw) { // after ~6 s of real play, switch slow devices to Lite once
+  if (GFX.probed || GFX.mode !== 'auto' || GFX.lite || !ST.ready || document.hidden || raw > 0.5) return;
+  GFX.probe.push(raw); if (GFX.probe.length < 240) return; GFX.probed = true;
+  const sorted = GFX.probe.slice(30).sort((a, b) => a - b), med = sorted[sorted.length >> 1];
+  if (1 / med < 34) applyGfx(true, true);
+}
 const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
 const scene = new THREE.Scene();
@@ -105,7 +122,7 @@ const sun = new THREE.Vector3();
 }
 const hemi = new THREE.HemisphereLight(0xe4ecff, 0x7b6a52, 0.55); scene.add(hemi);
 const sunL = new THREE.DirectionalLight(0xfff0d8, 2.7);
-sunL.castShadow = true;
+sunL.castShadow = !GFX.lite;
 sunL.shadow.mapSize.set(TOUCH ? 1024 : 2048, TOUCH ? 1024 : 2048);
 Object.assign(sunL.shadow.camera, { left: -38, right: 38, top: 38, bottom: -38, near: 1, far: 160 });
 sunL.shadow.bias = -0.0004; sunL.shadow.normalBias = 0.03;
@@ -816,7 +833,7 @@ const traffic = [];
 function spawnVehicle(lane, x, kind) {
   const v = kind === 'danfo' ? danfo() : kind === 'keke' ? keke() : car();
   applyReal(v);
-  v.lane = lane; v.x = x; v.v = rnd(6, 10); v.vmax = kind === 'keke' ? rnd(7, 9) : kind === 'danfo' ? rnd(9, 12) : rnd(10, 14); v.stop = 0; v.served = -999;
+  v.kind = kind; v.lane = lane; v.x = x; v.v = rnd(6, 10); v.vmax = kind === 'keke' ? rnd(7, 9) : kind === 'danfo' ? rnd(9, 12) : rnd(10, 14); v.stop = 0; v.served = -999;
   v.g.position.set(x, 0, LANES[lane].z); v.g.rotation.y = LANES[lane].dir > 0 ? 0 : Math.PI;
   scene.add(v.g); traffic.push(v); return v;
 }
@@ -1032,8 +1049,9 @@ function renderChats() {
   const ts = [...PH.threads.values()].sort((a, b) => b.last - a.last);
   const os = ON.net ? onlineSummary() : null;
   const gs = STATS.d, fmt = n => Number(n || 0).toLocaleString('en-NG');
-  $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${gs ? fmt(Math.max(gs.online, os.all + 1)) + ' playing now' : os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${gs ? `${fmt(gs.state_online)} online in ${esc(STATE().name)} · ${fmt(gs.players)} corpers have played` + (os.atPPA ? ` · ${os.atPPA} at your PPA` : '') : os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
+  $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${gs ? fmt(Math.max(gs.online, os.all + 1)) + ' playing now' : os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${gs ? `${fmt(gs.state_online)} online in ${esc(STATE().name)} · ${fmt(gs.players)} corpers have played` + (os.atPPA ? ` · ${os.atPPA} at your PPA` : '') : os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div><button class="ogrp" id="oinv" style="background:#e7f6ec;color:#14532d;margin-top:-2px">📨 Invite corper friends</button>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
   for (const b of $('pchats').querySelectorAll('button')) b.onclick = () => { PH.thread = b.dataset.n; phShow('thread'); };
+  if ($('oinv')) $('oinv').onclick = () => { phone(false); setTimeout(shareInvite, 450); };
   if ($('onl')) $('onl').onclick = () => { PH.onlist = true; $('pchats').innerHTML = renderOnlineList() + `<button class="ogrp">💬 Open the group chat here</button>`;
     $('pchats').querySelector('.ogrp').onclick = () => { PH.onlist = false; thr(onThread(), 'group'); PH.thread = onThread(); phShow('thread'); };
     for (const b of $('pchats').querySelectorAll('.olist button')) b.onclick = () => { const uid = b.dataset.u.slice(0, 16); if (!uid) return; const n = dmName(uid, b.dataset.n); thr(n, 'dm').uid = uid; PH.onlist = false; PH.thread = n; phShow('thread'); }; };
@@ -1051,7 +1069,10 @@ function renderID() {
   $('pid').innerHTML = `<div class="idc"><small>CORPS MEMBER · FICTIONAL ID</small><b>${ST.name || 'Corper'}</b><span>${ST.code || 'State code: not yet registered'}</span></div>
   <dl>${ST.ch === 3 ? `<div><dt>Service</dt><dd>Month ${Y.month} of ${Y.MONTHS} · ${{ Mon: 'PPA day', Thu: 'CDS day', Sat: 'Free day', Clr: 'Clearance', Pop: 'POP' }[Y.kind]}</dd></div><div><dt>Attendance</dt><dd>PPA ${Y.ppaDays}/${Y.ppaDays + Y.ppaMiss} · CDS ${Y.cdsDays}/${Y.cdsDays + Y.cdsMiss}</dd></div>` : ''}<div><dt>Platoon</dt><dd>${ST.code ? '5' : '—'}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga + ', ' + ST.post.state : '—'}</dd></div><div><dt>PPA</dt><dd>${ST.post ? ST.post.ppa : '—'}</dd></div><div><dt>Background</dt><dd>${bgl}</dd></div><div><dt>Reputation</dt><dd>${ST.rep}</dd></div></dl>
   <label>Energy ${Math.round(ST.energy)}</label>${bar(ST.energy, '#1a9d52')}<label>Stress ${Math.round(ST.stress)}</label>${bar(ST.stress, '#d93025')}
-  <div class="vibe"><small>YOUR VIBE SO FAR</small><b>${corperType()[0]}</b></div>`;
+  <div class="vibe"><small>YOUR VIBE SO FAR</small><b>${corperType()[0]}</b></div>
+  <div class="idbtns"><button id="pshare">📤 Share my card</button><button id="pinvite">📨 Invite corper friends</button></div>`;
+  $('pshare').onclick = () => { phone(false); setTimeout(() => shareResult(ST.ch === 3 && Y.done ? 3 : 1), 450); };
+  $('pinvite').onclick = () => { phone(false); setTimeout(shareInvite, 450); };
 }
 const SCREENS = { // id → [element, title, light status bar?, dark header?]
   home: ['phome'], chats: ['pchats', 'Corper Connect', 1], thread: ['msgs', null, 1], map: ['pmap', null, 1], bank: ['pbank', 'Naija Trust Bank', 1], id: ['pid', 'My NYSC', 1],
@@ -1140,10 +1161,11 @@ function renderCal() {
 function renderSettings() {
   const W = $('phone').dataset.wall || 'naija';
   $('psettings').innerHTML = `<h4>Wallpaper</h4><div class="walls">${[['naija', 'linear-gradient(165deg,#2fbf71,#0a3f27)'], ['lagoon', 'linear-gradient(165deg,#3bc9db,#13315c)'], ['sunset', 'linear-gradient(165deg,#ff8a3d,#5a1a3a)']].map(([k, bg]) => `<button data-w="${k}" class="${k === W ? 'on' : ''}" style="background:${bg}" aria-label="${k} wallpaper"></button>`).join('')}</div>
-  <h4>General</h4><div class="grp"><button id="psnd"><span>Sound</span><span>${MUTED ? 'Off' : 'On'}</span></button><div><span>Phone</span><span>NaijaPhone 16 · 5G</span></div><div><span>Owner</span><span>${esc(ST.name || 'Corper')}</span></div><div><span>State of deployment</span><span>${STATE().name}</span></div></div>
+  <h4>General</h4><div class="grp"><button id="psnd"><span>Sound</span><span>${MUTED ? 'Off' : 'On'}</span></button><button id="pgfx"><span>Graphics</span><span>${{ auto: 'Auto' + (GFX.lite ? ' (Lite)' : ''), lite: 'Lite · smoother', high: 'High · prettier' }[GFX.mode]}</span></button><div><span>Phone</span><span>NaijaPhone 16 · 5G</span></div><div><span>Owner</span><span>${esc(ST.name || 'Corper')}</span></div><div><span>State of deployment</span><span>${STATE().name}</span></div></div>
   <h4>About</h4><div class="grp"><div><span>Otondo</span><span>Fictional game</span></div></div>`;
   $('psettings').querySelectorAll('.walls button').forEach(b => b.onclick = () => { $('phone').dataset.wall = b.dataset.w; try { localStorage.setItem('nysc3d.wall', b.dataset.w); } catch (e) { } renderSettings(); });
   $('psnd').onclick = () => { $('bmute').click(); renderSettings(); };
+  $('pgfx').onclick = () => { GFX.mode = { auto: 'lite', lite: 'high', high: 'auto' }[GFX.mode]; try { localStorage.setItem('nysc3d.gfx', GFX.mode); } catch (e) { } applyGfx(GFX.mode === 'lite' || (GFX.mode === 'auto' && GFX.lite), false); renderSettings(); };
 }
 try { const w = localStorage.getItem('nysc3d.wall'); if (w) $('phone').dataset.wall = w; } catch (e) { }
 /* ---- home-screen widgets ---- */
@@ -1194,16 +1216,35 @@ function audio() {
   { // crickets at night
     const o = AC.createOscillator(); o.frequency.value = 4300; const am = AC.createGain(); am.gain.value = 0; const p = AC.createOscillator(); p.type = 'square'; p.frequency.value = 18; const pg = AC.createGain(); pg.gain.value = 0.5; p.connect(pg).connect(am.gain); const g = AC.createGain(); g.gain.value = 0; o.connect(am).connect(g).connect(MASTER); o.start(); p.start(); SND.crick = g;
   }
+  { // generator ("gen") hum: 50 Hz engine + rattle — Nigerian streets run on them
+    const g = AC.createGain(); g.gain.value = 0; const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
+    for (const [f, t, v] of [[49, 'sawtooth', 0.6], [98.5, 'square', 0.25], [147, 'sawtooth', 0.12]]) { const o = AC.createOscillator(), og = AC.createGain(); o.type = t; o.frequency.value = f; og.gain.value = v; o.connect(og).connect(lp); o.start(); const w = AC.createOscillator(), wg = AC.createGain(); w.frequency.value = 0.7 + f / 300; wg.gain.value = f * 0.012; w.connect(wg).connect(o.frequency); w.start(); }
+    lp.connect(g).connect(MASTER); const r = loopNoise('bandpass', 2300, 3, 0); SND.genRattle = r; SND.gen = g;
+  }
+  { // one engine voice that follows the nearest danfo/keke/car
+    const g = AC.createGain(); g.gain.value = 0; const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 70; const am = AC.createGain(); am.gain.value = 0.6; const p = AC.createOscillator(); p.type = 'square'; p.frequency.value = 24; const pg = AC.createGain(); pg.gain.value = 0.4; p.connect(pg).connect(am.gain);
+    o.connect(am).connect(lp).connect(g); const pan = AC.createStereoPanner ? AC.createStereoPanner() : null; if (pan) { g.connect(pan).connect(MASTER); SND.engPan = pan; } else g.connect(MASTER);
+    o.start(); p.start(); SND.eng = g; SND.engO = o; SND.engP = p;
+  }
+  SND.birdT = 2; SND.hawkT = 8; SND.hornT = 6;
   SND.music = AC.createGain(); SND.music.gain.value = 0; SND.music.connect(MASTER);
   SND.musicFX = AC.createBiquadFilter(); SND.musicFX.type = 'lowpass'; SND.musicFX.frequency.value = 9000; SND.musicFX.connect(SND.music);
   if (SND.tracks && SND.tracks.length) { // real afrobeat tracks (royalty-free, see credits), played as a rotating playlist
-    const el = new Audio(); let i = (Math.random() * SND.tracks.length) | 0; el.src = SND.tracks[i]; el.preload = 'auto'; SND.track = el; AC.createMediaElementSource(el).connect(SND.musicFX);
+    const el = new Audio(); let i = (Math.random() * SND.tracks.length) | 0; el.preload = 'none'; el.src = SND.tracks[i]; SND.track = el; AC.createMediaElementSource(el).connect(SND.musicFX);
     el.addEventListener('ended', () => { i = (i + 1) % SND.tracks.length; el.src = SND.tracks[i]; el.play().catch(() => { }); }); }
   SND.next = AC.currentTime + 0.1; SND.step = 0; setInterval(scheduleBeat, 25);
 }
 function env(node, t, a, peak, d) { node.gain.setValueAtTime(0.0001, t); node.gain.exponentialRampToValueAtTime(peak, t + a); node.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
 function tone(freq, dur, type = 'square', vol = 0.05, when = 0) { if (!AC) return; const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = freq; const t = AC.currentTime + when; env(g, t, 0.005, vol, dur); o.connect(g).connect(MASTER); o.start(t); o.stop(t + dur + 0.05); }
 function horn(dist = 10) { const v = clamp(0.09 - dist * 0.0018, 0.01, 0.09); tone(392, .35, 'square', v); tone(494, .35, 'square', v * .8); }
+function chirp(vol) { if (!AC) return; const t0 = AC.currentTime, n = 2 + ((Math.random() * 4) | 0), f0 = rnd(2600, 4200); for (let i = 0; i < n; i++) { const o = AC.createOscillator(), g = AC.createGain(), t = t0 + i * rnd(0.09, 0.16); o.type = 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * rnd(1.2, 1.6), t + 0.05); o.frequency.exponentialRampToValueAtTime(f0 * 0.9, t + 0.09); env(g, t, 0.01, vol, 0.08); o.connect(g).connect(MASTER); o.start(t); o.stop(t + 0.15); } }
+const HAWK = { street: ['Pure water! Cold pure water!', 'Gala! Gala! Buy your Gala!', 'Recharge card dey! MTN, Glo, Airtel!', 'Agege bread! Hot Agege bread!', 'Last stop! Last stop! Enter with your change!'], camp: ['Pure water! Cold pure water!', 'Corper, buy puff-puff! E still dey hot!', 'Charge your phone here! Hundred naira!'] };
+let hawkEl = null;
+function hawkerCall() { // only real recorded voices: no robotic voice in the background
+  if (MUTED) return; const L = HAWK[ST.area === 'camp' ? 'camp' : 'street'], t = pick(L), id = fnv(t); if (!VOICE_IDS.has(id) || (voiceEl && !voiceEl.paused)) return;
+  try { if (!hawkEl) { hawkEl = new Audio(); } hawkEl.src = 'voice/' + id + '.mp3'; hawkEl.volume = 0.28; hawkEl.play().catch(() => { }); } catch (e) { }
+}
 function beep() { tone(880, .09, 'sine', .07); tone(1320, .12, 'sine', .06, .1); }
 function bugle() { if (!AC) return; const n = [392, 523, 659, 784, 659, 784, 1047]; n.forEach((f, i) => { const o = AC.createOscillator(), g = AC.createGain(), lp = AC.createBiquadFilter(); o.type = 'sawtooth'; o.frequency.value = f; lp.type = 'lowpass'; lp.frequency.value = 2400; const t = AC.currentTime + i * 0.24; env(g, t, 0.03, 0.06, i === n.length - 1 ? 0.9 : 0.2); o.connect(lp).connect(g).connect(MASTER); o.start(t); o.stop(t + 1.2); }); }
 function whistle() { if (!AC) return; const o = AC.createOscillator(), g = AC.createGain(), v = AC.createOscillator(), vg = AC.createGain(); o.frequency.value = 2900; v.frequency.value = 28; vg.gain.value = 120; v.connect(vg).connect(o.frequency); const t = AC.currentTime; env(g, t, 0.01, 0.05, 0.35); o.connect(g).connect(MASTER); o.start(t); v.start(t); o.stop(t + .45); v.stop(t + .45); }
@@ -1243,6 +1284,18 @@ function updateAudio(dt) {
   set(amb, ST.area === 'street' ? 0.06 : 0.012);
   set(SND.crowd, ST.area === 'street' ? 0.018 : night ? 0.01 : 0.026);
   set(SND.crick, ST.area === 'camp' && night ? 0.012 : 0);
+  // generators: louder in the evening and at night ("NEPA don take light"), near the shop rows and the mammy market
+  { const gx = ST.area === 'street' ? Math.min(...[-150, -95, -40, 25, 90, 150].map(x => Math.hypot(P.x - x, Math.abs(P.z) - 15))) : Math.hypot(P.x - 14, P.z - (CZ - 30)); const near = clamp(1 - gx / 45, 0, 1), base = ST.seg === 'Evening' || night ? 1 : 0.45;
+    set(SND.gen, 0.05 * near * base); set(SND.genRattle, 0.006 * near * base); }
+  // traffic: the nearest vehicle drives one engine sound (pitch by kind and speed, panned left/right)
+  if (SND.eng) { let best = null, bd = 1e9; if (ST.area === 'street') for (const v of traffic) { const d = Math.hypot(v.g.position.x - P.x, v.g.position.z - P.z); if (d < bd) { bd = d; best = v; } }
+    if (best && bd < 40) { const kk = best.kind, sp = clamp(best.v / 12, 0.2, 1.2); SND.engO.frequency.value = (kk === 'keke' ? 92 : kk === 'danfo' ? 58 : 66) * (0.7 + sp * 0.5); SND.engP.frequency.value = kk === 'keke' ? 31 * (0.7 + sp * 0.4) : 18 * (0.7 + sp * 0.4);
+      set(SND.eng, (kk === 'keke' ? 0.035 : kk === 'danfo' ? 0.05 : 0.03) * Math.pow(clamp(1 - bd / 40, 0, 1), 1.5)); if (SND.engPan) { const cy = Math.atan2(best.g.position.x - P.x, best.g.position.z - P.z) - Math.atan2(-Math.sin(cam.yaw), -Math.cos(cam.yaw)); SND.engPan.pan.value = clamp(-Math.sin(cy), -0.8, 0.8); } }
+    else set(SND.eng, 0); }
+  // little things: birds by day, the odd horn, hawkers calling (Gemini voice clips when available)
+  SND.birdT -= dt; if (SND.birdT < 0 && !night) { SND.birdT = rnd(2.5, ST.area === 'camp' ? 6 : 10); chirp(ST.area === 'camp' ? 0.03 : 0.015); }
+  SND.hornT -= dt; if (SND.hornT < 0 && ST.area === 'street') { SND.hornT = rnd(7, 18); const v = traffic[(Math.random() * traffic.length) | 0]; if (v) horn(Math.hypot(v.g.position.x - P.x, v.g.position.z - P.z)); }
+  SND.hawkT -= dt; if (SND.hawkT < 0) { SND.hawkT = rnd(14, 30); if (!DLG && !night) hawkerCall(); }
   const m = musicSource(); let mv = 0;
   if (m) { const d = Math.hypot(P.x - m.x, P.z - m.z); mv = m.vol * Math.pow(clamp(1 - d / m.range, 0, 1), 1.6); SND.musicFX.frequency.value = 1200 + 9000 * clamp(1 - d / m.range, 0, 1); }
   set(SND.music, mv);
@@ -1267,7 +1320,8 @@ const FEMALE_NAMES = /tolu|chioma|mama|aunty|nurse|mc spicy|bisi|ronke|chidinma|
 // Recorded Nigerian voices (YarnGPT): voice/manifest.json lists line ids; voice/<id>.mp3 holds the audio.
 const VOICE_IDS = new Set(); let voiceEl = null;
 const VOICE_CACHE = {};
-fetch('voice/manifest.json').then(r => r.ok ? r.json() : []).then(a => { for (const id of a) { VOICE_IDS.add(id); const el = new Audio(); el.preload = 'auto'; el.src = 'voice/' + id + '.mp3'; VOICE_CACHE[id] = el; } }).catch(() => { });
+// voice files load only when a line is spoken (saves ~4 MB of data at start); each is cached after first use
+fetch('voice/manifest.json').then(r => r.ok ? r.json() : []).then(a => { for (const id of a) VOICE_IDS.add(id); }).catch(() => { });
 function stopVoice() { try { if (voiceEl) voiceEl.pause(); if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { } }
 function fnv(t) { let h = 0x811c9dc5; for (const b of new TextEncoder().encode(t)) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); }
 function speak(text, female, priority = true, who = '') {
@@ -1277,7 +1331,7 @@ function speak(text, female, priority = true, who = '') {
   if (window.__said) window.__said.set(t, { who: String(who || ''), female: !!female });
   if (MUTED) return;
   const id = fnv(t);
-  if (VOICE_IDS.has(id)) { if (!priority && voiceEl && !voiceEl.paused) return; try { if (voiceEl) voiceEl.pause(); if (window.speechSynthesis) speechSynthesis.cancel(); voiceEl = VOICE_CACHE[id] || new Audio('voice/' + id + '.mp3'); voiceEl.currentTime = 0; voiceEl.volume = 1; voiceEl.playbackRate = 1.0; voiceEl.preservesPitch = true; voiceEl.play().catch(() => { }); window.__lastVoice = id; } catch (e) { } return; }
+  if (VOICE_IDS.has(id)) { if (!priority && voiceEl && !voiceEl.paused) return; try { if (voiceEl) voiceEl.pause(); if (window.speechSynthesis) speechSynthesis.cancel(); voiceEl = VOICE_CACHE[id] || (VOICE_CACHE[id] = new Audio('voice/' + id + '.mp3')); voiceEl.currentTime = 0; voiceEl.volume = 1; voiceEl.playbackRate = 1.0; voiceEl.preservesPitch = true; voiceEl.play().catch(() => { }); window.__lastVoice = id; } catch (e) { } return; }
   if (!window.speechSynthesis) return;
   if (!priority && speechSynthesis.speaking) return;
   try {
@@ -1329,7 +1383,7 @@ function interactables() {
   if (ST.ch === 3) return L.concat(yInteractables());
   if (ST.ch === 2) return cdsInteractables();
   if (ST.done) L.push(...ppaInteractables());
-  if (ST.phase >= 1 && !ST.done) L.push({ x: LGA.x, z: -12.4, label: ST.queue ? 'Wait for your name (queue)' : 'Join the clearance queue', act: clearance });
+  if (ST.phase >= 1 && !ST.done) L.push({ x: LGA.x, z: -12.4, label: CQ.on ? 'Ask about the queue' : 'Join the clearance queue', act: clearance });
   return L;
 }
 function buy(what) {
@@ -1383,9 +1437,123 @@ function rideArrive(v) {
     ST.mins += Math.round(Math.abs(v.goal - (v.startX || v.goal)) / 60) + 6; if (ST.target) $('arrow').style.display = 'block';
   }, 700).then(() => toast(v.kind === 'keke' ? 'Keke man: "We don reach. Change dey?"' : v.kind === 'own' ? 'You park, lock the car twice, and check the door again.' : 'Driver: "Please rate me five stars, corper."', 2600));
 }
+/* ---------------- CLEARANCE QUEUE: the signature mini-game ----------------
+   Get a number, hold your spot in the line, survive the sun, line-cutters, rumours, a dead biometric machine and a "fixer",
+   then thumbprint before the office closes at 2 PM. Busy LGAs (Ikeja 1) have long queues and more wahala; quiet LGAs are short. */
+const CQ = { on: false };
+const CQ_SPOT = { x: LGA.x + 1.2, z: -19.6 }, CQ_DESK = { x: LGA.x, z: -14.2 };
+function cqMesh() {
+  if (CQ.ring) return; const m = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.78, 40), new THREE.MeshBasicMaterial({ color: 0x38d47f, transparent: true, opacity: 0.85, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(CQ_SPOT.x, 0.05, CQ_SPOT.z); m.renderOrder = 3; scene.add(m); CQ.ring = m;
+  const d = m.clone(); d.material = m.material.clone(); d.material.color.set(0xffca28); d.position.set(CQ_DESK.x, 0.05, CQ_DESK.z); scene.add(d); CQ.desk = d;
+}
+function dropNPC(p) { if (!p) return; scene.remove(p.o); for (const arr of [people, NPC]) { const i = arr.indexOf(p); if (i >= 0) arr.splice(i, 1); } }
+function cqStart(onDone) {
+  if (CQ.on) return; cqMesh(); const pf = PF(), busy = clamp(pf.queue / 16, 0.4, 2.2);
+  Object.assign(CQ, { on: true, onDone, busy, serving: 1 + ((Math.random() * 6) | 0), heat: 10, away: 0, hold: 0, t: 0, ev: 6 + rnd(0, 4), paused: 0, held: false, retries: 0, cutter: null, fixerSeen: false, stage: 'line', called: false });
+  CQ.me = CQ.serving + Math.round(clamp(pf.queue * 2 + 8, 10, 40));
+  ST.mins = Math.max(ST.mins || 0, 8 * 60 + 30); CQ.ring.visible = CQ.desk.visible = true; CQ.desk.visible = false;
+  toast(`A man with a file: "You are number ${CQ.me}. Stand inside that line, don't go far o."`, 3600);
+  ST.target = { x: CQ_SPOT.x, z: CQ_SPOT.z, label: 'Your spot in the queue' }; $('arrow').style.display = 'block';
+  chat(GRP(), 'LGI said nobody should leave the premises. Names will be called ONCE.', 'off');
+  $('cq').hidden = false; cqHud();
+}
+function cqHud() {
+  const left = Math.max(0, CQ.me - CQ.serving), close = 14 * 60, mins = Math.max(0, close - ST.mins), heat = Math.round(CQ.heat);
+  $('cq').innerHTML = `<b>🧾 Clearance</b><span>You <em>#${CQ.me}</em> · Serving <em>#${CQ.serving}</em> · ${left ? left + ' before you' : '<em class="go">YOUR TURN</em>'}</span>
+  <span class="row"><i>🔥</i><u><s style="width:${heat}%;background:${heat > 70 ? '#ff5252' : heat > 45 ? '#ffb300' : '#38d47f'}"></s></u><i>⏳ ${Math.floor(mins / 60)}h ${String(Math.round(mins % 60)).padStart(2, '0')}m</i></span>
+  ${CQ.paused > 0 ? '<span class="warn">⚠️ Biometric machine is down</span>' : CQ.away > 0 && CQ.stage === 'line' && !CQ.hold ? '<span class="warn">🚶🏾 You left the line!</span>' : CQ.hold > 0 ? `<span>🤝 Spot held for ${Math.ceil(CQ.hold)}s</span>` : ''}`;
+}
+function cqNear(pt, r) { return player && Math.hypot(player.o.position.x - pt.x, player.o.position.z - pt.z) < r; }
+function cqUpdate(dt) {
+  if (!CQ.on || !player || DLG) return;
+  CQ.t += dt; const inLine = cqNear(CQ_SPOT, 2.4), sun = ST.seg === 'Afternoon' ? 1.3 : ST.seg === 'Morning' ? 0.8 : 0.5;
+  if (CQ.stage === 'line') {
+    // standing in the sun heats you up; leaving the line risks your place
+    CQ.heat = clamp(CQ.heat + dt * (inLine ? 0.9 * sun : -1.6), 0, 100); if (CQ.heat > 80) ST.stress = clamp(ST.stress + dt * 0.6, 0, 100);
+    if (CQ.hold > 0) CQ.hold -= dt;
+    if (!inLine && CQ.hold <= 0) { CQ.away += dt; if (CQ.away > 25) { CQ.away = 0; const lost = 2 + ((Math.random() * 4) | 0); CQ.me += lost; toast(`Someone took your spot while you were away. You're now #${CQ.me}. 😤`, 3200); ST.stress = clamp(ST.stress + 5, 0, 100); } }
+    else CQ.away = 0;
+    // the line moves only while the machine works
+    if (CQ.paused > 0) CQ.paused -= dt;
+    else { CQ.tick = (CQ.tick || 0) + dt * (inLine || CQ.hold > 0 ? 1 : 0.6); if (CQ.tick > 2.3) { CQ.tick = 0; CQ.serving++; ST.mins += 3; } }
+    if (CQ.serving >= CQ.me) {
+      if (inLine || CQ.hold > 0) { CQ.stage = 'desk'; CQ.desk.visible = true; ST.target = { x: CQ_DESK.x, z: CQ_DESK.z, label: 'Thumbprint desk' }; toast(`"Number ${CQ.me}! Number ${CQ.me}!" That's you. Go to the desk! 🏃🏾`, 3600); speak(`Number ${CQ.me}! Number ${CQ.me}!`, false, true, 'Clearance officer'); beep(); }
+      else { CQ.me = CQ.serving + 4 + ((Math.random() * 4) | 0); toast(`They called your number while you were away! Back of the line: #${CQ.me}. Omo. 😭`, 3800); ST.stress = clamp(ST.stress + 8, 0, 100); }
+    }
+    // things happen in the queue
+    CQ.ev -= dt * (0.7 + CQ.busy * 0.3); if (CQ.ev <= 0 && inLine && CQ.me - CQ.serving > 3) { CQ.ev = rnd(12, 22) / Math.max(0.6, CQ.busy); cqEvent(); }
+  } else if (CQ.stage === 'desk' && cqNear(CQ_DESK, 2.2)) { CQ.stage = 'thumb'; thumbprint(); }
+  if (ST.mins >= 14 * 60 && CQ.stage !== 'done' && CQ.stage !== 'thumb') cqEnd(false);
+  CQ.hudT = (CQ.hudT || 0) - dt; if (CQ.hudT <= 0) { CQ.hudT = 0.25; cqHud(); }
+  if (CQ.ring) CQ.ring.material.opacity = 0.55 + Math.sin(CQ.t * 4) * 0.3;
+}
+function cqEvent() {
+  const opts = ['cutter', 'water', 'rumour', 'machine', 'hold'];
+  if (!CQ.fixerSeen && CQ.me - CQ.serving > 8) opts.push('fixer', 'fixer');
+  const k = pick(opts);
+  if (k === 'cutter') {
+    const p = N(pick(['lewis', 'man2']), pick([TEX.lCorper2, TEX.mCorper2, TEX.lCorper3]), CQ_SPOT.x - 0.9, CQ_SPOT.z - 0.1, Math.PI, { bubble: ['Abeg I was here before!', 'I just went to ease myself!'] }); CQ.cutter = p;
+    ask('A corper squeezes in front of you', '"Abeg I was here before, I just went to ease myself." Nobody in the line has ever seen him.', [
+      ['"No way. Go to the back."', () => { ST.stress = clamp(ST.stress + 4, 0, 100); ST.rep = (ST.rep || 0) + 1; toast('He hisses and walks to the back. The line claps for you. 👏🏾', 3000); dropNPC(p); }],
+      ['"Okay, no wahala."', () => { CQ.me += 1; toast('He stays. Two of his "friends" join him. You are now #' + (CQ.me += 2) + '.', 3200); setTimeout(() => dropNPC(p), 8000); }],
+      ['Call the clearance officer', () => { if (Math.random() < 0.55) { toast('Officer: "Oya, comot for line!" He is sent to the back. ✅', 3000); dropNPC(p); } else { toast('Officer: "Settle it among yourselves." He stays. 🙄', 3000); CQ.me += 1; setTimeout(() => dropNPC(p), 8000); } }],
+    ]);
+  } else if (k === 'water') {
+    ask('Pure water seller', `"Pure water! Cold pure water!" The sun is serious. Heat ${Math.round(CQ.heat)}%.`, [
+      [`Buy two sachets (${naira(fareOf(100))})`, () => { ST.cash -= fareOf(100); ST.txn = 'Pure water'; CQ.heat = Math.max(0, CQ.heat - 45); ST.energy = clamp(ST.energy + 6, 0, 100); toast('Ice cold. Life is back. 💧', 2200); }],
+      ['"I\'m fine, thanks"', () => { }],
+    ], 'Pure water! Cold pure water!');
+  } else if (k === 'rumour') {
+    const fake = Math.random() < 0.7;
+    chat(GRP(), fake ? 'Guys LGI don close for today o. Them say make we come back tomorrow 😩' : 'They are calling 20 numbers at once now, hurry!', '', GRP());
+    if (fake) setTimeout(() => { if (CQ.on) chat('LGI (Official)', 'Clearance continues till 2pm. Ignore rumours. Stay on the line.', 'off'); }, 14000);
+    toast('📱 Corper Connect is buzzing… check before you believe anything.', 2600);
+  } else if (k === 'machine') {
+    CQ.paused = rnd(14, 26); toast('⚠️ "The biometric machine don hang!" Everybody groans. Somebody shouts: "On the generator!"', 3600); horn(30);
+  } else if (k === 'hold') {
+    ask('The corper behind you', '"Corper, I fit hold your spot if you wan go buy something. Just one minute o."', [
+      ['"Thank you! Hold it for me"', () => { CQ.hold = 60; toast('Your spot is held for 60 seconds. Go and come back quick. ⏱️', 3000); }],
+      ['"I\'m staying"', () => { }],
+    ]);
+  } else if (k === 'fixer') {
+    CQ.fixerSeen = true;
+    ask('A man in a fine kaftan', `"Corper, why you dey suffer for sun? Give me ${naira(2000)}, I go push your file to the front."`, [
+      [`Pay ${naira(2000)}`, () => { ST.cash -= 2000; ST.txn = 'Fixer'; if (Math.random() < 0.3) { toast('The LGI saw everything. "You! Back of the line, and see me after!" 😬', 3800); CQ.me += 6; ST.queried = true; ST.stress = clamp(ST.stress + 12, 0, 100); } else { CQ.me = CQ.serving + 2; toast('Your file magically moved. You feel a little guilty. 🫣', 3200); ST.rep = (ST.rep || 0) - 1; } }],
+      ['"No, I\'ll wait like everyone"', () => { ST.rep = (ST.rep || 0) + 2; toast('He shrugs and goes to find another corper.', 2400); }],
+    ]);
+  }
+}
+function thumbprint() {
+  let el = $('thumb'); if (!el) { el = document.createElement('div'); el.id = 'thumb'; document.body.appendChild(el); }
+  el.hidden = false; el.innerHTML = `<div class="tb"><small>BIOMETRIC CLEARANCE · ${esc(LGN())}</small><b>Press and hold your right thumb</b><button id="tbtn" aria-label="Hold to scan"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" class="bg"/><circle cx="60" cy="60" r="52" class="pr" id="tpr"/></svg><span>🖐🏾</span></button><p id="tmsg">Hold it… don't shake.</p></div>`;
+  const pr = $('tpr'), msg = $('tmsg'), L = 2 * Math.PI * 52; pr.style.strokeDasharray = L; pr.style.strokeDashoffset = L;
+  let held = 0, down = false, raf = 0, last = 0; const need = 1.6, failOnce = CQ.retries === 0 && Math.random() < 0.65;
+  const step = t => { const dt = last ? (t - last) / 1000 : 0; last = t; if (down) { held += dt; pr.style.strokeDashoffset = L * (1 - Math.min(1, held / need));
+      if (held >= need) { down = false; if (failOnce && CQ.retries === 0) { CQ.retries++; held = 0; pr.style.strokeDashoffset = L; msg.textContent = '❌ "Try again. Wipe your thumb." (Of course.)'; tone(220, .2, 'square', .05); } else { msg.textContent = '✅ Captured!'; tone(880, .1, 'sine', .07); tone(1320, .14, 'sine', .06, .1); setTimeout(() => { el.hidden = true; cqEnd(true); }, 700); return; } } }
+    else if (held > 0 && held < need) { held = Math.max(0, held - dt * 2); pr.style.strokeDashoffset = L * (1 - held / need); }
+    raf = requestAnimationFrame(step); };
+  raf = requestAnimationFrame(step);
+  const b = $('tbtn'), on = e => { e.preventDefault(); down = true; last = 0; }, off = () => { down = false; };
+  b.addEventListener('pointerdown', on); addEventListener('pointerup', off); b.addEventListener('pointerleave', off);
+  const kd = e => { if (e.code === 'KeyE' || e.code === 'Space') { if (!down) on(e); } }, ku = e => { if (e.code === 'KeyE' || e.code === 'Space') off(); };
+  addEventListener('keydown', kd); addEventListener('keyup', ku);
+  CQ.cleanup = () => { cancelAnimationFrame(raf); removeEventListener('pointerup', off); removeEventListener('keydown', kd); removeEventListener('keyup', ku); };
+  window.__thumb = () => { held = need; down = true; };
+}
+function cqEnd(ok) {
+  if (CQ.cleanup) CQ.cleanup(); if (CQ.cutter) dropNPC(CQ.cutter);
+  CQ.on = false; CQ.stage = 'done'; $('cq').hidden = true; if (CQ.ring) CQ.ring.visible = CQ.desk.visible = false; ST.target = null; $('arrow').style.display = 'none';
+  ST.clrPlayed = (ST.clrPlayed || 0) + 1; if (ok) ST.clrWins = (ST.clrWins || 0) + 1;
+  const cb = CQ.onDone; CQ.onDone = null; if (cb) cb(ok);
+}
 function clearance() {
-  if (!ST.queue) { ST.queue = PF().queue + 7; toast(`A man with a file: "You are number ${ST.queue}. Don't go far o."`, 3200); setObj(`Queue position ${ST.queue} — stay around the Secretariat`); chat(GRP(), 'LGI said nobody should leave the premises. Names will be called ONCE.', 'off'); return; }
-  toast(`Still ${ST.queue} people before you. Check the group or buy pure water.`);
+  if (ST.done) { toast('You are already cleared ✅'); return; }
+  if (CQ.on) { toast(CQ.stage === 'desk' ? 'Go to the thumbprint desk! (yellow ring)' : `You're #${CQ.me}. Serving #${CQ.serving}. Stay on your spot.`); return; }
+  cqStart(ok => {
+    if (ok) { ST.done = true; ST.txn = 'NYSC allowance · FGN'; ST.cash += 77000; ST.stress = clamp(ST.stress - 12, 0, 100); setObj('Cleared ✅  Allowance is on the way'); ST.target = null; $('arrow').style.display = 'none'; toast('Thumbprint captured. Cleared! ✅  Alert: +₦77,000 allowance 🎉', 5000); chat('Naija Trust Bank', 'Credit alert: ₦77,000.00 — NYSC allowance. Bal: ' + naira(ST.cash), 'off'); setTimeout(() => { ppaGo(0); chat('Corper Close Model School', 'Corper, the principal is asking of you. Come to school after clearance.'); }, 5200); tone(523, .15, 'sine', .07); tone(659, .15, 'sine', .07, .15); tone(784, .3, 'sine', .07, .3); }
+    else cine('NEXT MORNING', '2 PM: "Clearance has closed for today." You are back at 7 AM sharp.', () => { ST.mins = 7 * 60; setTOD('Morning'); ST.stress = clamp(ST.stress + 10, 0, 100); }, 2800).then(() => { toast('Early bird. The queue is shorter today. 🌅', 3000); setTimeout(clearance, 900); });
+  });
 }
 function interact() {
   audio(); if (DLG) return; let it = nearest;
@@ -1428,7 +1596,7 @@ function setTOD(seg) {
   hemi.intensity = night ? 0.18 : 0.55; hemi.color.set(night ? 0x5a6a9a : 0xe4ecff);
   renderer.toneMappingExposure = night ? 0.75 : 0.85;
   scene.fog.color.set(night ? 0x141a2a : seg === 'Evening' ? 0xd8b896 : 0xd9d6cb);
-  { const cl = ST.state ? STATE().climate : 'humid', base = FOGBASE || (FOGBASE = [scene.fog.near, scene.fog.far]); scene.fog.near = base[0]; scene.fog.far = base[1] * (OSMG && ST.area !== 'camp' ? 1.5 : 1);
+  { const cl = ST.state ? STATE().climate : 'humid', base = FOGBASE || (FOGBASE = [scene.fog.near, scene.fog.far]); scene.fog.near = base[0] * (GFX.lite ? 0.8 : 1); scene.fog.far = base[1] * (OSMG && ST.area !== 'camp' ? (GFX.lite ? 1.1 : 1.5) : 1) * (GFX.lite ? 0.8 : 1);
     if (!night && cl === 'harmattan') { scene.fog.color.set(seg === 'Evening' ? 0xcfa77a : 0xd8c7a2); scene.fog.near = base[0] * 0.55; scene.fog.far = base[1] * 0.7; sunL.intensity *= 0.82; } // dusty harmattan haze
     if (!night && cl === 'cool') { scene.fog.color.set(0xc9d4de); scene.fog.near = base[0] * 0.7; sunL.intensity *= 0.9; }
     if (!night && cl === 'riverine') scene.fog.color.set(0xc6d4c4); }
@@ -1854,9 +2022,9 @@ function showSummary(ch = 1) {
   const [t, d] = ch === 3 ? yearType() : corperType(), el = $('summary');
   el.innerHTML = `<small>${esc((ST.name || 'CORPER').toUpperCase())} · ${ST.code || 'NO STATE CODE'} · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
   <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch === 2 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div>${ch === 3 ? `<div><dt>PPA days</dt><dd>${Y.ppaDays} present · ${Y.ppaMiss} missed · ${Y.lates} late</dd></div><div><dt>CDS</dt><dd>${Y.cdsDays} attended · ${Y.cdsMiss} missed</dd></div><div><dt>Clearance</dt><dd>${Y.cleared || 0} of ${Y.MONTHS - 1} cleared</dd></div><div><dt>Earned</dt><dd>${naira(Y.earned)}</dd></div><div><dt>Spent</dt><dd>${naira(Y.spent)}</dd></div><div><dt>Sent home</dt><dd>${naira(Y.sent)}</dd></div><div><dt>Balance at POP</dt><dd>${naira(ST.cash)}</dd></div>` : ''}</dl>
-  <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring ' + LGN()}</button><button class="btn" id="sumagain">Start again</button></div>`;
+  <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring ' + LGN()}</button><button class="btn" id="sumshare">📤 Share my result</button><button class="btn" id="sumagain">Start again</button></div>`;
   if (ch === 1) saveGame('ch2'); if (ch === 2) { ST.ch = 3; saveGame('year'); ST.ch = 2; }
-  el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); else if (ch === 2) startYear(); else if (ch === 3) { Y.on = false; setObj('Ex-corper. Explore ' + LGN() + ' as long as you like.'); } }; $('sumagain').onclick = () => location.reload();
+  el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); else if (ch === 2) startYear(); else if (ch === 3) { Y.on = false; setObj('Ex-corper. Explore ' + LGN() + ' as long as you like.'); } }; $('sumagain').onclick = () => location.reload(); $('sumshare').onclick = () => shareResult(ch);
   bugle();
 }
 $('arrow').onclick = () => { if (ST.target && ST.area === 'street' && !ST.riding && !DLG) travelMenu(ST.target, ST.target.label); };
@@ -2042,7 +2210,7 @@ function yInteractables() {
   if (Y.kind === 'Mon' && !Y.signed) { const sp = PKIND() === 'school' ? { x: SCH.x + 15, z: -24 } : WORK[PKIND()].spots.sign; L.push({ x: sp.x, z: sp.z, label: 'Sign the staff attendance book', act: ySignPPA }); }
   if (Y.kind === 'Mon' && Y.signed && !Y.done) for (const j of (Y.jobs || [])) { const J = PPA_JOBS[j]; L.push({ x: J.at().x, z: J.at().z, label: J.label, act: J.act }); }
   if (Y.kind === 'Thu' && !Y.signed && Math.hypot(P.x - (LGA.x + 9), P.z + 14) < 12) L.push({ x: LGA.x + 9, z: -12.4, label: Y.cdsOff ? 'Ask the security man about CDS' : 'Sign the CDS register', act: ySignCDS });
-  if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, label: Y.inQ ? `Wait for your name (${Y.queue} before you)` : 'Join the clearance queue', act: yClearance });
+  if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, label: CQ.on ? 'Ask about the queue' : 'Join the clearance queue', act: yClearance });
   if (Y.kind === 'Pop' && !Y.done && Math.hypot(P.x - LGA.x, P.z - LGA.z) < 20) L.push({ x: LGA.x, z: -12.4, label: 'Take your place at the parade', act: yPOP });
   return L;
 }
@@ -2120,8 +2288,15 @@ function ySignCDS() {
   setObj('Go home and rest'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
 }
 function yClearance() {
-  if (!Y.inQ) { Y.inQ = true; toast(`A man with a file: "You are number ${Y.queue}. Stay around."`, 3000); return; }
-  toast(`${Y.queue} people still before you. Gist, buy pure water, check the group.`, 2400);
+  if (Y.done) { toast('You are already cleared this month ✅'); return; }
+  if (CQ.on) { toast(CQ.stage === 'desk' ? 'Go to the thumbprint desk! (yellow ring)' : `You're #${CQ.me}. Serving #${CQ.serving}. Stay on your spot.`); return; }
+  cqStart(ok => { if (ok) yCleared(); else { toast('2 PM. "Clearance has closed for today." 😩 No allowance this month.', 4200); setObj('Go home. You missed clearance this month.'); } });
+}
+function yCleared() {
+      Y.done = true; Y.cleared = (Y.cleared || 0) + 1; ST.txn = 'NYSC allowance · FGN'; ST.cash += 77000; Y.earned += 77000; ST.stress = clamp(ST.stress - 10, 0, 100); hudSync();
+      chat('Naija Trust Bank', `Credit alert: ₦77,000.00 · NYSC allowance. Bal: ${naira(ST.cash)}`, 'off');
+      setTimeout(() => { ySpend(PF().rent, 'Rent · Corper Lodge (Baba Lodge)', null, true); chat('Landlord (Baba Lodge)', `Thank you corper. I have collected this month's rent ${naira(PF().rent)}. God bless.`, '', 'Baba Lodge'); }, 3500);
+      toast('Thumbprint. Cleared ✅ +₦77,000', 4200); setObj('Go home'); ST.target = { x: LODGE.x, z: LODGE.z, label: 'Your lodge' }; $('arrow').style.display = 'block';
 }
 function yUpdate(dt) {
   if (!Y.on || !player) return;
@@ -2368,6 +2543,7 @@ function spawnWorld(T, gender) {
   setGroup('Platoon 5 · Camp Gist');
   campGo(0); setTOD('Morning');
   window.__merged = mergeStatic();
+  window.__cq = { CQ, CQ_SPOT, CQ_DESK, clearance, yClearance, cqStart, shareResult, shareInvite, applyGfx, GFX, INVITE };
   window.__ON = { ON, onSay, onSend, onWave, onlineSummary, onRoomName, STICKERS, dmName, thr, PH, setReply, phShow };
   $('pcomp').onsubmit = e => { e.preventDefault(); const i = $('pcin'); if (i.value.trim()) onSend({ t: i.value }); i.value = ''; $('pemo').hidden = true; };
   window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK, osm: () => ({ OSM, OSMG, camera }) };
@@ -2608,6 +2784,68 @@ function renderOnlineList() { // everyone online, closest to you first
   const tag = ['at your PPA', 'in your LGA', 'in your state', ''];
   return `<div class="olist"><div class="oh">🟢 Online now</div>` + (L.length ? L.map(p => { const s = p.presence, r = rank(p), where = s.ar === 'camp' ? (STATES.find(x => x.id === s.st) || {}).name + ' camp' : (s.lga || ''); return `<button data-u="${esc(String(s.uid || ''))}" data-n="${esc(tame(s.nm || 'Corper', 24))}"><i>${r === 0 ? '🟡' : r === 1 ? '🟢' : '🔵'}</i><span><b>${esc(tame(s.nm || 'Corper', 24))}</b><small>${esc(tame(where, 40))}${tag[r] ? ' · ' + tag[r] : ''}${s.org ? ' · ' + esc(tame(s.org, 36)) : ''}</small></span><em>Message</em></button>`; }).join('') : '<p>Nobody else is online right now.</p>') + '</div>';
 }
+/* ---------------- share cards + invite links (made for WhatsApp Status / TikTok) ---------------- */
+const ONCLAUDE = /claude\.ai|anthropic|claudeusercontent/.test(location.hostname) || location.protocol === 'file:';
+const SITE = ONCLAUDE || /^(localhost|127\.)/.test(location.hostname) ? 'https://otondo.com.ng' : location.origin;
+const MARK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><clipPath id="pc"><path d="M256 70c-92 0-166 72-166 162 0 118 140 214 158 226a14 14 0 0 0 16 0c18-12 158-108 158-226 0-90-74-162-166-162z"/></clipPath></defs><g clip-path="url(#pc)"><rect x="60" y="60" width="140" height="420" fill="#1f9d55"/><rect x="200" y="60" width="112" height="420" fill="#f6f1e4"/><rect x="312" y="60" width="140" height="420" fill="#1f9d55"/></g><circle cx="256" cy="232" r="70" fill="#0b1a12"/><circle cx="256" cy="232" r="36" fill="#c9b78a"/></svg>';
+const MARK_IMG = new Image(); MARK_IMG.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(MARK_SVG);
+function inviteURL() {
+  const q = new URLSearchParams({ state: ST.state || 'LA' });
+  if (ST.post && ST.post.lga) q.set('lga', ST.post.lga.replace(/\s*LGA$/i, ''));
+  q.set('ref', 'invite'); return SITE + '/play?' + q.toString();
+}
+function snapCanvas(w, h) { // the current 3D view, cropped to fill w×h
+  renderer.render(scene, camera); const src = renderer.domElement, c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'), k = Math.max(w / src.width, h / src.height), sw = w / k, sh = h / k; g.drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, w, h); return c;
+}
+function wrapText(g, t, x, y, maxW, lh, maxLines = 3) {
+  const words = String(t).split(' '), lines = []; let line = '';
+  for (const w of words) { const tt = line ? line + ' ' + w : w; if (g.measureText(tt).width > maxW && line) { lines.push(line); line = w; } else line = tt; } lines.push(line);
+  if (lines.length > maxLines) { lines.length = maxLines; let l = lines[maxLines - 1]; while (l && g.measureText(l + '…').width > maxW) l = l.slice(0, -1); lines[maxLines - 1] = l.replace(/\s+\S*$/, '') + '…'; }
+  lines.forEach((l, i) => g.fillText(l, x, y + i * lh)); return y + lines.length * lh;
+}
+function shareCard(o) { // o: { kicker, title, text, chips: [[label, value]] }
+  const W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  g.fillStyle = '#0b1a12'; g.fillRect(0, 0, W, H);
+  try { g.drawImage(snapCanvas(W, 960), 0, 0); } catch (e) { }
+  let gr = g.createLinearGradient(0, 600, 0, 965); gr.addColorStop(0, 'rgba(11,26,18,0)'); gr.addColorStop(1, '#0b1a12'); g.fillStyle = gr; g.fillRect(0, 600, W, 370);
+  gr = g.createLinearGradient(0, 0, 0, 260); gr.addColorStop(0, 'rgba(11,26,18,.75)'); gr.addColorStop(1, 'rgba(11,26,18,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, 260);
+  try { g.drawImage(MARK_IMG, 70, 70, 96, 96); } catch (e) { }
+  g.fillStyle = '#f6f1e4'; g.font = '800 58px system-ui, -apple-system, Segoe UI, Roboto, sans-serif'; g.textBaseline = 'middle'; g.fillText('otondo', 178, 120);
+  g.textBaseline = 'alphabetic'; let y = 1030;
+  g.fillStyle = '#c9b78a'; g.font = '700 34px system-ui, sans-serif'; g.fillText(String(o.kicker || '').toUpperCase(), 80, y); y += 100;
+  g.fillStyle = '#ffffff'; g.font = `900 ${o.title.length > 22 ? 88 : 104}px system-ui, sans-serif`; y = wrapText(g, o.title, 80, y, W - 160, o.title.length > 22 ? 96 : 112, 2) + 6;
+  g.fillStyle = '#c7d1c6'; g.font = '500 40px system-ui, sans-serif'; wrapText(g, o.text || '', 80, y + 14, W - 160, 52, 2);
+  y = H - 440; let x = 80; g.font = '700 34px system-ui, sans-serif';
+  for (const [l, v] of o.chips || []) { const t = `${l}  ${v}`, tw = g.measureText(t).width + 56; if (x + tw > W - 80) { x = 80; y += 92; } g.fillStyle = 'rgba(255,255,255,.08)'; g.beginPath(); g.roundRect(x, y, tw, 72, 36); g.fill(); g.strokeStyle = 'rgba(255,255,255,.16)'; g.lineWidth = 2; g.stroke(); g.fillStyle = '#f6f1e4'; g.fillText(t, x + 28, y + 48); x += tw + 18; }
+  g.fillStyle = '#1f9d55'; g.beginPath(); g.roundRect(80, H - 250, W - 160, 120, 60); g.fill();
+  g.fillStyle = '#fff'; g.font = '800 46px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText('Play free → ' + SITE.replace(/^https?:\/\//, ''), W / 2, H - 175);
+  g.fillStyle = 'rgba(246,241,228,.5)'; g.font = '500 26px system-ui, sans-serif'; g.fillText('A fictional game about the NYSC service year', W / 2, H - 70); g.textAlign = 'left';
+  return c;
+}
+function shareSheet(canvas, text, url) {
+  let el = $('share'); if (!el) { el = document.createElement('div'); el.id = 'share'; document.body.appendChild(el); }
+  const msg = `${text}\n${url}`;
+  el.innerHTML = `<div class="sbox"><img alt="Your Otondo card"><div class="sbtn"><button data-a="native">📤 Share</button><a data-a="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">🟢 WhatsApp</a><a data-a="save" download="otondo-card.jpg">⬇️ Save image</a><button data-a="copy">🔗 Copy link</button><button data-a="x">Close</button></div><small>Post it on your Status and tag your corper friends.</small></div>`;
+  el.hidden = false; const img = el.querySelector('img'); let data = ''; try { data = canvas.toDataURL('image/jpeg', 0.86); } catch (e) { }
+  img.src = data; el.querySelector('[data-a="save"]').href = data;
+  if (ONCLAUDE) el.querySelector('[data-a="save"]').remove(); // downloads don't work inside a claude.ai artifact
+  const nat = el.querySelector('[data-a="native"]');
+  canvas.toBlob(b => { const f = b && new File([b], 'otondo.jpg', { type: 'image/jpeg' }); if (!(f && navigator.canShare && navigator.canShare({ files: [f] }))) { nat.remove(); return; } nat.onclick = () => navigator.share({ files: [f], text: msg }).catch(() => { }); }, 'image/jpeg', 0.86);
+  el.querySelector('[data-a="copy"]').onclick = e => { const done = () => { e.target.textContent = '✅ Copied'; }; const fail = () => { e.target.textContent = '⚠️ Copy blocked'; }; try { navigator.clipboard.writeText(msg).then(done, fail); } catch (er) { fail(); } };
+  el.querySelector('[data-a="x"]').onclick = () => { el.hidden = true; };
+}
+function shareResult(ch) {
+  const [t, d] = ch === 3 ? yearType() : corperType();
+  const chips = [['📍', (ST.post && ST.post.lga) || (SNAME() + ' camp')], ['🪖 Drill', (ST.drillOk ?? 0) + '/6'], ['💸', naira(ST.cash || 0)]]; if (ch === 3) chips.push(['🎓', 'POP done']);
+  shareSheet(shareCard({ kicker: `${ST.name || 'Corper'} · ${STATE().name}${STATE().id === 'FC' ? '' : ' State'}`, title: t, text: d, chips }), `I just played Otondo, the corper game 🇳🇬 My result: ${t}. What kind of corper are you?`, inviteURL());
+}
+function shareInvite() {
+  shareSheet(shareCard({ kicker: 'Corper invite', title: `Join me in ${ST.post && ST.post.lga ? ST.post.lga : SNAME() + ' camp'}`, text: `I'm serving in ${STATE().name} on Otondo. Come and meet me: camp, CDS, clearance wahala and all.`, chips: [['🟢', 'Play online together'], ['📱', 'No download']] }), `Join me on Otondo, the corper game 🇳🇬 I'm in ${ST.post && ST.post.lga ? ST.post.lga : SNAME() + ' camp'}.`, inviteURL());
+}
+// arriving from an invite link: same state (and LGA) as the friend who sent it
+const INVITE = (() => { try { const q = new URLSearchParams(location.search); const st = (q.get('state') || '').toUpperCase(); return STATES.some(s => s.id === st) ? { state: st, lga: (q.get('lga') || '').slice(0, 40) } : null; } catch (e) { return null; } })();
+if (INVITE && INVITE.lga && !window.__posting) window.__posting = INVITE.lga; // posted to the same LGA as your friend (when you pick their state)
 /* ---------------- maps: corner minimap + the phone's Map app (pan, zoom, pins, routes) ---------------- */
 const POIS = {
   camp: () => [['🚧', 'Camp gate', CAMP.spots.gate, '#5d4037'], ['📝', 'Registration', CAMP.spots.desk, '#1565c0'], ['🎽', 'Kit store', CAMP.spots.kit, '#6a1b9a'], ['🛏️', 'Hostel B', CAMP.spots.hostel, '#00695c'], ['🪖', 'Parade ground', { x: 0, z: CZ }, '#33691e'], ['🎤', 'Stage', CAMP.spots.stage, '#ad1457'], ['🛍️', 'Mammy market', CAMP.spots.market[2], '#ef6c00'], ['📋', 'Notice board', CAMP.spots.notice, '#455a64'], ['🏥', 'Camp clinic', CAMP.spots.clinic, '#c62828'], ['🎓', 'SAED hall', CAMP.spots.hall, '#4527a0'], ['🚌', 'Bus park', CAMP.busSpot, '#f9a825']],
@@ -2772,10 +3010,10 @@ function updatePeople(dt) {
   const cp = camera.position;
   for (const p of people) {
     if (p === player) continue;
-    const d2 = p.o.position.distanceToSquared(cp), far = d2 > 75 * 75; p.o.visible = !p.hidden && d2 < (TOUCH ? 3000 : 9025);
+    const d2 = p.o.position.distanceToSquared(cp), far = d2 > 75 * 75; p.o.visible = !p.hidden && d2 < (GFX.lite ? 1500 : TOUCH ? 3000 : 9025);
     const sh = !TOUCH && d2 < 26 * 26; if (sh !== p.sh) { p.sh = sh; for (const m of p.meshes) m.castShadow = sh; }
     if (!p.o.visible) { if (p.wander && !p.hidden) wanderStep(p, dt); continue; }
-    const lod = d2 > 900 ? (TOUCH ? 4 : 3) : d2 > 225 && TOUCH ? 2 : 1; p.acc = (p.acc || 0) + dt; p.fr = ((p.fr || 0) + 1) % lod; const mdt = p.fr === 0 ? p.acc : 0; if (mdt) p.acc = 0;
+    const lod = d2 > 900 ? (TOUCH ? 4 : 3) : d2 > (GFX.lite ? 64 : 225) && TOUCH ? 2 : 1; p.acc = (p.acc || 0) + dt; p.fr = ((p.fr || 0) + 1) % lod; const mdt = p.fr === 0 ? p.acc : 0; if (mdt) p.acc = 0;
     if (p.wander) { wanderStep(p, dt); if (!far && mdt) p.mixer.update(mdt); continue; }
     if (!p.static) {
       if (p.mode === 'wait') { p.wait -= dt; if (p.wait <= 0) { p.mode = 'walk'; play(p, 'walk'); } }
@@ -2851,7 +3089,7 @@ function updateFlag(t) {
 }
 let hudT = 0, frames = 0, fpsT = 0;
 let simT = 0;
-function sim(dt) { simT += dt; updateAudio(dt); updateMaps(dt); updatePlayer(dt); updateTraffic(dt); updatePeople(dt); updateOnline(dt); updateStory(dt); updateCamera(dt); updateUI(dt); updateFlag(simT); hudT -= dt; if (hudT <= 0) { hudT = .25; hudSync(); } }
+function sim(dt) { simT += dt; cqUpdate(dt); updateAudio(dt); updateMaps(dt); updatePlayer(dt); updateTraffic(dt); updatePeople(dt); updateOnline(dt); updateStory(dt); updateCamera(dt); updateUI(dt); updateFlag(simT); hudT -= dt; if (hudT <= 0) { hudT = .25; hudSync(); } }
 window.__step = (n = 1, dt = 1 / 30) => { for (let i = 0; i < n; i++) sim(dt); renderer.render(scene, camera); };
 let wall = performance.now();
 function loop() {
@@ -2859,7 +3097,7 @@ function loop() {
   // slow phones: run the world in small steps so walking speed is the same at 15 fps as at 60 fps
   if (player) { let rem = Math.min(raw, 0.2); const n = Math.ceil(rem / 0.05); for (let i = 0; i < n; i++) sim(rem / n); }
   renderer.render(scene, camera);
-  frames++; fpsT += raw; if (fpsT > 1) { window.__fps = frames / fpsT; window.__calls = renderer.info.render.calls; window.__tris = renderer.info.render.triangles; frames = 0; fpsT = 0; }
+  probeGfx(raw); frames++; fpsT += raw; if (fpsT > 1) { window.__fps = frames / fpsT; window.__calls = renderer.info.render.calls; window.__tris = renderer.info.render.triangles; frames = 0; fpsT = 0; }
   requestAnimationFrame(loop);
 }
 // Merge static single-material meshes by material: far fewer draw calls (phones!)
@@ -2903,7 +3141,7 @@ boot().then(T => {
   $('cstate').innerHTML = `<option value="rand">🎲 Random, like the real call-up letter</option>` + STATES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}${s.id === 'FC' ? '' : ' State'} · camp at ${s.camp.split(/[,(]/)[0]}</option>`).join('');
   $('ccourse').innerHTML = `<option value="rand">🎲 Random</option>` + COURSES.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
   try { const last = JSON.parse(localStorage.getItem('nysc3d.corper') || 'null'); if (last) { Object.assign(CH, last); $('cname').value = CH.name || ''; } } catch (e) { }
-  if (!CH.bgPick) CH.bg = 'rand'; $('cstate').value = CH.pick || 'rand'; $('ccourse').value = CH.coursePick || 'rand';
+  if (!CH.bgPick) CH.bg = 'rand'; $('cstate').value = INVITE ? INVITE.state : CH.pick || 'rand'; $('ccourse').value = CH.coursePick || 'rand';
   sync(); preview(); pvLoop();
   L.style.transition = 'opacity .7s'; L.style.opacity = 0; setTimeout(() => { if (pvOn) L.style.display = 'none'; }, 750); C.hidden = false;
   const start = async g => {

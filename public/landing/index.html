@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Otondo · the corper game</title>
 <link rel="icon" href="/brand/otondo-mark.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">
 <meta name="description" content="Otondo: a 3D Nigerian game about the service year: call-up letter, orientation camp, group-chat rumours, clearance, your PPA and the road to POP. Real streets from all 36 states and the FCT. Play free in your browser.">
 <meta property="og:title" content="Otondo · the corper game">
 <meta property="og:description" content="Survive the service year. Camp, CDS, clearance, PPA, group-chat wahala. Play free in your browser.">
@@ -353,5 +355,6 @@ footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
   else requestAnimationFrame(frame);
 })();
 </script>
+<script>if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));</script>
 </body>
 </html>
