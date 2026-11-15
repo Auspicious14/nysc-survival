@@ -2546,7 +2546,7 @@ function spawnWorld(T, gender) {
   window.__cq = { CQ, CQ_SPOT, CQ_DESK, clearance, yClearance, cqStart, shareResult, shareInvite, applyGfx, GFX, INVITE };
   window.__ON = { ON, onSay, onSend, onWave, onlineSummary, onRoomName, STICKERS, dmName, thr, PH, setReply, phShow };
   $('pcomp').onsubmit = e => { e.preventDefault(); const i = $('pcin'); if (i.value.trim()) onSend({ t: i.value }); i.value = ''; $('pemo').hidden = true; };
-  window.__G = { ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK, osm: () => ({ OSM, OSMG, camera }) };
+  window.__G = { renderer, scene, sunL, ST, player, people, traffic, NPC, colliders, interact, phone, phShow, chat, interactables, cam, LGA, board, CAMP, CZ, RIGS, WORK, osm: () => ({ OSM, OSMG, camera }) };
 }
 
 /* ---------------- real town around the street (OpenStreetMap, © OpenStreetMap contributors) ---------------- */
@@ -3090,9 +3090,10 @@ function updateFlag(t) {
 let hudT = 0, frames = 0, fpsT = 0;
 let simT = 0;
 function sim(dt) { simT += dt; cqUpdate(dt); updateAudio(dt); updateMaps(dt); updatePlayer(dt); updateTraffic(dt); updatePeople(dt); updateOnline(dt); updateStory(dt); updateCamera(dt); updateUI(dt); updateFlag(simT); hudT -= dt; if (hudT <= 0) { hudT = .25; hudSync(); } }
-window.__step = (n = 1, dt = 1 / 30) => { for (let i = 0; i < n; i++) sim(dt); renderer.render(scene, camera); };
+window.__step = (n = 1, dt = 1 / 30, noRender) => { for (let i = 0; i < n; i++) sim(dt); if (!noRender) renderer.render(scene, camera); };
 let wall = performance.now();
 function loop() {
+  if (window.__hold) { requestAnimationFrame(loop); return; } // video capture drives frames itself
   const now = performance.now(), raw = (now - wall) / 1000; wall = now;
   // slow phones: run the world in small steps so walking speed is the same at 15 fps as at 60 fps
   if (player) { let rem = Math.min(raw, 0.2); const n = Math.ceil(rem / 0.05); for (let i = 0; i < n; i++) sim(rem / n); }

@@ -1,0 +1,83 @@
+{
+ "ad1": {
+  "lines": [
+   "POV: your call-up letter just dropped 📩"
+  ]
+ },
+ "ad2": {
+  "lines": [
+   "21 days in khaki 🪖"
+  ]
+ },
+ "ad3": {
+  "lines": [
+   "The group chat says “no CDS” 😴"
+  ],
+  "pos": "mid"
+ },
+ "ad3b": {
+  "lines": [
+   "The group chat says “no CDS” 😴",
+   "The LGI says otherwise 😭"
+  ],
+  "green": true,
+  "pos": "mid"
+ },
+ "ad4": {
+  "lines": [
+   "Clearance day. Omo. 🫠"
+  ]
+ },
+ "ad5": {
+  "lines": [
+   "Real streets.",
+   "All 36 states + FCT"
+  ],
+  "green": true
+ },
+ "ad6": {
+  "lines": [
+   "What kind of corper are you?"
+  ]
+ },
+ "k1": {
+  "kick": "Chapter 1 · Orientation camp"
+ },
+ "k2": {
+  "kick": "Registration · Day 1"
+ },
+ "k3": {
+  "kick": "Kitting"
+ },
+ "k4": {
+  "kick": "Social night"
+ },
+ "k5": {
+  "kick": "Parade · 5:30 AM"
+ },
+ "k6": {
+  "kick": "Postings are out"
+ },
+ "k7": {
+  "kick": "Chapter 2 · Your LGA"
+ },
+ "k8": {
+  "kick": "Corper Connect"
+ },
+ "k9": {
+  "kick": "Your PPA"
+ },
+ "k10": {
+  "kick": "Monthly clearance"
+ },
+ "k11": {
+  "kick": "What kind of corper are you?"
+ },
+ "g0": {
+  "lines": [
+   "I built a game about",
+   "the NYSC service year 🇳🇬"
+  ],
+  "green": true
+ }
+}
