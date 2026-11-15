@@ -2061,8 +2061,32 @@ function showSummary(ch = 1) {
   <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch === 2 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div>${ch === 3 ? `<div><dt>PPA days</dt><dd>${Y.ppaDays} present · ${Y.ppaMiss} missed · ${Y.lates} late</dd></div><div><dt>CDS</dt><dd>${Y.cdsDays} attended · ${Y.cdsMiss} missed</dd></div><div><dt>Clearance</dt><dd>${Y.cleared || 0} of ${Y.MONTHS - 1} cleared</dd></div><div><dt>Earned</dt><dd>${naira(Y.earned)}</dd></div><div><dt>Spent</dt><dd>${naira(Y.spent)}</dd></div><div><dt>Sent home</dt><dd>${naira(Y.sent)}</dd></div><div><dt>Balance at POP</dt><dd>${naira(ST.cash)}</dd></div>` : ''}</dl>
   <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring ' + LGN()}</button><button class="btn" id="sumshare">📤 Share my result</button><button class="btn" id="sumagain">Start again</button></div>`;
   if (ch === 1) saveGame('ch2'); if (ch === 2) { ST.ch = 3; saveGame('year'); ST.ch = 2; }
+  if (ch === 1) surveyCard(el);
   el.hidden = false; $('sumplay').onclick = () => { el.hidden = true; if (ch === 1 && !ST.ch) startChapter2(); else if (ch === 2) startYear(); else if (ch === 3) { Y.on = false; setObj('Ex-corper. Explore ' + LGN() + ' as long as you like.'); } }; $('sumagain').onclick = () => location.reload(); $('sumshare').onclick = () => shareResult(ch);
   bugle();
+}
+// Two-question survey after Chapter 1 (website only: answers go to the admin page). Once per device.
+const SURVEY_WANTS = [['cds', '📅 Online CDS with my LGA'], ['friends', '👥 Friends & platoons'], ['leaderboards', '🏆 Leaderboards'], ['minigames', '🎮 More mini-games'], ['meetups', '🤝 Real-life meetups']];
+function surveyCard(el) {
+  if (STATS.c === undefined) STATS.c = statsClient();
+  let done = false; try { done = !!localStorage.getItem('nysc3d.survey1'); } catch (e) { }
+  if (!STATS.c || !STATS.c.survey || done) return;
+  const box = document.createElement('div'); box.className = 'survey';
+  box.innerHTML = `<b>Quick one before you continue 🙏🏾</b><span>10 seconds. The developer reads every answer.</span>
+    <label for="sv1">What would make you play again tomorrow?</label><textarea id="sv1" maxlength="280" rows="2" placeholder="Be honest, abeg 😅"></textarea>
+    <label>What should we add next? Pick any</label><div class="svw">${SURVEY_WANTS.map(([k, t]) => `<button type="button" data-k="${k}" aria-pressed="false">${t}</button>`).join('')}</div>
+    <div class="svr"><button type="button" class="btn g" id="svsend">Send</button><button type="button" class="btn" id="svskip">Skip</button></div>`;
+  el.insertBefore(box, el.querySelector('.row'));
+  box.querySelectorAll('.svw button').forEach(b => b.onclick = () => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'));
+  const finish = msg => { try { localStorage.setItem('nysc3d.survey1', '1'); } catch (e) { } box.innerHTML = `<b>${msg}</b>`; };
+  $('svskip').onclick = () => box.remove();
+  $('svsend').onclick = async () => {
+    const again = $('sv1').value.trim().slice(0, 280), wants = [...box.querySelectorAll('.svw button[aria-pressed="true"]')].map(b => b.dataset.k);
+    if (!again && !wants.length) { $('sv1').focus(); $('sv1').placeholder = 'Type something or pick one below 🙏🏾'; return; }
+    $('svsend').disabled = true; $('svsend').textContent = 'Sending…';
+    const ok = await STATS.c.survey(ST.state || 'LA', (ST.post && ST.post.lga) || '', again, wants);
+    if (ok) finish('Thank you! 🙏🏾 Your answer is in.'); else { $('svsend').disabled = false; $('svsend').textContent = 'Try again'; }
+  };
 }
 $('arrow').onclick = () => { if (ST.target && ST.area === 'street' && !ST.riding && !DLG) travelMenu(ST.target, ST.target.label); };
 window.__travel = { travelMenu, rideTo };

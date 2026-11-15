@@ -217,3 +217,44 @@ end $$;
 grant execute on function public.track_player(text, text, text, text, boolean) to anon, authenticated;
 grant execute on function public.public_stats(text) to anon, authenticated;
 grant execute on function public.admin_stats(text) to anon, authenticated;
+
+-- ============================================================================
+-- PLAYER SURVEY (end of Chapter 1): "What would make you play again tomorrow?" + "What should we add next?"
+-- One answer per device (answering again replaces it). No names: the same random device id as player_pings.
+-- ============================================================================
+create table if not exists public.survey_answers (
+  uid        text primary key check (char_length(uid) between 6 and 40),
+  state      text not null default '' check (char_length(state) <= 4),
+  lga        text not null default '' check (char_length(lga) <= 60),
+  again      text not null default '' check (char_length(again) <= 300),
+  wants      text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+alter table public.survey_answers enable row level security;   -- no direct access; only the functions below
+
+create or replace function public.submit_survey(p_uid text, p_state text, p_lga text, p_again text, p_wants text[])
+returns void language plpgsql security definer set search_path = public as $$
+declare allowed text[] := array['cds','friends','leaderboards','minigames','meetups'];
+begin
+  if p_uid is null or char_length(p_uid) < 6 or char_length(p_uid) > 40 then return; end if;
+  insert into survey_answers (uid, state, lga, again, wants)
+  values (p_uid, left(coalesce(p_state,''),4), left(coalesce(p_lga,''),60), left(btrim(coalesce(p_again,'')),300),
+          array(select distinct w from unnest(coalesce(p_wants,'{}')) w where w = any(allowed)))
+  on conflict (uid) do update set state = excluded.state, lga = excluded.lga, again = excluded.again, wants = excluded.wants, created_at = now();
+end $$;
+
+create or replace function public.admin_survey(p_key text)
+returns json language plpgsql security definer set search_path = public stable as $$
+declare ok boolean;
+begin
+  select exists(select 1 from app_secrets where name = 'admin_key' and value = p_key and char_length(value) >= 12) into ok;
+  if not ok then raise exception 'not allowed'; end if;
+  return json_build_object(
+    'total', (select count(*) from survey_answers),
+    'wants', (select coalesce(json_object_agg(w, n), '{}') from (select w, count(*) n from survey_answers, unnest(wants) w group by w) t),
+    'recent', (select coalesce(json_agg(r order by r.created_at desc), '[]') from (
+        select state, lga, again, wants, created_at from survey_answers where again <> '' order by created_at desc limit 100) r));
+end $$;
+
+grant execute on function public.submit_survey(text, text, text, text, text[]) to anon, authenticated;
+grant execute on function public.admin_survey(text) to anon, authenticated;

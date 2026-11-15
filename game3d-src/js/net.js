@@ -93,5 +93,6 @@ export function statsClient() {
   return {
     ping: (state, lga, area) => { const b = { p_uid: pid, p_state: state, p_lga: lga || '', p_area: area || '', p_new_session: first }; first = false; return rpc('track_player', b); },
     stats: state => rpc('public_stats', { p_state: state }),
+    survey: (state, lga, again, wants) => fetch(`${C.supabaseUrl}/rest/v1/rpc/submit_survey`, { method: 'POST', headers: H, body: JSON.stringify({ p_uid: pid, p_state: state, p_lga: lga || '', p_again: again, p_wants: wants }) }).then(r => r.ok).catch(() => false),
   };
 }
