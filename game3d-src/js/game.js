@@ -1768,17 +1768,52 @@ function posting() {
   const st = STATE(); let P = drawPosting(st.id, ST.course);
   if (window.__posting) { const l = st.lgas.find(l => l[0].toLowerCase().replace(/\W/g, '') === window.__posting.toLowerCase().replace(/\W/g, '')); if (l) { const o = orgsFor(st, l[0], l[1]); const org = window.__org ? o.find(x => x.kind === window.__org) || o[0] : o[0]; P = { ...P, id: l[0], short: l[0], lga: l[0] + ' LGA', tier: l[1], org, sector: org.sector, kind: org.kind, ppa: org.name, prof: profileFor(st, l[0], l[1]) }; } }
   ST.post = P; const pr = P.prof;
-  const done = () => { dress('khaki'); toast('Swearing-in done, khaki on. The bus to ' + P.short + ' is outside the gate.', 4000); campGo(7); };
+  const done = () => { dress('khaki'); toast('Swearing-in done, khaki on. The bus to ' + ST.post.short + (ST.state !== st.id ? ', ' + STATE().name : '') + ' is outside the gate.', 4000); campGo(7); };
   const lagosIkeja = st.id === 'LA' && P.short === 'Ikeja' && P.ppa === 'Corper Close Model School';
   ask('Posting list', `${esc(ST.name || 'Your name')}, ${ST.code || st.id + '/26C/----'}: <b>${P.short} LGA, ${st.name} State</b> · ${pr.density} density.<br>${pr.blurb}<br><small>PPA: <b>${esc(P.ppa)}</b> · Clearance monthly at the ${P.short} LGA Secretariat · Rent about ${naira(pr.rent)} a month</small>`, [
     ['"God, thank you!" 🙏🏾', () => { ST.stress = clamp(ST.stress - (pr.density === 'Low' ? 10 : 6), 0, 100); done(); }],
-    ['Ask about redeployment', () => ask('Redeployment desk', '"Redeployment is for marriage, health or security reasons, with documents. Do you have any of those?"', [
-      ['"No, I just don\'t like the place"', () => { toast('"Then go and serve your fatherland, corper." ' + P.short + ' it is.', 3600); done(); }],
-      ['"Abeg, I know somebody…"', () => { ST.rep -= 2; ST.stress = clamp(ST.stress + 6, 0, 100); toast('The officer looks at you for a long time. You decide ' + P.short + ' is actually lovely.', 3800); done(); }],
-    ])],
+    ['Ask about redeployment', () => redeploy(P, done)],
   ], lagosIkeja ? SAY('Your posting is out. Ikeja L G A, Lagos. Your place of primary assignment is Corper Close Model School. Clearance is every month at the L G A Secretariat.') : undefined);
   const others = st.lgas.filter(l => l[0] !== P.short).sort(() => Math.random() - .5).slice(0, 3).map(l => l[0]);
   chat('Platoon 5 · Camp Gist', `Who else got ${P.short}?? 🙋🏾`); setTimeout(() => chat('Emeka', pick([`They posted me to ${others[0]} 😭 is it far?`, `${others[1]}! Na there my uncle dey`, `${others[2]} for me. Who knows the place?`, `Abeg who has gone to ${P.short} before? How is accommodation?`])), 2200);
+}
+// Redeployment: real grounds cost money and may fail; "knowing somebody" costs big money and may be a scam.
+const ZONE_ORDER = ['SW', 'SE', 'SS', 'NC', 'NE', 'NW'];
+function pickState(onPick, onBack) {
+  ask('Redeployment form', 'Which part of the country do you want to serve in?', [
+    ...ZONE_ORDER.map(z => [ZONES[z].name, () => ask('Redeployment form', 'Which state?', [
+      ...STATES.filter(s => s.zone === z && s.id !== ST.state).map(s => [s.name + (s.id === 'FC' ? ' (Abuja)' : ''), () => onPick(s.id)]),
+      ['‹ Back', () => pickState(onPick, onBack)]])]),
+    ['‹ Never mind', onBack]]);
+}
+function applyRedeploy(id, done, how) {
+  const from = STATE().name; ST.state = id; const P2 = drawPosting(id, ST.course); ST.post = P2;
+  if (ST.code) ST.code = id + ST.code.slice(ST.code.indexOf('/')); ST.redeployed = how;
+  ask('Redeployment approved ✅', `From ${esc(from)} to <b>${esc(STATE().name)}${id === 'FC' ? '' : ' State'}</b>.<br>New posting: <b>${esc(P2.short)} LGA</b> · PPA: <b>${esc(P2.ppa)}</b><br><small>${P2.prof.blurb}</small>`, [['Pack my bag 🎒', done]]);
+  chat('Platoon 5 · Camp Gist', `Wait o, ${ST.name || 'this person'} don redeploy to ${STATE().name}?? 👀 How you take do am?`);
+}
+function redeploy(P, done) {
+  const stay = (msg) => { if (msg) toast(msg, 3800); done(); };
+  ask('Redeployment desk', '"Redeployment is for health, marriage or security reasons, with documents. Which one do you have?"', [
+    ['🏥 Health: get a medical report (about ₦8,500)', () => {
+      if (ST.cash < 8500) return ask('Bank alert', `Balance: <b>${naira(ST.cash)}</b>. Hospital card and test alone na ₦8,500 😭`, [[`Serve in ${esc(P.short)}`, () => stay()]]);
+      ST.cash -= 8500; ST.stress = clamp(ST.stress + 5, 0, 100); ST.energy = clamp(ST.energy - 10, 0, 100);
+      if (Math.random() < 0.55) ask('Redeployment desk', '"Your medical report is in order. Where do you want to go?"', [['Choose my state 🗺️', () => pickState(id => applyRedeploy(id, done, 'health'), () => stay())]]);
+      else ask('Redeployment desk', '"Not approved. The doctor wrote <i>mild malaria</i>. Malaria is not a reason, corper."', [['😭 Okay. ' + esc(P.short) + ' it is.', () => stay()]]);
+    }],
+    ['💍 Marriage: my spouse lives in another state', () => ask('Redeployment desk', '"Marriage certificate and a letter from your spouse, please."', [
+      ['"…I\'m not married yet" 😅', () => stay('"Then go and serve, corper." The officer is laughing at you.')],
+      ['"Give me one week, I go find person" 💀', () => { ST.rep -= 1; stay('The whole queue heard you. Platoon 5 will never forget this.'); }]])],
+    ['🤝 "Abeg, I know somebody…"', () => ask('“Somebody” behind the canteen', '"My guy, any state you want. Na ₦150,000. Cash or transfer."', [
+      ['Pay ₦150,000 💸', () => {
+        if (ST.cash < 150000) { ST.stress = clamp(ST.stress + 4, 0, 100); return stay(`You check your balance: ${naira(ST.cash)}. Sapa said no. ${P.short} is actually lovely.`); }
+        ST.cash -= 150000; ST.rep -= 4; ST.bribeTaken = (ST.bribeTaken || 0) + 1;
+        if (Math.random() < 0.5) { ST.stress = clamp(ST.stress + 15, 0, 100); return stay('Two days later, "somebody" has stopped picking your calls. ₦150,000 gone 😭'); }
+        pickState(id => applyRedeploy(id, done, 'connection'), () => stay());
+      }],
+      ['"That one pass me" 😂', () => stay()]])],
+    ['"Forget it. I go serve here."', () => stay()],
+  ]);
 }
 function leaveCamp() {
   cine('FOUR WEEKS LATER', LGN() + ', ' + SNAME() + ' State · Monthly clearance day', () => { enterStreet(); saveGame('street'); }, 3000);
@@ -1789,6 +1824,8 @@ function callUpLetter() {
   const st = STATE(), z = ZONES[st.zone];
   ask('Call-up letter', `<b>${esc(ST.name || 'Corps member')}</b>, you have been mobilised for the National Youth Service in <b>${st.name}${st.id === 'FC' ? '' : ' State'}</b> (${z.name}).<br>Report to the orientation camp at <b>${st.camp}</b>.<br><small>${st.nick ? '“' + st.nick + '” · ' : ''}Capital: ${st.capital} · ${st.lgas.length} LGAs · Languages you will hear: ${z.lang}${st.flav ? '<br>' + st.flav : ''}</small><br><small>Course: ${(COURSES.find(c => c[0] === ST.course) || [, ''])[1]} · Background: ${(BACKGROUNDS.find(b => b[0] === ST.bg) || [, ''])[1]}</small>`, [
     ['Report to camp ▶', () => { if (st.id !== 'LA') chat('Platoon 5 · Camp Gist', `Welcome to ${st.name} camp o! ${z.greet[0]}`); }],
+    [`"${st.name}?! I no fit go there 😭"`, () => ask('Mummy', `"Go and serve. If ${st.name} no favour you, you fit apply for redeployment after camp. Now go and pack your white."`, [
+      ['Report to camp ▶ (I go ask for redeployment later)', () => { chat('Platoon 5 · Camp Gist', `Welcome to ${st.name} camp o! ${z.greet[0]}`); toast('Tip: redeployment opens at the posting desk, after camp.', 4200); }]])],
   ]);
 }
 function themeCamp() { // your state's camp at the gate
@@ -1822,7 +1859,7 @@ function enterStreet() {
   }
 }
 /* ---------------- save / continue (this browser only) ---------------- */
-const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['state', 'course', 'cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles', 'queried', 'cdsDone'];
+const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['state', 'course', 'cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'redeployed', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles', 'queried', 'cdsDone'];
 function saveGame(cp) { try { const d = { cp, g: ST.g, at: Date.now(), st: {}, y: cp === 'year' ? Object.fromEntries(Object.entries(Y).filter(([k, v]) => typeof v !== 'function' && typeof v !== 'object')) : null }; for (const k of SAVE_FIELDS) if (ST[k] !== undefined) d.st[k] = ST[k]; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { } }
 function loadSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.cp && d.g ? d : null; } catch (e) { return null; } }
 function resumeFrom(d) {
@@ -3139,7 +3176,7 @@ boot().then(T => {
   $('cbg').innerHTML = `<button data-v="rand"><b>🎲 Surprise me</b><span>Life picks for you</span></button>` + BACKGROUNDS.map(b => `<button data-v="${b[0]}"><b>${b[1]}</b><span>${naira(b[3].cash)} · ${b[2]}</span></button>`).join('');
   const sync = () => { for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.classList.toggle('on', String(CH[key]) === b.dataset.v); };
   for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.onclick = () => { CH[key] = key === 'tone' ? +b.dataset.v : b.dataset.v; sync(); if (key !== 'bg') preview(); };
-  $('cstate').innerHTML = `<option value="rand">🎲 Random, like the real call-up letter</option>` + STATES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}${s.id === 'FC' ? '' : ' State'} · camp at ${s.camp.split(/[,(]/)[0]}</option>`).join('');
+  $('cstate').innerHTML = `<option value="rand">🎲 Random, like the real call-up letter (or pick yours)</option>` + STATES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}${s.id === 'FC' ? '' : ' State'} · camp at ${s.camp.split(/[,(]/)[0]}</option>`).join('');
   $('ccourse').innerHTML = `<option value="rand">🎲 Random</option>` + COURSES.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
   try { const last = JSON.parse(localStorage.getItem('nysc3d.corper') || 'null'); if (last) { Object.assign(CH, last); $('cname').value = CH.name || ''; } } catch (e) { }
   if (!CH.bgPick) CH.bg = 'rand'; $('cstate').value = INVITE ? INVITE.state : CH.pick || 'rand'; $('ccourse').value = CH.coursePick || 'rand';
