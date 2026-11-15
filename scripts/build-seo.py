@@ -114,8 +114,8 @@ def state_page(st):
             f'and play the service year on real {st["capital"]} streets, free in your browser.')
     cr, crld = crumbs([('Kopa Life', '/'), ('States', '/states'), (nm, None)])
     same_zone = [x for x in STATES if x['zone'] == st['zone'] and x['id'] != st['id']]
-    hero = (f'<figure class="hero-img"><img src="{street}" alt="A real {E(st["capital"])} street rebuilt in 3D in Kopa Life, with a corper in khaki" width="1200" height="675" fetchpriority="high"></figure>'
-            + (f'<figcaption>{E(o["road"])}, {E(st["capital"])}, rebuilt in the game from OpenStreetMap data.</figcaption>' if o.get("road") else f'<figcaption>A street in {E(st["capital"])}, rebuilt in the game from OpenStreetMap data.</figcaption>')) if street else ''
+    hero = (f'<figure class="hero-img"><img src="{street}" alt="{('A real ' + E(st["capital"]) + ' street') if o else 'A street'} rebuilt in 3D in Kopa Life, with a corper in khaki" width="1200" height="675" fetchpriority="high"></figure>'
+            + (f'<figcaption>{E(o["road"])}, {E(st["capital"])}, rebuilt in the game from OpenStreetMap data.</figcaption>' if o.get("road") else f'<figcaption>A street in {E(st["capital"])}, rebuilt in the game from OpenStreetMap data.</figcaption>' if o else f'<figcaption>The street you start on after posting in {E(nm)}. Real {E(st["capital"])} map data is coming soon.</figcaption>')) if street else ''
     lm_html = ''
     if lms:
         lm_html = f'<h2 id="landmarks">Landmarks you will see in {E(nm)}</h2><p>Walk around your posting in the game and these real places sit on the skyline and on your phone map:</p><ul class="chips">' + ''.join(f'<li>{E(l)}</li>' for l in lms) + '</ul>'
