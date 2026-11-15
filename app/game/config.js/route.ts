@@ -10,5 +10,19 @@ export function GET() {
   try { const u = new URL(url.replace(/^["']|["']$/g, "")); if (u.protocol === "https:" && /^[a-z0-9.-]+$/i.test(u.hostname)) safe = u.origin; } catch (e) { safe = ""; }
   const k = key.replace(/^["']|["']$/g, "");
   const body = `window.NYSC_CONFIG=${JSON.stringify({ supabaseUrl: safe || "https://YOUR-PROJECT-ID.supabase.co", supabaseAnonKey: k, online: !!(safe && k) })};`;
-  return new Response(body, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } });
+  // Moving players to the main domain (set MOVE_TO_DOMAIN=https://kopalife.com.ng in Vercel when ready).
+  // Saves live in each address's own browser storage, so instead of a server redirect the old address
+  // packs the player's saves into the link and the new address unpacks them. Nothing goes to any server.
+  let moveTo = "";
+  try { const m = new URL(pick("MOVE_TO_DOMAIN")); if (m.protocol === "https:") moveTo = m.origin; } catch (e) { moveTo = ""; }
+  const migrate = `(function(){var TO=${JSON.stringify(moveTo)},P="kmig=",S="nysc3d.save.v1";
+function prog(t){try{var o=JSON.parse(t),d=o&&o.done;return d?(d.length!=null?d.length:Object.keys(d).length):0}catch(e){return 0}}
+try{var W=window.top,h=W.location.hash;if(h.indexOf("#"+P)===0){var d=JSON.parse(decodeURIComponent(escape(atob(h.slice(P.length+1)))));
+for(var k in d){if(!/^nysc/.test(k)||typeof d[k]!=="string")continue;var mine=localStorage.getItem(k);
+if(mine===null||(k===S&&prog(d[k])>prog(mine)))localStorage.setItem(k,d[k]);}
+W.history.replaceState(null,"",W.location.pathname+W.location.search);}}catch(e){}
+try{if(TO&&/\\.vercel\\.app$/.test(location.hostname)&&location.origin!==TO){var o={},n=0;
+for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(/^nysc/.test(k)){o[k]=localStorage.getItem(k);n++}}
+var t=window.top.location;t.replace(TO+t.pathname+t.search+(n?"#"+P+btoa(unescape(encodeURIComponent(JSON.stringify(o)))):""));}}catch(e){}})();`;
+  return new Response(body + "\n" + migrate, { headers: { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "no-store" } });
 }

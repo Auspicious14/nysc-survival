@@ -75,3 +75,11 @@ Never put the Supabase service_role key anywhere in this project.
 `/states`, `/states/<state>` (36 states + FCT), `/nysc-slang`, `/nysc-camp-guide`, plus `public/sitemap.xml` and `public/robots.txt`.
 They live in `public/seo/` and are served at clean URLs by the rewrites in `next.config.mjs`.
 `--shots` takes a folder of in-game screenshots named `<STATE_ID>_street.jpg`.
+
+## Moving players to the main domain
+
+Saves live in each address's own browser storage. To send players from a `*.vercel.app` address to the main domain
+without losing progress, set `MOVE_TO_DOMAIN=https://kopalife.com.ng` in Vercel (Production) and redeploy.
+`/game/config.js` then forwards visitors of the vercel.app address to the same page on the main domain and carries
+their game data (`nysc*` keys only) in the link; the main domain keeps whichever save has more progress.
+Do not use Vercel's own domain redirect for the vercel.app address, because a server redirect cannot carry saves.
