@@ -1162,7 +1162,7 @@ function renderSettings() {
   const W = $('phone').dataset.wall || 'naija';
   $('psettings').innerHTML = `<h4>Wallpaper</h4><div class="walls">${[['naija', 'linear-gradient(165deg,#2fbf71,#0a3f27)'], ['lagoon', 'linear-gradient(165deg,#3bc9db,#13315c)'], ['sunset', 'linear-gradient(165deg,#ff8a3d,#5a1a3a)']].map(([k, bg]) => `<button data-w="${k}" class="${k === W ? 'on' : ''}" style="background:${bg}" aria-label="${k} wallpaper"></button>`).join('')}</div>
   <h4>General</h4><div class="grp"><button id="psnd"><span>Sound</span><span>${MUTED ? 'Off' : 'On'}</span></button><button id="pgfx"><span>Graphics</span><span>${{ auto: 'Auto' + (GFX.lite ? ' (Lite)' : ''), lite: 'Lite · smoother', high: 'High · prettier' }[GFX.mode]}</span></button><div><span>Phone</span><span>NaijaPhone 16 · 5G</span></div><div><span>Owner</span><span>${esc(ST.name || 'Corper')}</span></div><div><span>State of deployment</span><span>${STATE().name}</span></div></div>
-  <h4>About</h4><div class="grp"><div><span>Otondo</span><span>Fictional game</span></div></div>`;
+  <h4>About</h4><div class="grp"><div><span>Kopa Life</span><span>Fictional game</span></div></div>`;
   $('psettings').querySelectorAll('.walls button').forEach(b => b.onclick = () => { $('phone').dataset.wall = b.dataset.w; try { localStorage.setItem('nysc3d.wall', b.dataset.w); } catch (e) { } renderSettings(); });
   $('psnd').onclick = () => { $('bmute').click(); renderSettings(); };
   $('pgfx').onclick = () => { GFX.mode = { auto: 'lite', lite: 'high', high: 'auto' }[GFX.mode]; try { localStorage.setItem('nysc3d.gfx', GFX.mode); } catch (e) { } applyGfx(GFX.mode === 'lite' || (GFX.mode === 'auto' && GFX.lite), false); renderSettings(); };
@@ -2786,7 +2786,7 @@ function renderOnlineList() { // everyone online, closest to you first
 }
 /* ---------------- share cards + invite links (made for WhatsApp Status / TikTok) ---------------- */
 const ONCLAUDE = /claude\.ai|anthropic|claudeusercontent/.test(location.hostname) || location.protocol === 'file:';
-const SITE = ONCLAUDE || /^(localhost|127\.)/.test(location.hostname) ? 'https://otondo.com.ng' : location.origin;
+const SITE = ONCLAUDE || /^(localhost|127\.)/.test(location.hostname) ? 'https://kopalife.com.ng' : location.origin;
 const MARK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><clipPath id="pc"><path d="M256 70c-92 0-166 72-166 162 0 118 140 214 158 226a14 14 0 0 0 16 0c18-12 158-108 158-226 0-90-74-162-166-162z"/></clipPath></defs><g clip-path="url(#pc)"><rect x="60" y="60" width="140" height="420" fill="#1f9d55"/><rect x="200" y="60" width="112" height="420" fill="#f6f1e4"/><rect x="312" y="60" width="140" height="420" fill="#1f9d55"/></g><circle cx="256" cy="232" r="70" fill="#0b1a12"/><circle cx="256" cy="232" r="36" fill="#c9b78a"/></svg>';
 const MARK_IMG = new Image(); MARK_IMG.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(MARK_SVG);
 function inviteURL() {
@@ -2811,7 +2811,7 @@ function shareCard(o) { // o: { kicker, title, text, chips: [[label, value]] }
   let gr = g.createLinearGradient(0, 600, 0, 965); gr.addColorStop(0, 'rgba(11,26,18,0)'); gr.addColorStop(1, '#0b1a12'); g.fillStyle = gr; g.fillRect(0, 600, W, 370);
   gr = g.createLinearGradient(0, 0, 0, 260); gr.addColorStop(0, 'rgba(11,26,18,.75)'); gr.addColorStop(1, 'rgba(11,26,18,0)'); g.fillStyle = gr; g.fillRect(0, 0, W, 260);
   try { g.drawImage(MARK_IMG, 70, 70, 96, 96); } catch (e) { }
-  g.fillStyle = '#f6f1e4'; g.font = '800 58px system-ui, -apple-system, Segoe UI, Roboto, sans-serif'; g.textBaseline = 'middle'; g.fillText('otondo', 178, 120);
+  g.fillStyle = '#f6f1e4'; g.font = '800 58px system-ui, -apple-system, Segoe UI, Roboto, sans-serif'; g.textBaseline = 'middle'; g.fillText('kopa life', 178, 120);
   g.textBaseline = 'alphabetic'; let y = 1030;
   g.fillStyle = '#c9b78a'; g.font = '700 34px system-ui, sans-serif'; g.fillText(String(o.kicker || '').toUpperCase(), 80, y); y += 100;
   g.fillStyle = '#ffffff'; g.font = `900 ${o.title.length > 22 ? 88 : 104}px system-ui, sans-serif`; y = wrapText(g, o.title, 80, y, W - 160, o.title.length > 22 ? 96 : 112, 2) + 6;
@@ -2826,22 +2826,22 @@ function shareCard(o) { // o: { kicker, title, text, chips: [[label, value]] }
 function shareSheet(canvas, text, url) {
   let el = $('share'); if (!el) { el = document.createElement('div'); el.id = 'share'; document.body.appendChild(el); }
   const msg = `${text}\n${url}`;
-  el.innerHTML = `<div class="sbox"><img alt="Your Otondo card"><div class="sbtn"><button data-a="native">📤 Share</button><a data-a="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">🟢 WhatsApp</a><a data-a="save" download="otondo-card.jpg">⬇️ Save image</a><button data-a="copy">🔗 Copy link</button><button data-a="x">Close</button></div><small>Post it on your Status and tag your corper friends.</small></div>`;
+  el.innerHTML = `<div class="sbox"><img alt="Your Kopa Life card"><div class="sbtn"><button data-a="native">📤 Share</button><a data-a="wa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">🟢 WhatsApp</a><a data-a="save" download="kopalife-card.jpg">⬇️ Save image</a><button data-a="copy">🔗 Copy link</button><button data-a="x">Close</button></div><small>Post it on your Status and tag your corper friends.</small></div>`;
   el.hidden = false; const img = el.querySelector('img'); let data = ''; try { data = canvas.toDataURL('image/jpeg', 0.86); } catch (e) { }
   img.src = data; el.querySelector('[data-a="save"]').href = data;
   if (ONCLAUDE) el.querySelector('[data-a="save"]').remove(); // downloads don't work inside a claude.ai artifact
   const nat = el.querySelector('[data-a="native"]');
-  canvas.toBlob(b => { const f = b && new File([b], 'otondo.jpg', { type: 'image/jpeg' }); if (!(f && navigator.canShare && navigator.canShare({ files: [f] }))) { nat.remove(); return; } nat.onclick = () => navigator.share({ files: [f], text: msg }).catch(() => { }); }, 'image/jpeg', 0.86);
+  canvas.toBlob(b => { const f = b && new File([b], 'kopalife.jpg', { type: 'image/jpeg' }); if (!(f && navigator.canShare && navigator.canShare({ files: [f] }))) { nat.remove(); return; } nat.onclick = () => navigator.share({ files: [f], text: msg }).catch(() => { }); }, 'image/jpeg', 0.86);
   el.querySelector('[data-a="copy"]').onclick = e => { const done = () => { e.target.textContent = '✅ Copied'; }; const fail = () => { e.target.textContent = '⚠️ Copy blocked'; }; try { navigator.clipboard.writeText(msg).then(done, fail); } catch (er) { fail(); } };
   el.querySelector('[data-a="x"]').onclick = () => { el.hidden = true; };
 }
 function shareResult(ch) {
   const [t, d] = ch === 3 ? yearType() : corperType();
   const chips = [['📍', (ST.post && ST.post.lga) || (SNAME() + ' camp')], ['🪖 Drill', (ST.drillOk ?? 0) + '/6'], ['💸', naira(ST.cash || 0)]]; if (ch === 3) chips.push(['🎓', 'POP done']);
-  shareSheet(shareCard({ kicker: `${ST.name || 'Corper'} · ${STATE().name}${STATE().id === 'FC' ? '' : ' State'}`, title: t, text: d, chips }), `I just played Otondo, the corper game 🇳🇬 My result: ${t}. What kind of corper are you?`, inviteURL());
+  shareSheet(shareCard({ kicker: `${ST.name || 'Corper'} · ${STATE().name}${STATE().id === 'FC' ? '' : ' State'}`, title: t, text: d, chips }), `I just played Kopa Life, the corper game 🇳🇬 My result: ${t}. What kind of corper are you?`, inviteURL());
 }
 function shareInvite() {
-  shareSheet(shareCard({ kicker: 'Corper invite', title: `Join me in ${ST.post && ST.post.lga ? ST.post.lga : SNAME() + ' camp'}`, text: `I'm serving in ${STATE().name} on Otondo. Come and meet me: camp, CDS, clearance wahala and all.`, chips: [['🟢', 'Play online together'], ['📱', 'No download']] }), `Join me on Otondo, the corper game 🇳🇬 I'm in ${ST.post && ST.post.lga ? ST.post.lga : SNAME() + ' camp'}.`, inviteURL());
+  shareSheet(shareCard({ kicker: 'Corper invite', title: `Join me in ${ST.post && ST.post.lga ? ST.post.lga : SNAME() + ' camp'}`, text: `I'm serving in ${STATE().name} on Kopa Life. Come and meet me: camp, CDS, clearance wahala and all.`, chips: [['🟢', 'Play online together'], ['📱', 'No download']] }), `Join me on Kopa Life, the corper game 🇳🇬 I'm in ${ST.post && ST.post.lga ? ST.post.lga : SNAME() + ' camp'}.`, inviteURL());
 }
 // arriving from an invite link: same state (and LGA) as the friend who sent it
 const INVITE = (() => { try { const q = new URLSearchParams(location.search); const st = (q.get('state') || '').toUpperCase(); return STATES.some(s => s.id === st) ? { state: st, lga: (q.get('lga') || '').slice(0, 40) } : null; } catch (e) { return null; } })();

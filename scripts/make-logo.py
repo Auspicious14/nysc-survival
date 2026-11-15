@@ -1,4 +1,4 @@
-# Otondo logo: a pin-shaped "O" in Nigerian green with a white band (green-white-green), plus a wordmark set in Inter Display Black (outlined to paths).
+# Kopa Life logo: a pin-shaped "O" in Nigerian green with a white band (green-white-green), plus a wordmark set in Inter Display Black (outlined to paths).
 from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.boundsPen import BoundsPen
@@ -21,10 +21,10 @@ def mark(size=512, bg=True):
 <g clip-path="url(#pc)"><rect x="60" y="60" width="140" height="420" fill="#1f9d55"/><rect x="200" y="60" width="112" height="420" fill="#f6f1e4"/><rect x="312" y="60" width="140" height="420" fill="#1f9d55"/><rect x="60" y="60" width="392" height="420" fill="url(#sh)"/></g>
 <circle cx="256" cy="232" r="70" fill="#0b1a12"/><circle cx="256" cy="232" r="36" fill="#c9b78a"/>
 </svg>'''
-open(f'{OUT}/otondo-mark.svg', 'w').write(mark(512, True))
-open(f'{OUT}/otondo-mark-transparent.svg', 'w').write(mark(512, False))
-# wordmark: mark + "otondo"
-paths, w = word('otondo', -40)
+open(f'{OUT}/kopalife-mark.svg', 'w').write(mark(512, True))
+open(f'{OUT}/kopalife-mark-transparent.svg', 'w').write(mark(512, False))
+# wordmark: mark + "kopa life"
+paths, w = word('kopa life', -40)
 bp = BoundsPen(gs); gs[cmap[ord('o')]].draw(bp); xmin, ymin, xmax, ymax = bp.bounds; xh = ymax - ymin
 H = 200; sc = H * 0.40 / xh; markW = H
 cy = H * 232 / 512   # pin head centre
@@ -34,6 +34,6 @@ def lockup(ink):
 <g transform="scale({markW/512})">{mark(512, False).split('>',1)[1].rsplit('</svg>',1)[0]}</g>
 <g fill="{ink}" transform="translate({markW + 10} {cy + xh*sc/2}) scale({sc} {-sc})">{paths}</g>
 </svg>'''
-open(f'{OUT}/otondo-logo-light.svg', 'w').write(lockup('#f6f1e4'))
-open(f'{OUT}/otondo-logo-dark.svg', 'w').write(lockup('#0b1a12'))
+open(f'{OUT}/kopalife-logo-light.svg', 'w').write(lockup('#f6f1e4'))
+open(f'{OUT}/kopalife-logo-dark.svg', 'w').write(lockup('#0b1a12'))
 print('ok')

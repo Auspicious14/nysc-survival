@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 export const metadata = {
-  title: "Otondo · the corper game",
+  title: "Kopa Life · the corper game",
   description: "Survive the service year. A 3D Nigerian corper game: camp, CDS, clearance, PPA and the road to POP.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/brand/otondo-mark.svg", apple: "/brand/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Otondo", statusBarStyle: "black-translucent" },
+  icons: { icon: "/brand/kopalife-mark.svg", apple: "/brand/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Kopa Life", statusBarStyle: "black-translucent" },
 };
 export const viewport = { width: "device-width", initialScale: 1, themeColor: "#0b1a12", viewportFit: "cover" };
 export default function RootLayout({ children }: { children: ReactNode }) {

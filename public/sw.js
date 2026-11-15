@@ -1,6 +1,6 @@
-// Otondo service worker: makes the game installable and saves data on every visit after the first.
+// Kopa Life service worker: makes the game installable and saves data on every visit after the first.
 // Pages: network first (always fresh when online). Game files: served from the cache at once, refreshed quietly in the background.
-const CACHE = 'otondo-v1';
+const CACHE = 'kopalife-v1';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => {
   for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);
