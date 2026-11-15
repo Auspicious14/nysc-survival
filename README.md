@@ -68,3 +68,10 @@ Supabase pauses free projects after 7 days without activity. `vercel.json` sched
 Controls: WASD/arrows, Shift to run, drag to look, E to interact, P for phone. On phones: touch the left half to walk, drag the right half to look.
 
 Never put the Supabase service_role key anywhere in this project.
+
+## Search pages (SEO)
+
+`python3 scripts/build-seo.py --shots <dir>` regenerates the static search pages from the game's own state data:
+`/states`, `/states/<state>` (36 states + FCT), `/nysc-slang`, `/nysc-camp-guide`, plus `public/sitemap.xml` and `public/robots.txt`.
+They live in `public/seo/` and are served at clean URLs by the rewrites in `next.config.mjs`.
+`--shots` takes a folder of in-game screenshots named `<STATE_ID>_street.jpg`.
