@@ -41,6 +41,10 @@ input{flex:1;min-width:0;background:#0b1a12;border:1px solid var(--line);color:v
       <div class="grid" style="grid-template-columns:1fr 1.6fr"><div><p class="st" style="margin:0 0 10px">What should we add next?</p><div class="bars" id="svw"></div></div>
       <div style="min-width:0"><p class="st" style="margin:0 0 10px">What would make you play again tomorrow? (latest first)</p><div style="max-height:420px;overflow:auto"><table><thead><tr><th>Answer</th><th>From</th><th class="n">When</th></tr></thead><tbody id="sva"></tbody></table></div></div></div>
     </section>
+    <section class="panel" style="margin-top:16px"><h2>Player reports <span class="st" id="rpn"></span></h2>
+      <p class="st" style="margin:0 0 10px">From the 🚩 Report button in chat. Players' ids change every session, so look for patterns in names and messages.</p>
+      <div style="max-height:420px;overflow:auto"><table><thead><tr><th>Player</th><th>Message</th><th>Where</th><th class="n">When</th></tr></thead><tbody id="rpt"></tbody></table></div>
+    </section>
   </div>
 </div>
 <script src="/game/config.js"></script>
@@ -52,17 +56,31 @@ let key = ''; try { key = sessionStorage.getItem('nysc.admin') || ''; } catch (e
 async function load() {
   if (!C.online) { $('err').textContent = 'Supabase is not configured on this site (/game/config.js).'; $('login').hidden = false; return; }
   const r = await fetch(C.supabaseUrl + '/rest/v1/rpc/admin_stats', { method: 'POST', headers: { apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + C.supabaseAnonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key }) }).catch(() => null);
-  if (!r || !r.ok) { $('dash').hidden = true; $('login').hidden = false; $('err').textContent = r ? (r.status === 404 ? 'admin_stats is missing: run the PLAYER STATS part of supabase_schema.sql.' : 'Wrong key, or the key is not set in app_secrets.') : 'Could not reach Supabase.'; return false; }
-  const d = await r.json(); $('login').hidden = true; $('dash').hidden = false; render(d); loadSurvey(); return true;
+  const d = r && r.ok ? await r.json().catch(() => null) : null;
+  if (!d || d.error) {
+    key = ''; try { sessionStorage.removeItem('nysc.admin'); } catch (e) { }
+    $('dash').hidden = true; $('login').hidden = false;
+    $('err').textContent = !r ? 'Could not reach Supabase.' : r.status === 404 ? 'admin_stats is missing: run supabase/security_2026_11.sql in the Supabase SQL Editor.' : d && d.error === 'locked' ? 'Too many wrong keys from this network. Try again in 15 minutes.' : 'Wrong key, or the key is not set in app_secrets.';
+    return false;
+  }
+  $('login').hidden = true; $('dash').hidden = false; render(d); loadSurvey(); loadReports(); return true;
 }
 const WANTS = { cds: 'Online CDS with my LGA', friends: 'Friends & platoons', leaderboards: 'Leaderboards', minigames: 'More mini-games', meetups: 'Real-life meetups' };
 async function loadSurvey() {
   const r = await fetch(C.supabaseUrl + '/rest/v1/rpc/admin_survey', { method: 'POST', headers: { apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + C.supabaseAnonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key }) }).catch(() => null);
-  if (!r || !r.ok) { $('svn').textContent = r && r.status === 404 ? '· run the PLAYER SURVEY part of supabase_schema.sql to turn this on' : ''; return; }
-  const d = await r.json(), w = d.wants || {}, max = Math.max(1, ...Object.values(w));
+  const d = r && r.ok ? await r.json().catch(() => null) : null;
+  if (!d || d.error) { $('svn').textContent = r && r.status === 404 ? '· run supabase/security_2026_11.sql to turn this on' : ''; return; }
+  const w = d.wants || {}, max = Math.max(1, ...Object.values(w));
   $('svn').textContent = '· ' + f(d.total) + ' answers';
   $('svw').innerHTML = Object.keys(WANTS).sort((a, b) => (w[b] || 0) - (w[a] || 0)).map(k => `<div class="row" style="grid-template-columns:150px 1fr 40px"><span>${WANTS[k]}</span><div class="bar"><i style="width:${(w[k] || 0) / max * 100}%"></i></div><span class="n">${f(w[k])}</span></div>`).join('');
   $('sva').innerHTML = (d.recent || []).map(a => `<tr><td style="white-space:normal">${esc(a.again)}${a.wants && a.wants.length ? `<br><small class="st">${a.wants.map(x => esc(WANTS[x] || x)).join(' · ')}</small>` : ''}</td><td>${esc(NAMES[a.state] || a.state)}${a.lga ? '<br><small class="st">' + esc(a.lga) + '</small>' : ''}</td><td class="n"><small>${new Date(a.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' })}</small></td></tr>`).join('') || '<tr><td colspan="3" class="st">No written answers yet.</td></tr>';
+}
+async function loadReports() {
+  const r = await fetch(C.supabaseUrl + '/rest/v1/rpc/admin_reports', { method: 'POST', headers: { apikey: C.supabaseAnonKey, Authorization: 'Bearer ' + C.supabaseAnonKey, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_key: key }) }).catch(() => null);
+  const d = r && r.ok ? await r.json().catch(() => null) : null;
+  if (!d || d.error) { $('rpn').textContent = r && r.status === 404 ? '· run supabase/security_2026_11.sql to turn this on' : ''; return; }
+  $('rpn').textContent = '· ' + f(d.total) + ' reports';
+  $('rpt').innerHTML = (d.recent || []).map(a => `<tr><td>${esc(a.name || '(no name)')}<br><small class="st">id ${esc(a.target)} · reported ${f(a.times)}×</small></td><td style="white-space:normal">${esc(a.msg)}</td><td>${esc(a.room)}</td><td class="n"><small>${new Date(a.created_at).toLocaleString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></td></tr>`).join('') || '<tr><td colspan="4" class="st">No reports. 🙏🏾</td></tr>';
 }
 function render(d) {
   $('upd').innerHTML = '<i></i>Updated ' + new Date().toLocaleTimeString();

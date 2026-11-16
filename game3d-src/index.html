@@ -215,7 +215,7 @@ canvas{display:block;touch-action:none}
  <label for="cstate">Call-up letter · state of deployment</label><select id="cstate"></select>
  <label for="ccourse">Course of study</label><select id="ccourse"></select>
  <button id="go">Report to camp ▶</button><button id="gocont" hidden></button>
- <p>Fictional game. Not an official NYSC product.</p>
+ <p>Fictional game. Not an official NYSC product. · <a href="https://kopalife.com.ng/privacy" target="_blank" rel="noopener" style="color:inherit">Privacy</a></p>
 </div>
 <div id="hud" style="visibility:hidden">
  <div class="pill" id="obj"><small>Objective</small><b id="objt">Show your call-up letter at the camp gate</b></div>
@@ -244,6 +244,6 @@ canvas{display:block;touch-action:none}
 <div id="dlg" hidden></div>
 <div id="card" hidden></div>
 <div id="summary" hidden></div><div id="cq" hidden></div>
-<div id="drillbtns" hidden><button class="btn" onclick="window.__camp.drillAnswer(1)">⬅ Left turn</button><button class="btn" onclick="window.__camp.drillAnswer(2)">⬇ About turn</button><button class="btn" onclick="window.__camp.drillAnswer(0)">Right turn ➡</button></div>
+<div id="drillbtns" hidden><button class="btn" data-drill="1">⬅ Left turn</button><button class="btn" data-drill="2">⬇ About turn</button><button class="btn" data-drill="0">Right turn ➡</button></div>
 <div id="credits">3D models: "Lagos Danfo Bus" by Iam_thearchitect · "Autorikshaw" by bhagathartworks (Sketchfab, CC BY 4.0) · Characters: Mixamo (Lewis, Ch41, Ch26) · Music: Pixabay (FreeMusicForVideo, PlayStarz_Music, Kiravale) · <a href="models/credits.txt" target="_blank" style="color:inherit;pointer-events:auto">credits</a></div>
 <script type="module" src="./js/game.js"></script>

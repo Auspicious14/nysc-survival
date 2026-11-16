@@ -1,142 +1,8 @@
 -- ============================================================================
--- NYSC Survival: database setup for REAL-TIME CHAT and BATCHES (Supabase)
--- Run this ONCE: Supabase dashboard -> SQL Editor -> New query -> paste -> Run.
--- It is safe to run again (it uses "if not exists" / "or replace").
--- Before running, enable: Authentication -> Providers -> Anonymous Sign-Ins.
+-- KOPA LIFE: Supabase schema (run the whole file in the SQL Editor on a fresh project; safe to re-run)
+-- Stores no names: random device ids, the state/LGA you play in, timestamps, survey answers, player reports.
+-- The website only reaches the data through the functions below; every table has RLS on and no policies.
 -- ============================================================================
-
--- ---- tables ---------------------------------------------------------------
-create table if not exists public.batches (
-  id         int generated always as identity primary key,
-  seats      int not null default 0,
-  cap        int not null default 40,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.players (
-  uid        uuid primary key references auth.users(id) on delete cascade,
-  name       text not null check (char_length(name) <= 18),
-  skin       int  not null default 0,
-  batch_id   int  not null references public.batches(id),
-  seat       int  not null,
-  lga_i      int  not null,   -- index into the game's LGA list (0..7)
-  ppa_i      int  not null,   -- index into the game's PPA list (0..11)
-  created_at timestamptz not null default now()
-);
-create index if not exists players_batch_idx on public.players (batch_id, lga_i, ppa_i);
-
-create table if not exists public.messages (
-  id      bigint generated always as identity primary key,
-  channel text   not null check (char_length(channel) between 1 and 90),
-  ts      bigint not null default ((extract(epoch from now()) * 1000)::bigint),
-  uid     uuid   not null default auth.uid(),
-  n       text   not null check (char_length(n) between 1 and 18),
-  sk      int    not null default 0,
-  tx      text   not null check (char_length(tx) between 1 and 240)
-);
-create index if not exists messages_channel_ts_idx on public.messages (channel, ts desc);
-
--- ---- server-side rules for every new message --------------------------------
--- The server (not the browser) decides who sent it and when. One message per
--- ~1 second per person (chat channels). Inbox pings are not rate limited.
-create or replace function public.messages_before_insert() returns trigger
-language plpgsql as $$
-begin
-  new.uid := auth.uid();
-  new.ts  := (extract(epoch from now()) * 1000)::bigint;
-  new.tx  := btrim(new.tx);
-  if new.uid is null then raise exception 'not signed in'; end if;
-  if new.channel not like 'inbox-%' and exists (
-       select 1 from public.messages m
-       where m.uid = new.uid and m.channel not like 'inbox-%' and m.ts > new.ts - 900) then
-    raise exception 'rate limit';
-  end if;
-  return new;
-end $$;
-drop trigger if exists messages_before_insert on public.messages;
-create trigger messages_before_insert before insert on public.messages
-  for each row execute function public.messages_before_insert();
-
--- ---- who may do what (Row Level Security) -----------------------------------
-alter table public.batches  enable row level security;
-alter table public.players  enable row level security;
-alter table public.messages enable row level security;
--- batches and players have NO direct policies: the browser can only use the two
--- functions below. Messages:
-drop policy if exists messages_read   on public.messages;
-drop policy if exists messages_insert on public.messages;
-drop policy if exists messages_delete on public.messages;
--- Public channels (camp hall, LGA, PPA) are readable by everyone signed in.
--- Private DMs (dm-a--b) and inboxes (inbox-<uid>) only by people whose id is in the name.
-create policy messages_read on public.messages for select to authenticated using (
-  (channel not like 'dm-%' and channel not like 'inbox-%') or position(auth.uid()::text in channel) > 0);
-create policy messages_insert on public.messages for insert to authenticated with check (
-  uid = auth.uid() and (channel not like 'dm-%' or position(auth.uid()::text in channel) > 0));
--- You can delete your own messages; anyone can clean messages older than 48 hours.
-create policy messages_delete on public.messages for delete to authenticated using (
-  uid = auth.uid() or ts < ((extract(epoch from now()) * 1000)::bigint - 172800000));
-
--- ---- batches: put players into the same LGA / PPA -----------------------------
--- Seats are handed out in order. Every 5 players share an LGA; inside an LGA the
--- first 3 share one PPA and the next 2 share another. So 10 players = 2 LGAs of 5,
--- each split 3 + 2 (the example from the game design).
-create or replace function public.join_batch(p_name text, p_skin int, p_fresh boolean default false)
-returns table (o_batch int, o_seat int, o_lga int, o_ppa int)
-language plpgsql security definer set search_path = public as $$
-declare
-  v_uid uuid := auth.uid();
-  b public.batches%rowtype;
-  s int; slot int; grp int; ppa int;
-begin
-  if v_uid is null then raise exception 'not signed in'; end if;
-  if not p_fresh then
-    return query select pl.batch_id, pl.seat, pl.lga_i, pl.ppa_i from public.players pl where pl.uid = v_uid;
-    if found then return; end if;
-  end if;
-  select * into b from public.batches where seats < cap order by id limit 1 for update skip locked;
-  if not found then insert into public.batches default values returning * into b; end if;
-  s := b.seats;
-  update public.batches set seats = seats + 1 where id = b.id;
-  slot := (s / 5) % 8;           -- which LGA (0..7)
-  grp  := (s % 5) / 3;           -- 0 for the first three, 1 for the other two
-  ppa  := (slot * 2 + grp) % 12; -- which PPA (0..11)
-  insert into public.players (uid, name, skin, batch_id, seat, lga_i, ppa_i)
-  values (v_uid, left(coalesce(nullif(btrim(p_name), ''), 'Corper'), 18), coalesce(p_skin, 0), b.id, s, slot, ppa)
-  on conflict (uid) do update set name = excluded.name, skin = excluded.skin, batch_id = excluded.batch_id,
-     seat = excluded.seat, lga_i = excluded.lga_i, ppa_i = excluded.ppa_i, created_at = now();
-  return query select b.id, s, slot, ppa;
-end $$;
-
--- Who else is in my LGA (same PPA first)?
-create or replace function public.get_mates()
-returns table (o_uid uuid, o_name text, o_skin int, o_lga int, o_ppa int, o_same_ppa boolean)
-language sql security definer set search_path = public stable as $$
-  select p.uid, p.name, p.skin, p.lga_i, p.ppa_i, (p.ppa_i = me.ppa_i)
-  from public.players p
-  join public.players me on me.uid = auth.uid()
-  where p.batch_id = me.batch_id and p.lga_i = me.lga_i and p.uid <> me.uid
-  order by (p.ppa_i = me.ppa_i) desc, p.seat
-  limit 20;
-$$;
-
-revoke all on function public.join_batch(text, int, boolean) from public, anon;
-revoke all on function public.get_mates() from public, anon;
-grant execute on function public.join_batch(text, int, boolean) to authenticated;
-grant execute on function public.get_mates() to authenticated;
-
--- ---- live updates -----------------------------------------------------------
-do $$ begin
-  alter publication supabase_realtime add table public.messages;
-exception when duplicate_object then null; when undefined_object then null; end $$;
-
--- ---- optional housekeeping --------------------------------------------------
-create or replace function public.prune_messages() returns void
-language sql security definer set search_path = public as $$
-  delete from public.messages where ts < ((extract(epoch from now()) * 1000)::bigint - 172800000);
-$$;
-revoke all on function public.prune_messages() from public, anon, authenticated;
-
--- ---- keep-alive (stops the free project from pausing) -----------------------
 -- /api/keepalive (Vercel Cron, daily) reads this one-row table.
 create table if not exists public.keepalive (id int primary key default 1, note text default 'NYSC Survival keep-alive');
 insert into public.keepalive (id) values (1) on conflict (id) do nothing;
@@ -162,19 +28,6 @@ create index if not exists player_pings_seen_idx on public.player_pings (last_se
 create index if not exists player_pings_state_idx on public.player_pings (state);
 alter table public.player_pings enable row level security;   -- no direct access; only the functions below
 
--- the game calls this about once a minute while you play
-create or replace function public.track_player(p_uid text, p_state text, p_lga text default '', p_area text default '', p_new_session boolean default false)
-returns void language plpgsql security definer set search_path = public as $$
-begin
-  if p_uid is null or char_length(p_uid) < 6 or char_length(p_uid) > 40 then return; end if;
-  insert into player_pings (uid, state, lga, area) values (p_uid, left(coalesce(p_state,'LA'),4), left(coalesce(p_lga,''),60), left(coalesce(p_area,''),12))
-  on conflict (uid) do update set
-    state = excluded.state, lga = excluded.lga, area = excluded.area,
-    sessions = player_pings.sessions + case when p_new_session then 1 else 0 end,
-    minutes = player_pings.minutes + case when now() - player_pings.last_seen < interval '3 minutes' then greatest(1, extract(epoch from now() - player_pings.last_seen)::int / 60) else 0 end,
-    last_seen = now();
-end $$;
-
 -- what players see: totals, online now, and your state
 create or replace function public.public_stats(p_state text default null)
 returns json language sql security definer set search_path = public stable as $$
@@ -185,18 +38,143 @@ returns json language sql security definer set search_path = public stable as $$
     'state_online', (select count(*) from player_pings where state = p_state and last_seen > now() - interval '3 minutes'));
 $$;
 
--- the admin page: needs the key you set below
 create table if not exists public.app_secrets (name text primary key, value text not null);
 alter table public.app_secrets enable row level security;     -- nobody can read it directly
--- SET YOUR ADMIN KEY (change the text, then run this line):
--- insert into public.app_secrets (name, value) values ('admin_key', 'change-me-to-a-long-secret') on conflict (name) do update set value = excluded.value;
+-- SET YOUR ADMIN KEY (at least 12 characters; stored hashed):
+-- insert into public.app_secrets (name, value) values ('admin_key', extensions.crypt('change-me-to-a-long-secret', extensions.gen_salt('bf', 10))) on conflict (name) do update set value = excluded.value;
 
-create or replace function public.admin_stats(p_key text)
-returns json language plpgsql security definer set search_path = public stable as $$
-declare ok boolean;
+create table if not exists public.survey_answers (
+  uid        text primary key check (char_length(uid) between 6 and 40),
+  state      text not null default '' check (char_length(state) <= 4),
+  lga        text not null default '' check (char_length(lga) <= 60),
+  again      text not null default '' check (char_length(again) <= 300),
+  wants      text[] not null default '{}',
+  created_at timestamptz not null default now()
+);
+alter table public.survey_answers enable row level security;   -- no direct access; only the functions below
+
+
+-- ============================================================================
+-- KOPA LIFE SECURITY UPDATE (November 2026). Run once in the Supabase SQL Editor. Safe to run again.
+-- Fixes from the security review: retire the classic game's tables, per-IP rate limits on the public
+-- functions, strict input checks, hashed admin key with lockout, player reports, test-data cleanup.
+-- ============================================================================
+create extension if not exists pgcrypto with schema extensions;
+
+-- 1) The classic game is retired (anonymous sign-ins are off): remove its tables and functions.
+drop function if exists public.join_batch(text, int, boolean);
+drop function if exists public.get_mates();
+drop table if exists public.messages cascade;
+drop table if exists public.players cascade;
+drop table if exists public.batches cascade;
+drop function if exists public.messages_before_insert();
+
+-- 2) Helpers (not callable from the website)
+-- the caller's IP as seen by Supabase's edge (Cloudflare sets cf-connecting-ip; clients cannot fake it through the edge)
+create or replace function public.client_ip() returns text language sql stable as $$
+  with h as (select nullif(current_setting('request.headers', true), '')::json j)
+  select coalesce(nullif(j->>'cf-connecting-ip', ''), nullif(j->>'x-real-ip', ''),
+                  nullif(btrim(split_part(coalesce(j->>'x-forwarded-for', ''), ',', 1)), ''), '') from h;
+$$;
+
+create table if not exists public.rate_hits (
+  ip text not null, fn text not null, win timestamptz not null, n int not null default 0,
+  primary key (ip, fn, win));
+alter table public.rate_hits enable row level security;
+
+-- true while this network (IP) is under p_max calls of p_fn in the current window
+create or replace function public.rate_ok(p_fn text, p_max int, p_window interval)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare v_ip text := public.client_ip(); v_secs double precision := extract(epoch from p_window); v_win timestamptz; v_n int;
 begin
-  select exists(select 1 from app_secrets where name = 'admin_key' and value = p_key and char_length(value) >= 12) into ok;
-  if not ok then raise exception 'not allowed'; end if;
+  if v_ip = '' then return true; end if;
+  v_win := to_timestamp(floor(extract(epoch from now()) / v_secs) * v_secs);
+  insert into rate_hits as h (ip, fn, win, n) values (v_ip, p_fn, v_win, 1)
+  on conflict (ip, fn, win) do update set n = h.n + 1 returning n into v_n;
+  if random() < 0.01 then delete from rate_hits where win < now() - interval '2 days'; end if;
+  return v_n <= p_max;
+end $$;
+
+create or replace function public.valid_states() returns text[] language sql immutable as $$
+  select array['AB','AD','AK','AN','BA','BY','BE','BO','CR','DT','EB','ED','EK','EN','FC','GB','IM','JG','KD','KN','KT','KB','KG','KW','LA','NR','NG','OG','OD','OS','OY','PL','RV','SO','TR','YB','ZA'];
+$$;
+create or replace function public.clean_text(t text, n int) returns text language sql immutable as $$
+  select left(btrim(regexp_replace(coalesce(t, ''), '[<>"`\\[:cntrl:]]', '', 'g')), n);
+$$;
+
+-- 3) Player counts: real-looking ids only, known states only, limited per network
+create or replace function public.track_player(p_uid text, p_state text, p_lga text default '', p_area text default '', p_new_session boolean default false)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_new boolean;
+begin
+  if p_uid is null or p_uid !~ '^p[a-z0-9]{10,30}$' then return; end if;
+  if p_state is null or not (p_state = any(public.valid_states())) then return; end if;
+  if coalesce(p_area, '') !~ '^[a-z]{0,12}$' then p_area := ''; end if;
+  v_new := not exists (select 1 from player_pings where uid = p_uid);
+  if v_new and not public.rate_ok('new_player', 30, interval '1 hour') then return; end if;
+  if not public.rate_ok('ping', 600, interval '10 minutes') then return; end if;
+  insert into player_pings (uid, state, lga, area) values (p_uid, p_state, public.clean_text(p_lga, 60), coalesce(p_area, ''))
+  on conflict (uid) do update set
+    state = excluded.state, lga = excluded.lga, area = excluded.area,
+    sessions = player_pings.sessions + case when p_new_session then 1 else 0 end,
+    minutes = player_pings.minutes + case when now() - player_pings.last_seen < interval '3 minutes' then greatest(1, extract(epoch from now() - player_pings.last_seen)::int / 60) else 0 end,
+    last_seen = now();
+  if random() < 0.001 then delete from player_pings where last_seen < now() - interval '12 months'; end if; -- retention: 12 months
+end $$;
+
+-- 4) Survey: one answer per device (replaces), limited per network
+create or replace function public.submit_survey(p_uid text, p_state text, p_lga text, p_again text, p_wants text[])
+returns void language plpgsql security definer set search_path = public as $$
+declare allowed text[] := array['cds','friends','leaderboards','minigames','meetups'];
+begin
+  if p_uid is null or p_uid !~ '^p[a-z0-9]{10,30}$' then return; end if;
+  if not public.rate_ok('survey', 20, interval '1 hour') then return; end if;
+  insert into survey_answers (uid, state, lga, again, wants)
+  values (p_uid, case when p_state = any(public.valid_states()) then p_state else '' end, public.clean_text(p_lga, 60), public.clean_text(p_again, 300),
+          array(select distinct w from unnest(coalesce(p_wants, '{}')) w where w = any(allowed) limit 5))
+  on conflict (uid) do update set state = excluded.state, lga = excluded.lga, again = excluded.again, wants = excluded.wants, created_at = now();
+end $$;
+
+-- 5) Player reports from the in-game 🚩 Report button
+create table if not exists public.player_reports (
+  id bigint generated always as identity primary key,
+  reporter text not null, target text not null, name text not null default '', msg text not null default '', room text not null default '',
+  created_at timestamptz not null default now());
+alter table public.player_reports enable row level security;
+create or replace function public.report_player(p_uid text, p_target text, p_name text, p_text text, p_room text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_uid is null or p_uid !~ '^p[a-z0-9]{10,30}$' or p_target is null or p_target !~ '^[a-z0-9]{6,40}$' then return; end if;
+  if not public.rate_ok('report', 15, interval '1 hour') then return; end if;
+  insert into player_reports (reporter, target, name, msg, room) values (p_uid, p_target, public.clean_text(p_name, 24), public.clean_text(p_text, 200), public.clean_text(p_room, 80));
+  delete from player_reports where created_at < now() - interval '6 months';
+end $$;
+
+-- 6) Admin: the key is stored hashed (bcrypt); 8 wrong keys from one network locks it out for 15 minutes.
+--    Wrong keys return {"error": ...} instead of failing, so the failed attempt is recorded.
+create table if not exists public.admin_fails (ip text not null, at timestamptz not null default now());
+alter table public.admin_fails enable row level security;
+update public.app_secrets set value = extensions.crypt(value, extensions.gen_salt('bf', 10))
+  where name = 'admin_key' and value !~ '^\$2[aby]\$';
+
+create or replace function public.admin_ok(p_key text)
+returns text language plpgsql security definer set search_path = public, extensions as $$
+declare v_ip text := public.client_ip(); v_hash text;
+begin
+  if (select count(*) from admin_fails where ip = v_ip and at > now() - interval '15 minutes') >= 8 then return 'locked'; end if;
+  select value into v_hash from app_secrets where name = 'admin_key';
+  if v_hash ~ '^\$2[aby]\$' and p_key is not null and char_length(p_key) between 12 and 200 and extensions.crypt(p_key, v_hash) = v_hash then return 'ok'; end if;
+  insert into admin_fails (ip) values (v_ip);
+  delete from admin_fails where at < now() - interval '1 day';
+  return 'denied';
+end $$;
+
+drop function if exists public.admin_stats(text);
+create or replace function public.admin_stats(p_key text)
+returns json language plpgsql security definer set search_path = public as $$
+declare v text := public.admin_ok(p_key);
+begin
+  if v <> 'ok' then return json_build_object('error', v); end if;
   return json_build_object(
     'players', (select count(*) from player_pings),
     'online', (select count(*) from player_pings where last_seen > now() - interval '3 minutes'),
@@ -214,41 +192,12 @@ begin
         select date_trunc('day', first_seen)::date as day, count(*) as new_players from player_pings where first_seen > now() - interval '30 days' group by 1) r));
 end $$;
 
-grant execute on function public.track_player(text, text, text, text, boolean) to anon, authenticated;
-grant execute on function public.public_stats(text) to anon, authenticated;
-grant execute on function public.admin_stats(text) to anon, authenticated;
-
--- ============================================================================
--- PLAYER SURVEY (end of Chapter 1): "What would make you play again tomorrow?" + "What should we add next?"
--- One answer per device (answering again replaces it). No names: the same random device id as player_pings.
--- ============================================================================
-create table if not exists public.survey_answers (
-  uid        text primary key check (char_length(uid) between 6 and 40),
-  state      text not null default '' check (char_length(state) <= 4),
-  lga        text not null default '' check (char_length(lga) <= 60),
-  again      text not null default '' check (char_length(again) <= 300),
-  wants      text[] not null default '{}',
-  created_at timestamptz not null default now()
-);
-alter table public.survey_answers enable row level security;   -- no direct access; only the functions below
-
-create or replace function public.submit_survey(p_uid text, p_state text, p_lga text, p_again text, p_wants text[])
-returns void language plpgsql security definer set search_path = public as $$
-declare allowed text[] := array['cds','friends','leaderboards','minigames','meetups'];
-begin
-  if p_uid is null or char_length(p_uid) < 6 or char_length(p_uid) > 40 then return; end if;
-  insert into survey_answers (uid, state, lga, again, wants)
-  values (p_uid, left(coalesce(p_state,''),4), left(coalesce(p_lga,''),60), left(btrim(coalesce(p_again,'')),300),
-          array(select distinct w from unnest(coalesce(p_wants,'{}')) w where w = any(allowed)))
-  on conflict (uid) do update set state = excluded.state, lga = excluded.lga, again = excluded.again, wants = excluded.wants, created_at = now();
-end $$;
-
+drop function if exists public.admin_survey(text);
 create or replace function public.admin_survey(p_key text)
-returns json language plpgsql security definer set search_path = public stable as $$
-declare ok boolean;
+returns json language plpgsql security definer set search_path = public as $$
+declare v text := public.admin_ok(p_key);
 begin
-  select exists(select 1 from app_secrets where name = 'admin_key' and value = p_key and char_length(value) >= 12) into ok;
-  if not ok then raise exception 'not allowed'; end if;
+  if v <> 'ok' then return json_build_object('error', v); end if;
   return json_build_object(
     'total', (select count(*) from survey_answers),
     'wants', (select coalesce(json_object_agg(w, n), '{}') from (select w, count(*) n from survey_answers, unnest(wants) w group by w) t),
@@ -256,5 +205,33 @@ begin
         select state, lga, again, wants, created_at from survey_answers where again <> '' order by created_at desc limit 100) r));
 end $$;
 
+create or replace function public.admin_reports(p_key text)
+returns json language plpgsql security definer set search_path = public as $$
+declare v text := public.admin_ok(p_key);
+begin
+  if v <> 'ok' then return json_build_object('error', v); end if;
+  return json_build_object(
+    'total', (select count(*) from player_reports),
+    'recent', (select coalesce(json_agg(r order by r.created_at desc), '[]') from (
+        select target, name, msg, room, created_at, (select count(*) from player_reports p2 where p2.target = p.target) as times
+        from player_reports p order by created_at desc limit 100) r));
+end $$;
+
+-- 7) Who may call what: the website (anon) only gets the public entry points.
+revoke all on function public.client_ip() from public, anon, authenticated;
+revoke all on function public.rate_ok(text, int, interval) from public, anon, authenticated;
+revoke all on function public.admin_ok(text) from public, anon, authenticated;
+revoke all on function public.valid_states() from public, anon, authenticated;
+revoke all on function public.clean_text(text, int) from public, anon, authenticated;
+grant execute on function public.track_player(text, text, text, text, boolean) to anon, authenticated;
+grant execute on function public.public_stats(text) to anon, authenticated;
 grant execute on function public.submit_survey(text, text, text, text, text[]) to anon, authenticated;
+grant execute on function public.report_player(text, text, text, text, text) to anon, authenticated;
+grant execute on function public.admin_stats(text) to anon, authenticated;
 grant execute on function public.admin_survey(text) to anon, authenticated;
+grant execute on function public.admin_reports(text) to anon, authenticated;
+revoke all on public.rate_hits, public.admin_fails, public.player_reports, public.player_pings, public.survey_answers, public.app_secrets from anon, authenticated;
+
+-- 8) Remove the security tester's data (ids that the game never creates)
+delete from public.survey_answers where uid !~ '^p[a-z0-9]{10,30}$';
+delete from public.player_pings where uid !~ '^p[a-z0-9]{10,30}$';

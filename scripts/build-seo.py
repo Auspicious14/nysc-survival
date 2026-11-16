@@ -47,7 +47,7 @@ FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="p
 NAV = '''<nav><div class="wrap"><a href="/" aria-label="Kopa Life home"><img src="/brand/kopalife-logo-light.svg" alt="Kopa Life" width="128" height="34" style="height:32px;width:auto"></a>
 <div class="links"><a class="opt" href="/states">States</a><a class="opt" href="/nysc-camp-guide">Camp guide</a><a class="opt" href="/nysc-slang">Slang</a><a class="btn sm" href="/play">Play free</a></div></div></nav>'''
 FOOT = f'''<footer><div class="wrap"><div><b>Kopa Life</b> · the corper game<br>A fictional game about the NYSC service year, built by a serving corper.<br>Not affiliated with or endorsed by the National Youth Service Corps.<br>Map data © <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap contributors</a> (ODbL).</div>
-<div class="cols"><div><b>Play</b><a href="/play">Play free</a><a href="/">Home</a></div><div><b>Guides</b><a href="/nysc-camp-guide">NYSC camp guide</a><a href="/nysc-camp-guide#packing-list">Camp packing list</a><a href="/nysc-slang">NYSC slang</a></div><div><b>States</b><a href="/states/lagos">Lagos</a><a href="/states/fct">FCT Abuja</a><a href="/states/oyo">Oyo</a><a href="/states/rivers">Rivers</a><a href="/states">All 37 →</a></div></div></div></footer>'''
+<div class="cols"><div><b>Play</b><a href="/play">Play free</a><a href="/">Home</a></div><div><b>Guides</b><a href="/nysc-camp-guide">NYSC camp guide</a><a href="/nysc-camp-guide#packing-list">Camp packing list</a><a href="/nysc-slang">NYSC slang</a><a href="/privacy">Privacy</a></div><div><b>States</b><a href="/states/lagos">Lagos</a><a href="/states/fct">FCT Abuja</a><a href="/states/oyo">Oyo</a><a href="/states/rivers">Rivers</a><a href="/states">All 37 →</a></div></div></div></footer>'''
 
 def page(path, title, desc, body, ld, image='/brand/og.jpg', kind='article'):
     url = SITE + path
@@ -277,6 +277,39 @@ def guide_page():
     return page('/nysc-camp-guide', 'NYSC Camp Packing List & Survival Guide (2026) · Kopa Life',
                 'What to take to NYSC orientation camp, what happens on arrival, the daily routine, and survival tips from a serving corper. Then practise camp in Kopa Life, free.', body, ld, image='/landing/img/parade.jpg')
 
+# ---- privacy notice ---------------------------------------------------------------------------
+SEC_CONTACT = 'https://github.com/Auspicious14/nysc-survival/security/advisories/new'
+def privacy_page():
+    cr, crld = crumbs([('Kopa Life', '/'), ('Privacy', None)])
+    rows = [
+        ('A random device ID', 'Made by your browser when you first play. It is not linked to your name, phone or email.', 'Count players and show how many people are playing', '12 months after you last play'),
+        ('The state and LGA you are playing in, and which part of the game', 'For example "Lagos · Ikeja LGA · street".', 'Player counts per state and LGA', '12 months after you last play'),
+        ('Your survey answers (optional)', 'Only if you fill in the survey after Chapter 1.', 'Decide what to build next', 'Until the game shuts down, or you ask us to delete them'),
+        ('Reports you send', 'The reported player\'s in-game name and message.', 'Keep online chat safe', '6 months'),
+        ('Your network (IP) address', 'Seen briefly by our database.', 'Stop people flooding the game with fake players or guessing the admin password', '2 days (failed admin logins: 1 day)'),
+    ]
+    table = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:15px"><thead><tr>' + ''.join(f'<th style="text-align:left;padding:8px;border-bottom:1px solid var(--line);color:var(--khaki)">{h}</th>' for h in ['What', 'Details', 'Why', 'Kept for']) + '</tr></thead><tbody>' + ''.join('<tr>' + ''.join(f'<td style="vertical-align:top;padding:10px 8px;border-bottom:1px solid var(--line)">{E(c)}</td>' for c in r) + '</tr>' for r in rows) + '</tbody></table></div>'
+    body = f'''<article class="wrap narrow">{cr}
+<header class="page"><span class="kick">Last updated {TODAY}</span><h1>Privacy</h1>
+<p class="lead" style="margin-top:16px">Kopa Life is a free, fictional game about the NYSC service year, made by an independent developer. It is not affiliated with the National Youth Service Corps. We collect as little as we can.</p></header>
+<h2>What we collect on this website</h2>
+{table}
+<h2>What we do not collect</h2>
+<ul class="check"><li>Your real name, email, phone number, photos or contacts.</li><li>Your location from GPS. The state you play in is the one you choose in the game.</li><li>No ads, no tracking pixels, and we never sell or share data for marketing.</li></ul>
+<h2>What stays on your phone</h2>
+<p>Your saved game, your settings and your corper name are kept in your browser's storage on your device. Clearing this site's data in your browser deletes them.</p>
+<h2>Playing online</h2>
+<p>When you play online, other players in your camp, LGA or PPA can see your corper name, outfit, where you are standing, and the messages you send to everyone. Those messages pass through our realtime service and are not stored. <b>Private messages are encrypted end to end</b>: only you and the person you write to can read them. Phone numbers and links are hidden in chat to protect players from scams. Never share bank details or your home address with someone you met in a game.</p>
+<p>Online chat is meant for people aged 18 and over.</p>
+<h2>Who helps us run the game</h2>
+<p><b>Vercel</b> hosts the website and <b>Supabase</b> runs the database and online play. Map data comes from <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>. They process data only to provide these services.</p>
+<h2>Your rights</h2>
+<p>Under the Nigeria Data Protection Act 2023 you can ask what we hold about you, ask us to correct or delete it, and complain to the Nigeria Data Protection Commission. Because we do not know who you are, tell us the date and the state you played in, and we will find and delete the matching records.</p>
+<h2 id="contact">Contact</h2>
+<p>For privacy questions or to report a security problem, write to us through our <a href="{SEC_CONTACT}" rel="noopener">private reporting page</a>. Please do not test the security of the game in a way that affects other players.</p>
+</article>'''
+    return page('/privacy', 'Privacy · Kopa Life', 'What Kopa Life collects (very little), why, how long we keep it, and your rights under the Nigeria Data Protection Act.', body, [crld], kind='website')
+
 # ---- write everything ----------------------------------------------------------------------
 os.makedirs(os.path.join(OUT, 'states'), exist_ok=True)
 for st in STATES:
@@ -284,8 +317,9 @@ for st in STATES:
 open(os.path.join(OUT, 'states', 'index.html'), 'w', encoding='utf-8').write(states_index())
 open(os.path.join(OUT, 'nysc-slang.html'), 'w', encoding='utf-8').write(slang_page())
 open(os.path.join(OUT, 'nysc-camp-guide.html'), 'w', encoding='utf-8').write(guide_page())
+open(os.path.join(OUT, 'privacy.html'), 'w', encoding='utf-8').write(privacy_page())
 
-urls = [('/', '1.0', 'weekly'), ('/play', '0.9', 'weekly'), ('/nysc-camp-guide', '0.8', 'monthly'), ('/nysc-slang', '0.8', 'monthly'), ('/states', '0.8', 'monthly')] + \
+urls = [('/', '1.0', 'weekly'), ('/play', '0.9', 'weekly'), ('/nysc-camp-guide', '0.8', 'monthly'), ('/nysc-slang', '0.8', 'monthly'), ('/states', '0.8', 'monthly'), ('/privacy', '0.3', 'yearly')] + \
        [(f'/states/{slug(s)}', '0.7', 'monthly') for s in STATES]
 sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + ''.join(
     f'  <url><loc>{SITE}{u}</loc><lastmod>{TODAY}</lastmod><changefreq>{f}</changefreq><priority>{p}</priority></url>\n' for u, p, f in urls) + '</urlset>\n'

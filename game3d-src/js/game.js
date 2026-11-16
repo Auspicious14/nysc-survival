@@ -1049,7 +1049,8 @@ function renderChats() {
   const ts = [...PH.threads.values()].sort((a, b) => b.last - a.last);
   const os = ON.net ? onlineSummary() : null;
   const gs = STATS.d, fmt = n => Number(n || 0).toLocaleString('en-NG');
-  $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${gs ? fmt(Math.max(gs.online, os.all + 1)) + ' playing now' : os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${gs ? `${fmt(gs.state_online)} online in ${esc(STATE().name)} · ${fmt(gs.players)} corpers have played` + (os.atPPA ? ` · ${os.atPPA} at your PPA` : '') : os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div><button class="ogrp" id="oinv" style="background:#e7f6ec;color:#14532d;margin-top:-2px">📨 Invite corper friends</button>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; return `<button data-n="${t.name.replace(/"/g, '&quot;')}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${t.name}</b><span>${l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? l.from + ': ' : '') + l.text.replace(/<[^>]+>/g, '') : 'No messages yet'}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
+  $('pchats').innerHTML = (os ? `<div class="onl" id="onl"><i>🟢</i><div><b>${gs ? fmt(Math.max(gs.online, os.all + 1)) + ' playing now' : os.all ? os.all + ' corper' + (os.all > 1 ? 's' : '') + ' online' : 'Online play is on'}</b><span>${gs ? `${fmt(gs.state_online)} online in ${esc(STATE().name)} · ${fmt(gs.players)} corpers have played` + (os.atPPA ? ` · ${os.atPPA} at your PPA` : '') : os.all ? `${os.atPPA ? os.atPPA + ' at your PPA · ' : ''}${ST.post ? os.inLga + ' in your LGA · ' : ''}${os.inState} in ${esc(STATE().name)}` : 'Nobody else is in the game right now. Share the game link with your corper friends.'}</span></div></div><button class="ogrp" id="oinv" style="background:#e7f6ec;color:#14532d;margin-top:-2px">📨 Invite corper friends</button>` : '') + ts.map(t => { const l = t.msgs[t.msgs.length - 1]; const prev = l ? (l.from === 'You' ? 'You: ' : t.kind === 'group' ? String(l.from).replace(/<[^>]+>/g, '') + ': ' : '') + (l.online ? (l.st && STICKERS[l.st] ? STICKERS[l.st][0] : l.t || '') : String(l.text || '').replace(/<[^>]+>/g, '')) : 'No messages yet';
+    return `<button data-n="${esc(t.name)}"><i>${t.kind === 'sms' ? '🏦' : t.kind === 'dm' ? '🙂' : '👥'}</i><div><b>${esc(t.name)}</b><span>${esc(prev)}</span></div>${t.unread ? `<em>${t.unread}</em>` : ''}</button>`; }).join('') || '<p>No chats yet.</p>';
   for (const b of $('pchats').querySelectorAll('button')) b.onclick = () => { PH.thread = b.dataset.n; phShow('thread'); };
   if ($('oinv')) $('oinv').onclick = () => { phone(false); setTimeout(shareInvite, 450); };
   if ($('onl')) $('onl').onclick = () => { PH.onlist = true; $('pchats').innerHTML = renderOnlineList() + `<button class="ogrp">💬 Open the group chat here</button>`;
@@ -1058,15 +1059,15 @@ function renderChats() {
 }
 function renderBank() {
   const acct = '30' + String(10000000 + ((ST.name || 'corper').split('').reduce((a, c) => a * 31 + c.charCodeAt(0), 7) % 89999999)).slice(0, 8);
-  $('pbank').innerHTML = `<div class="bal"><small>NAIJA TRUST BANK · SAVINGS</small><b>${naira(ST.cash)}</b><span>${(ST.name || 'Corps Member').toUpperCase()} · ${acct}</span></div>
+  $('pbank').innerHTML = `<div class="bal"><small>NAIJA TRUST BANK · SAVINGS</small><b>${naira(ST.cash)}</b><span>${esc((ST.name || 'Corps Member').toUpperCase())} · ${acct}</span></div>
   <div class="bacts"><button id="bsend">💸 Send ${naira(5000)} home</button><button id="bdata">📶 Buy data ${naira(1000)}</button></div>
-  <h4>Recent transactions</h4><ul>${PH.ledger.slice(0, 30).map(l => `<li><div><b>${l.label}</b><small>${l.t}</small></div><span class="${l.d > 0 ? 'cr' : 'dr'}">${l.d > 0 ? '+' : '−'}${naira(Math.abs(l.d))}</span></li>`).join('') || '<li><div><b>No transactions yet</b><small>Your alert never comes when you need it.</small></div></li>'}</ul>`;
+  <h4>Recent transactions</h4><ul>${PH.ledger.slice(0, 30).map(l => `<li><div><b>${esc(l.label)}</b><small>${esc(l.t)}</small></div><span class="${l.d > 0 ? 'cr' : 'dr'}">${l.d > 0 ? '+' : '−'}${naira(Math.abs(l.d))}</span></li>`).join('') || '<li><div><b>No transactions yet</b><small>Your alert never comes when you need it.</small></div></li>'}</ul>`;
   $('bsend').onclick = () => { if (ST.cash < 5000) return toast('Insufficient funds. The app is laughing at you.'); ST.txn = 'Transfer to MUMMY'; ST.cash -= 5000; ST.rep += 1; ST.stress = clamp(ST.stress - 4, 0, 100); ST.sentHome = (ST.sentHome || 0) + 1; hudSync(); setTimeout(() => chat('Mummy ❤️', pick(['I have seen the alert. God will bless you my child 🙏🏾', 'Ah! My own corper! Thank you. Have you eaten?', 'Thank you my dear. Your daddy says well done.'])), 2200); };
   $('bdata').onclick = () => { if (ST.cash < 1000) return toast('Insufficient funds. Even data is doing shakara.'); ST.txn = 'Airtime & data'; ST.cash -= 1000; ST.stress = clamp(ST.stress - 1, 0, 100); hudSync(); toast('3GB added. It will finish before Friday.', 2600); };
 }
 function renderID() {
   const bgl = (BACKGROUNDS.find(b => b[0] === ST.bg) || [0, 'Allowance-only'])[1], bar = (v, c) => `<div class="bar"><i style="width:${clamp(v, 0, 100)}%;background:${c}"></i></div>`;
-  $('pid').innerHTML = `<div class="idc"><small>CORPS MEMBER · FICTIONAL ID</small><b>${ST.name || 'Corper'}</b><span>${ST.code || 'State code: not yet registered'}</span></div>
+  $('pid').innerHTML = `<div class="idc"><small>CORPS MEMBER · FICTIONAL ID</small><b>${esc(ST.name || 'Corper')}</b><span>${esc(ST.code || 'State code: not yet registered')}</span></div>
   <dl>${ST.ch === 3 ? `<div><dt>Service</dt><dd>Month ${Y.month} of ${Y.MONTHS} · ${{ Mon: 'PPA day', Thu: 'CDS day', Sat: 'Free day', Clr: 'Clearance', Pop: 'POP' }[Y.kind]}</dd></div><div><dt>Attendance</dt><dd>PPA ${Y.ppaDays}/${Y.ppaDays + Y.ppaMiss} · CDS ${Y.cdsDays}/${Y.cdsDays + Y.cdsMiss}</dd></div>` : ''}<div><dt>Platoon</dt><dd>${ST.code ? '5' : '—'}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga + ', ' + ST.post.state : '—'}</dd></div><div><dt>PPA</dt><dd>${ST.post ? ST.post.ppa : '—'}</dd></div><div><dt>Background</dt><dd>${bgl}</dd></div><div><dt>Reputation</dt><dd>${ST.rep}</dd></div></dl>
   <label>Energy ${Math.round(ST.energy)}</label>${bar(ST.energy, '#1a9d52')}<label>Stress ${Math.round(ST.stress)}</label>${bar(ST.stress, '#d93025')}
   <div class="vibe"><small>YOUR VIBE SO FAR</small><b>${corperType()[0]}</b></div>
@@ -1861,7 +1862,29 @@ function enterStreet() {
 /* ---------------- save / continue (this browser only) ---------------- */
 const SAVE_KEY = 'nysc3d.save.v1', SAVE_FIELDS = ['state', 'course', 'cash', 'rep', 'stress', 'energy', 'code', 'post', 'drillOk', 'danced', 'watched', 'ppaScore', 'honest', 'bribeTaken', 'redeployed', 'infoPlug', 'khakiSize', 'phoneOpens', 'gateBribe', 'bunk', 'done', 'name', 'tone', 'bg', 'famSent', 'hustles', 'queried', 'cdsDone'];
 function saveGame(cp) { try { const d = { cp, g: ST.g, at: Date.now(), st: {}, y: cp === 'year' ? Object.fromEntries(Object.entries(Y).filter(([k, v]) => typeof v !== 'function' && typeof v !== 'object')) : null }; for (const k of SAVE_FIELDS) if (ST[k] !== undefined) d.st[k] = ST[k]; localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (e) { } }
-function loadSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.cp && d.g ? d : null; } catch (e) { return null; } }
+// A save is untrusted input (it can arrive from a link or a tampered browser): keep known fields, plain values only, no markup.
+const scrubStr = v => String(v).replace(/[<>"`\\]/g, '').replace(/&/g, 'and').replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 300);
+function scrub(v, depth = 0) {
+  if (typeof v === 'string') return scrubStr(v);
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.max(-1e9, Math.min(1e9, v)) : 0;
+  if (typeof v === 'boolean' || v === null) return v;
+  if (depth > 4) return undefined;
+  if (Array.isArray(v)) return v.slice(0, 200).map(x => scrub(x, depth + 1)).filter(x => x !== undefined);
+  if (v && typeof v === 'object') { const o = {}; for (const [k, x] of Object.entries(v).slice(0, 80)) { if (!/^[A-Za-z0-9_]{1,30}$/.test(k)) continue; const y = scrub(x, depth + 1); if (y !== undefined) o[k] = y; } return o; }
+  return undefined;
+}
+function cleanSave(d) {
+  if (!d || typeof d !== 'object' || !['ch2', 'year', 'street'].includes(d.cp) || !['m', 'f'].includes(d.g)) return null;
+  const st = {}; for (const k of SAVE_FIELDS) if (d.st && d.st[k] !== undefined) { const v = scrub(d.st[k]); if (v !== undefined) st[k] = v; }
+  st.state = STATES.some(x => x.id === st.state) ? st.state : 'LA';
+  st.name = typeof st.name === 'string' ? st.name.slice(0, 14) : 'Corper';
+  if (st.code !== undefined && !/^[A-Z]{2}\/\d{2}[A-Z]\/\d{3,5}$/.test(String(st.code))) delete st.code;
+  if (st.post && typeof st.post !== 'object') delete st.post;
+  if (st.tone !== undefined && ![0, 1, 2].includes(st.tone)) st.tone = 1;
+  const y = d.y && typeof d.y === 'object' ? scrub(d.y) : null;
+  return { cp: d.cp, g: d.g, at: Number(d.at) || 0, st, y };
+}
+function loadSave() { try { return cleanSave(JSON.parse(localStorage.getItem(SAVE_KEY) || 'null')); } catch (e) { return null; } }
 function resumeFrom(d) {
   Object.assign(ST, d.st); PH.cash = null; ST.cstep = 99; CAMP.exodus = true;
   for (const p of people) if (p.area === 'camp') p.hidden = true;
@@ -2057,8 +2080,8 @@ function corperType() {
 }
 function showSummary(ch = 1) {
   const [t, d] = ch === 3 ? yearType() : corperType(), el = $('summary');
-  el.innerHTML = `<small>${esc((ST.name || 'CORPER').toUpperCase())} · ${ST.code || 'NO STATE CODE'} · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
-  <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${ST.post ? ST.post.lga : '—'}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch === 2 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div>${ch === 3 ? `<div><dt>PPA days</dt><dd>${Y.ppaDays} present · ${Y.ppaMiss} missed · ${Y.lates} late</dd></div><div><dt>CDS</dt><dd>${Y.cdsDays} attended · ${Y.cdsMiss} missed</dd></div><div><dt>Clearance</dt><dd>${Y.cleared || 0} of ${Y.MONTHS - 1} cleared</dd></div><div><dt>Earned</dt><dd>${naira(Y.earned)}</dd></div><div><dt>Spent</dt><dd>${naira(Y.spent)}</dd></div><div><dt>Sent home</dt><dd>${naira(Y.sent)}</dd></div><div><dt>Balance at POP</dt><dd>${naira(ST.cash)}</dd></div>` : ''}</dl>
+  el.innerHTML = `<small>${esc((ST.name || 'CORPER').toUpperCase())} · ${esc(ST.code || 'NO STATE CODE')} · CHAPTER ${ch}</small><h2>${t}</h2><p>${d}</p>
+  <dl><div><dt>Background</dt><dd>${(BACKGROUNDS.find(b => b[0] === ST.bg) || BACKGROUNDS[0])[1]}</dd></div><div><dt>Posting</dt><dd>${esc(ST.post ? ST.post.lga : '—')}</dd></div><div><dt>Drill</dt><dd>${ST.drillOk ?? 0} / 6</dd></div><div><dt>Class</dt><dd>${ST.ppaScore ?? 0} / 5</dd></div>${ch === 2 ? `<div><dt>CDS</dt><dd>${ST.cdsDone ? 'Attended ✅' : ST.queried ? 'Queried ⚠️' : CDS.truth ? 'Missed' : 'Cancelled'}</dd></div><div><dt>Rumour</dt><dd>${CDS.truth ? 'False' : 'True'}${CDS.confirmed ? ' · you checked' : ''}</dd></div>` : ''}<div><dt>Reputation</dt><dd>${ST.rep}</dd></div><div><dt>Balance</dt><dd>${naira(ST.cash)}</dd></div><div><dt>Stress</dt><dd>${Math.round(ST.stress)}</dd></div><div><dt>Energy</dt><dd>${Math.round(ST.energy)}</dd></div>${ch === 3 ? `<div><dt>PPA days</dt><dd>${Y.ppaDays} present · ${Y.ppaMiss} missed · ${Y.lates} late</dd></div><div><dt>CDS</dt><dd>${Y.cdsDays} attended · ${Y.cdsMiss} missed</dd></div><div><dt>Clearance</dt><dd>${Y.cleared || 0} of ${Y.MONTHS - 1} cleared</dd></div><div><dt>Earned</dt><dd>${naira(Y.earned)}</dd></div><div><dt>Spent</dt><dd>${naira(Y.spent)}</dd></div><div><dt>Sent home</dt><dd>${naira(Y.sent)}</dd></div><div><dt>Balance at POP</dt><dd>${naira(ST.cash)}</dd></div>` : ''}</dl>
   <div class="row"><button class="btn g" id="sumplay">${ch === 1 ? 'Continue to Chapter 2' : ch === 2 ? 'Start your service year ▶' : 'Keep exploring ' + LGN()}</button><button class="btn" id="sumshare">📤 Share my result</button><button class="btn" id="sumagain">Start again</button></div>`;
   if (ch === 1) saveGame('ch2'); if (ch === 2) { ST.ch = 3; saveGame('year'); ST.ch = 2; }
   if (ch === 1) surveyCard(el);
@@ -2090,6 +2113,7 @@ function surveyCard(el) {
 }
 $('arrow').onclick = () => { if (ST.target && ST.area === 'street' && !ST.riding && !DLG) travelMenu(ST.target, ST.target.label); };
 window.__travel = { travelMenu, rideTo };
+document.querySelectorAll('#drillbtns [data-drill]').forEach(b => b.addEventListener('click', () => drillAnswer(+b.dataset.drill)));
 window.__ppa = { ppaGo, kekeToPPA, principal1, startLesson, staffRoom, principal2, showSummary, corperType, SCH };
 
 /* ---------------- Chapter 2: CDS week, and the rumour mill ---------------- */
@@ -2639,7 +2663,7 @@ function myPPA() { return (ST.post && ST.post.ppa) || ''; }
 async function startOnline() {
   if (ON.starting) return; ON.starting = true;
   ON.net = await connectNet(); if (!ON.net) return;
-  ON.net.lobby.onPeers(c => { ON.lobby = c.peers.filter(p => !p.isMe && p.kind === 'viewer' && p.presence && p.presence.v === 1); onMessages(); if (PH.screen === 'chats' && !PH.onlist) renderChats(); });
+  ON.net.lobby.onPeers(c => { ON.lobby = c.peers.filter(p => !p.isMe && p.kind === 'viewer' && p.presence && p.presence.v === 1 && JSON.stringify(p.presence).length < 4096).slice(0, 300); for (const p of ON.lobby) peerUid(p.presence); onMessages(); if (PH.screen === 'chats' && !PH.onlist) renderChats(); });
 }
 async function onJoin(name) {
   if (ON.joining === name) return; ON.joining = name;
@@ -2691,26 +2715,29 @@ function updateStats(dt) { // website: count players and show a glimpse of who i
 function updateOnline(dt) {
   if (!ST.ready || window.__noNet) return;
   updateStats(dt);
+  if (!ON.uid) return;
   if (!ON.net) { startOnline(); return; }
   const want = onRoomName(); if (want !== ON.rname) onJoin(want);
   const P = player.o.position;
   // lobby: who is where (for the online list)
-  ON.lobT -= dt; if (ON.lobT <= 0) { ON.lobT = 1.5; const lp = { v: 1, uid: ON.uid, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), st: ST.state || 'LA', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(), msgs: ON.out.slice(-6) }; const k = JSON.stringify(lp); if (k !== ON.lobKey) { ON.lobKey = k; ON.net.lobby.presence(lp); } }
+  ON.lobT -= dt; if (ON.lobT <= 0) { ON.lobT = 1.5; const lp = { v: 1, uid: ON.uid, pk: ON.pk, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), st: ST.state || 'LA', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(), msgs: ON.out.slice(-6) }; const k = JSON.stringify(lp); if (k !== ON.lobKey) { ON.lobKey = k; ON.net.lobby.presence(lp); } }
   if (!ON.room) return;
   // me, about 8 times a second while moving, every 2 s otherwise
   ON.sendT -= dt; const sp = player.speed || 0;
-  const me = { v: 1, uid: ON.uid, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), g: ST.g === 'f' ? 'f' : 'm', tone: CH.tone, o: ST.outfit || 'mufti', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(),
+  const me = { v: 1, uid: ON.uid, pk: ON.pk, nm: cleanTxt(ST.name || CH.name || 'Corper', 24), g: ST.g === 'f' ? 'f' : 'm', tone: CH.tone, o: ST.outfit || 'mufti', ar: ST.area, lga: (ST.post && ST.post.lga) || '', org: myPPA(),
     x: Math.round(P.x * 10) / 10, z: Math.round(P.z * 10) / 10, ry: Math.round(player.o.rotation.y * 100) / 100, sp: sp > 4.2 ? 2 : sp > 0.3 ? 1 : 0, em: ON.em, rd: ST.riding ? 1 : 0 };
   const key = JSON.stringify(me);
   if (key !== ON.lastKey && ON.sendT <= 0 || ON.sendT < -2) { ON.sendT = 0.125; ON.lastKey = key; ON.room.presence(me); }
   // everyone else in this room
-  const seen = new Set();
+  const seen = new Set(); let made = 0;
   for (const peer of ON.room.peers()) {
     if (peer.isMe || peer.kind !== 'viewer' || !peer.presence || peer.presence.v !== 1) continue;
+    if (!ON.remotes.has(peer.peer) && (ON.remotes.size >= 40 || made >= 2)) continue; // at most 40 players drawn, 2 new per frame
+    if (JSON.stringify(peer.presence).length > 4096) continue;
     seen.add(peer.peer); let r = ON.remotes.get(peer.peer);
     const s = peer.presence;
     if (r && (s.o !== r.o || (s.g === 'f' ? 'f' : 'm') !== r.g || s.tone !== r.tone || s.nm !== r.s.nm || s.org !== r.s.org)) { dropRemote(r); ON.remotes.delete(peer.peer); r = null; }
-    if (!r) { makeRemote(peer); continue; }
+    if (!r) { made++; makeRemote(peer); continue; }
     if (r.loading) continue;
     r.s = s; if (Number.isFinite(s.x) && Number.isFinite(s.z)) { r.tx = clamp(s.x, -2000, 2000); r.tz = clamp(s.z, -2000, 2000); } if (Number.isFinite(s.ry)) r.ry = s.ry;
     if (s.em && s.em.n !== r.emN) { r.emN = s.em.n; r.emT = 2.6; play(r.p, r.p.acts.wave ? 'wave' : 'dance'); }
@@ -2740,13 +2767,14 @@ function onlineInteractables(L) {
 }
 function onlineMenu(r) {
   const nm = esc(tame(r.s.nm || 'Corper')), z = ZN(), org = r.s.org ? esc(tame(r.s.org, 40)) : '';
-  ask(nm + ' · online corper', `${nm} is another player, ${r.rel}${org ? ' (PPA: ' + org + ')' : ''}. What you say to everyone shows above your head and in the 🟢 Online chat here. Private messages only reach them.`, [
+  ask(nm + ' · online corper', `${nm} is another player, ${r.rel}${org ? ' (PPA: ' + org + ')' : ''}. What you say to everyone is public: it shows above your head and in the 🟢 Online chat here. Private messages are encrypted end to end, so only they can read them. Never share your phone number or bank details with someone you met here.`, [
     ['👋 Wave', () => { onWave(); }],
     [`"${z.greet || 'How far'}! Omo, how far?"`, () => onSay(`${z.greet || 'How far'}! Omo, how far?`)],
     ['"Which PPA dem post you?"', () => onSay(myPPA() ? `Which PPA dem post you? I dey ${myPPA()}.` : 'Which PPA dem post you?')],
     ['"Is there CDS this week?"', () => onSay('Abeg, is there CDS this week? Group chat don confuse me.')],
     ['💬 Type a message to everyone here…', () => { openThread(onThread(), 'group'); setTimeout(() => { const i = $('pcin'); if (i) i.focus(); }, 300); }],
-    ...(r.s.uid ? [['🔒 Message ' + nm + ' privately', () => { const n = dmName(String(r.s.uid).slice(0, 16), tame(r.s.nm || 'Corper', 24)); thr(n, 'dm').uid = String(r.s.uid).slice(0, 16); openThread(n, 'dm'); setTimeout(() => { const i = $('pcin'); if (i) i.focus(); }, 300); }]] : []),
+    ...(peerUid(r.s) ? [['🔒 Message ' + nm + ' privately', () => { const u = peerUid(r.s); if (!u) return; const n = dmName(u, tame(r.s.nm || 'Corper', 24)); thr(n, 'dm').uid = u; openThread(n, 'dm'); setTimeout(() => { const i = $('pcin'); if (i) i.focus(); }, 300); }]] : []),
+    ...(peerUid(r.s) ? [['🚩 Report ' + nm, () => reportPlayer(peerUid(r.s), tame(r.s.nm || 'Corper', 24), 'Reported from the street')]] : []),
     [ON.muted.has(r.peer) ? '🔊 Unmute' : '🔇 Mute ' + nm, () => { if (ON.muted.has(r.peer)) ON.muted.delete(r.peer); else { ON.muted.add(r.peer); if (r.bub) r.bub.visible = false; } toast(ON.muted.has(r.peer) ? `${tame(r.s.nm || 'Corper')} is muted. You won't see their messages.` : 'Unmuted.'); }],
   ], ' ');
 }
@@ -2757,18 +2785,67 @@ function onlineSummary() {
 }
 /* ---------------- online chat: group per place, private messages, replies, emojis, stickers ---------------- */
 // Messages ride in each player's lobby presence (last few only), so every transport carries them the same way.
-// "Private" means only the person you wrote to sees it in the game; it is not encrypted.
+// Group messages are public to everyone in the room. Private messages are sealed end to end (see seal/unseal).
 const STICKERS = { omo: ['Omo! 😩', '#ff7043'], nawa: ['Na wa o', '#7e57c2'], abeg: ['Abeg 🙏🏾', '#26a69a'], nowahala: ['No wahala 👌🏾', '#43a047'], sapa: ['Sapa is real 💸', '#8d6e63'], pop: ['POP loading… 🎓', '#1e88e5'], cds: ['CDS wey? 🤔', '#f9a825'], clear: ['Clearance don start? 🏃🏾', '#e53935'], cast: ['E don cast 😂', '#ec407a'], soft: ['Soft life only ✨', '#ab47bc'], chop: ['Wetin we go chop? 🍲', '#ef6c00'], allow: ['Allow am 🤲🏾', '#00897b'] };
 const EMOJIS = '😂🤣😅😩😭🙏🏾👌🏾👍🏾👏🏾🔥💯❤️😍🥰😎🤔😴🥵🥶😡🤦🏾‍♂️🤦🏾‍♀️🤷🏾‍♂️🤷🏾‍♀️💪🏾🙌🏾👀🎉🇳🇬💸🍲🍚🥤🚌🛺📚🏫🏥☕🎶⚽'.match(/\p{Extended_Pictographic}(️|‍\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*|🇳🇬/gu);
-ON.uid = (() => { try { let u = sessionStorage.getItem('nysc3d.uid'); if (!u) { u = Math.random().toString(36).slice(2, 12); sessionStorage.setItem('nysc3d.uid', u); } return u; } catch (e) { return Math.random().toString(36).slice(2, 12); } })();
+// Identity: one ECDH key pair per tab session. A player's uid is the first 16 hex characters of SHA-256(public key),
+// so nobody can claim someone else's uid without their private key. Private messages are sealed with AES-GCM using a
+// key both sides derive from ECDH: only the two players can read them, and only the real sender can write them.
+const CRY = window.crypto && crypto.subtle;
+const b64 = u8 => { let s = ''; for (const c of u8) s += String.fromCharCode(c); return btoa(s); };
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const hex16 = async raw => [...new Uint8Array(await CRY.digest('SHA-256', raw))].slice(0, 8).map(b => b.toString(16).padStart(2, '0')).join('');
+ON.uid = ''; ON.pk = ''; ON.keyP = null; ON.pkCache = new Map(); ON.aes = new Map(); ON.rate = new Map();
+ON.ready = (async () => {
+  if (!CRY) { ON.uid = 'x' + Math.random().toString(36).slice(2, 12); return; } // very old browsers: chat works, private messages don't
+  const EC = { name: 'ECDH', namedCurve: 'P-256' }; let kp = null;
+  try { const j = JSON.parse(sessionStorage.getItem('nysc3d.key') || 'null'); if (j) kp = { privateKey: await CRY.importKey('jwk', j.priv, EC, false, ['deriveKey']), publicKey: await CRY.importKey('jwk', j.pub, EC, true, []) }; } catch (e) { kp = null; }
+  if (!kp) { kp = await CRY.generateKey(EC, true, ['deriveKey']); try { sessionStorage.setItem('nysc3d.key', JSON.stringify({ priv: await CRY.exportKey('jwk', kp.privateKey), pub: await CRY.exportKey('jwk', kp.publicKey) })); } catch (e) { } }
+  const raw = new Uint8Array(await CRY.exportKey('raw', kp.publicKey)); ON.keyP = kp; ON.pk = b64(raw); ON.uid = await hex16(raw);
+})().catch(() => { ON.uid = 'x' + Math.random().toString(36).slice(2, 12); });
+function peerUid(s) { // a peer's uid only counts once it is proven to match their public key
+  if (!s || typeof s.pk !== 'string' || s.pk.length > 120 || typeof s.uid !== 'string' || !CRY) return null;
+  const c = ON.pkCache.get(s.pk);
+  if (c === undefined) { if (ON.pkCache.size > 3000) ON.pkCache.clear(); ON.pkCache.set(s.pk, null); try { const raw = unb64(s.pk); if (raw.length !== 65) return null; hex16(raw).then(u => { ON.pkCache.set(s.pk, u); onMessages(); }).catch(() => { }); } catch (e) { } return null; }
+  return c && c === s.uid ? c : null;
+}
+async function dmKey(pk) {
+  let k = ON.aes.get(pk); if (k) return k;
+  const pub = await CRY.importKey('raw', unb64(pk), { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  k = await CRY.deriveKey({ name: 'ECDH', public: pub }, ON.keyP.privateKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  ON.aes.set(pk, k); return k;
+}
+async function seal(pk, obj) { const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await CRY.encrypt({ name: 'AES-GCM', iv }, await dmKey(pk), new TextEncoder().encode(JSON.stringify(obj)))), out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return b64(out); }
+async function unseal(pk, c) { const b = unb64(c); return JSON.parse(new TextDecoder().decode(await CRY.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12) }, await dmKey(pk), b.slice(12)))); }
+async function pkOf(uid) { // the recipient's public key, once proven to belong to that uid
+  for (const p of ON.lobby) { const s = p.presence; if (s.uid !== uid || typeof s.pk !== 'string') continue; try { const raw = unb64(s.pk); if (raw.length === 65 && await hex16(raw) === uid) { ON.pkCache.set(s.pk, uid); return s.pk; } } catch (e) { } }
+  return null;
+}
+// Scams start with "add me on WhatsApp": phone numbers and links never travel through chat.
+const KEEP_LINK = /kopalife\.com\.ng|kopalife\.vercel\.app/i;
+const maskContact = t => String(t || '').replace(/\b(?:https?:\/\/|www\.)\S+|\b[\w-]+(?:\.[\w-]+)*\.(?:com|ng|net|org|io|me|ly|link|xyz|app|co|info|biz|site|online|live|gg)\b(?:\/\S*)?/gi, m => KEEP_LINK.test(m) ? m : '🔗 [link hidden]').replace(/(?:\+?\d[\s\-.()]{0,3}){7,}/g, ' 📵 [number hidden] ').replace(/\s+/g, ' ').trim();
+function allowFrom(uid) { const now = Date.now(), a = (ON.rate.get(uid) || []).filter(t => now - t < 20000); if (a.length >= 6) return false; a.push(now); ON.rate.set(uid, a); if (ON.rate.size > 2000) ON.rate.clear(); return true; }
+function reportPlayer(uid, nm, text) {
+  if (!uid) return; ON.mutedU.add(uid);
+  if (STATS.c === undefined) STATS.c = statsClient();
+  if (STATS.c && STATS.c.report) STATS.c.report(uid, cleanTxt(nm, 24), cleanTxt(text, 200), ON.rname);
+  toast(STATS.c ? `Reported. ${cleanTxt(nm, 24)} is muted for you, and the Kopa Life team will review it.` : `${cleanTxt(nm, 24)} is muted for you.`, 3800);
+}
 ON.out = []; ON.seenMsg = new Set(); ON.mid = 0; ON.reply = null; ON.dms = new Map(); // uid → thread name
 const dmName = (uid, nm) => { const have = ON.dms.get(uid); if (have) return have; let n = '🟢 ' + nm; for (const [u, t] of ON.dms) if (t === n && u !== uid) n += ' · ' + uid.slice(0, 3); ON.dms.set(uid, n); return n; };
-function onSend(o) { // o: { t } or { st }
+async function onSend(o) { // o: { t } or { st }
+  if (!ON.uid) await ON.ready;
   const T = PH.thread || '', th = thr(T), to = th.uid || null;
   const m = { id: ON.uid + '.' + (++ON.mid), ch: to ? 'dm' : ON.rname, to, at: Date.now() };
-  if (o.st && STICKERS[o.st]) m.st = o.st; else { m.t = tame(o.t); if (!m.t) return; }
-  if (ON.reply) m.re = { id: ON.reply.id, nm: cleanTxt(ON.reply.nm, 24), t: cleanTxt(ON.reply.t, 60) };
-  ON.out.push(m); if (ON.out.length > 6) ON.out.shift(); ON.lobT = 0; ON.lobKey = '';
+  if (o.st && STICKERS[o.st]) m.st = o.st; else { const raw = tame(o.t); m.t = maskContact(raw); if (!m.t) return; if (m.t !== raw) toast('Phone numbers and links are hidden in chat, to protect players from scams.', 3600); }
+  if (ON.reply) m.re = { id: ON.reply.id, nm: cleanTxt(ON.reply.nm, 24), t: maskContact(cleanTxt(ON.reply.t, 60)) };
+  let wire = m;
+  if (to) { // private: only the sealed copy travels
+    const pk = await pkOf(to);
+    if (!pk || !ON.keyP) { toast('They are offline now. Private messages need you both online.', 3200); return; }
+    wire = { id: m.id, ch: 'dm', to, at: m.at, c: await seal(pk, { id: m.id, at: m.at, t: m.t, st: m.st, re: m.re }) };
+  }
+  ON.out.push(wire); if (ON.out.length > 6) ON.out.shift(); ON.lobT = 0; ON.lobKey = '';
   if (!to && m.t) { ON.say = { t: m.t, n: ++ON.sayN, at: m.at }; ON.sendT = 0; }
   addMsg(T, { from: 'You', kind: 'me', online: 1, id: m.id, t: m.t, st: m.st, re: m.re });
   setReply(null);
@@ -2787,11 +2864,17 @@ function onMessages() { // read everyone's recent messages from the lobby
   for (const p of ON.lobby) {
     const s = p.presence, nm = tame(s.nm || 'Corper', 24); if (!Array.isArray(s.msgs) || ON.mutedU.has(s.uid)) continue;
     for (const m of s.msgs.slice(-6)) {
-      if (!m || typeof m.id !== 'string' || ON.seenMsg.has(m.id)) continue; ON.seenMsg.add(m.id);
+      if (!m || typeof m.id !== 'string' || ON.seenMsg.has(m.id)) continue; if (ON.seenMsg.size > 5000) ON.seenMsg.clear(); ON.seenMsg.add(m.id);
       if (Date.now() - (m.at || 0) > 120000) continue; // old news from before you arrived
-      const base = { from: esc(nm) + ' 🟢', kind: '', online: 1, id: m.id.slice(0, 40), uid: String(s.uid || '').slice(0, 16), nm, t: m.t ? tame(m.t) : '', st: STICKERS[m.st] ? m.st : '', re: m.re && typeof m.re === 'object' ? { id: String(m.re.id || '').slice(0, 40), nm: tame(m.re.nm, 24), t: tame(m.re.t, 60) } : null };
-      if (m.ch === 'dm') { if (m.to === ON.uid) addMsg(dmName(base.uid, nm), { ...base, dm: 1 }); }
-      else if (m.ch === ON.rname) { addMsg(onThread(), base); const r = [...ON.remotes.values()].find(r => r.s.uid === s.uid); if (r && r.p) remoteBubble(r, base.st ? STICKERS[base.st][0] : base.t); }
+      const uid = peerUid(s); if (!uid) { ON.seenMsg.delete(m.id); continue; } // not verified yet: look again once it is
+      if (!allowFrom(uid)) continue;
+      const pack = (x, re) => ({ from: esc(nm) + ' 🟢', kind: '', online: 1, id: m.id.slice(0, 40), uid, nm, t: x.t ? maskContact(tame(x.t)) : '', st: STICKERS[x.st] ? x.st : '', re: re && typeof re === 'object' ? { id: String(re.id || '').slice(0, 40), nm: tame(re.nm, 24), t: maskContact(tame(re.t, 60)) } : null });
+      if (m.ch === 'dm') {
+        if (m.to === ON.uid && typeof m.c === 'string' && m.c.length < 2000 && ON.keyP) unseal(s.pk, m.c).then(x => { if (!x || x.id !== m.id || Math.abs(Date.now() - (x.at || 0)) > 120000) return; addMsg(dmName(uid, nm), { ...pack(x, x.re), dm: 1 }); }).catch(() => { });
+        continue;
+      }
+      const base = pack(m, m.re);
+      if (m.ch === ON.rname) { addMsg(onThread(), base); const r = [...ON.remotes.values()].find(r => peerUid(r.s) === uid); if (r && r.p) remoteBubble(r, base.st ? STICKERS[base.st][0] : base.t); }
     }
   }
 }
@@ -2809,11 +2892,12 @@ function findMsg(id) { const t = thr(PH.thread); return t.msgs.find(m => m.id ==
 function msgMenu(el, m) {
   document.querySelectorAll('#msgs .mm').forEach(x => x.remove());
   const mine = m.kind === 'me', canDM = !mine && m.uid && !thr(PH.thread).uid;
-  el.insertAdjacentHTML('afterend', `<div class="mm${mine ? ' me' : ''}"><button data-a="r">↩ Reply</button>${canDM ? '<button data-a="d">💬 Message privately</button>' : ''}${!mine && m.uid ? '<button data-a="x">🔇 Mute</button>' : ''}</div>`);
+  el.insertAdjacentHTML('afterend', `<div class="mm${mine ? ' me' : ''}"><button data-a="r">↩ Reply</button>${canDM ? '<button data-a="d">💬 Message privately</button>' : ''}${!mine && m.uid ? '<button data-a="x">🔇 Mute</button><button data-a="p">🚩 Report</button>' : ''}</div>`);
   const mm = el.nextElementSibling;
   mm.querySelector('[data-a="r"]').onclick = () => { mm.remove(); setReply(m); };
   const d = mm.querySelector('[data-a="d"]'); if (d) d.onclick = () => { mm.remove(); const n = dmName(m.uid, m.nm); thr(n, 'dm').uid = m.uid; PH.thread = n; phShow('thread'); };
   const x = mm.querySelector('[data-a="x"]'); if (x) x.onclick = () => { mm.remove(); ON.mutedU.add(m.uid); toast(`${m.nm} is muted.`); };
+  const rp = mm.querySelector('[data-a="p"]'); if (rp) rp.onclick = () => { mm.remove(); reportPlayer(m.uid, m.nm, m.st ? STICKERS[m.st][0] : m.t); };
 }
 // swipe a message to the right to reply (like WhatsApp); tap it for more
 (() => {
@@ -2843,7 +2927,7 @@ function renderOnlineList() { // everyone online, closest to you first
   const rank = p => (org && p.presence.org === org ? 0 : lga && p.presence.lga === lga ? 1 : p.presence.st === st ? 2 : 3);
   const L = ON.lobby.slice().sort((a, b) => rank(a) - rank(b));
   const tag = ['at your PPA', 'in your LGA', 'in your state', ''];
-  return `<div class="olist"><div class="oh">🟢 Online now</div>` + (L.length ? L.map(p => { const s = p.presence, r = rank(p), where = s.ar === 'camp' ? (STATES.find(x => x.id === s.st) || {}).name + ' camp' : (s.lga || ''); return `<button data-u="${esc(String(s.uid || ''))}" data-n="${esc(tame(s.nm || 'Corper', 24))}"><i>${r === 0 ? '🟡' : r === 1 ? '🟢' : '🔵'}</i><span><b>${esc(tame(s.nm || 'Corper', 24))}</b><small>${esc(tame(where, 40))}${tag[r] ? ' · ' + tag[r] : ''}${s.org ? ' · ' + esc(tame(s.org, 36)) : ''}</small></span><em>Message</em></button>`; }).join('') : '<p>Nobody else is online right now.</p>') + '</div>';
+  return `<div class="olist"><div class="oh">🟢 Online now</div>` + (L.length ? L.map(p => { const s = p.presence, r = rank(p), where = s.ar === 'camp' ? (STATES.find(x => x.id === s.st) || {}).name + ' camp' : (s.lga || ''); return `<button data-u="${esc(peerUid(s) || '')}" data-n="${esc(tame(s.nm || 'Corper', 24))}"><i>${r === 0 ? '🟡' : r === 1 ? '🟢' : '🔵'}</i><span><b>${esc(tame(s.nm || 'Corper', 24))}</b><small>${esc(tame(where, 40))}${tag[r] ? ' · ' + tag[r] : ''}${s.org ? ' · ' + esc(tame(s.org, 36)) : ''}</small></span><em>Message</em></button>`; }).join('') : '<p>Nobody else is online right now.</p>') + '</div>';
 }
 /* ---------------- share cards + invite links (made for WhatsApp Status / TikTok) ---------------- */
 const ONCLAUDE = /claude\.ai|anthropic|claudeusercontent/.test(location.hostname) || location.protocol === 'file:';
@@ -3202,12 +3286,12 @@ boot().then(T => {
   for (const [id, key] of [['cgender', 'g'], ['ctone', 'tone'], ['cbg', 'bg']]) for (const b of $(id).children) b.onclick = () => { CH[key] = key === 'tone' ? +b.dataset.v : b.dataset.v; sync(); if (key !== 'bg') preview(); };
   $('cstate').innerHTML = `<option value="rand">🎲 Random, like the real call-up letter (or pick yours)</option>` + STATES.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => `<option value="${s.id}">${s.name}${s.id === 'FC' ? '' : ' State'} · camp at ${s.camp.split(/[,(]/)[0]}</option>`).join('');
   $('ccourse').innerHTML = `<option value="rand">🎲 Random</option>` + COURSES.map(c => `<option value="${c[0]}">${c[1]}</option>`).join('');
-  try { const last = JSON.parse(localStorage.getItem('nysc3d.corper') || 'null'); if (last) { Object.assign(CH, last); $('cname').value = CH.name || ''; } } catch (e) { }
+  try { const last = scrub(JSON.parse(localStorage.getItem('nysc3d.corper') || 'null')); if (last && typeof last === 'object' && !Array.isArray(last)) { for (const k of ['name', 'g', 'tone', 'bg', 'pick', 'coursePick', 'bgPick']) if (last[k] !== undefined) CH[k] = last[k]; CH.name = String(CH.name || '').slice(0, 14); if (![0, 1, 2].includes(CH.tone)) CH.tone = 1; if (CH.g !== 'f') CH.g = 'm'; $('cname').value = CH.name; } } catch (e) { }
   if (!CH.bgPick) CH.bg = 'rand'; $('cstate').value = INVITE ? INVITE.state : CH.pick || 'rand'; $('ccourse').value = CH.coursePick || 'rand';
   sync(); preview(); pvLoop();
   L.style.transition = 'opacity .7s'; L.style.opacity = 0; setTimeout(() => { if (pvOn) L.style.display = 'none'; }, 750); C.hidden = false;
   const start = async g => {
-    if (g) CH.g = g; CH.name = ($('cname').value || '').trim().slice(0, 14); CH.pick = $('cstate').value; CH.coursePick = $('ccourse').value; CH.bgPick = CH.bg;
+    if (g) CH.g = g; CH.name = scrubStr(($('cname').value || '').trim()).slice(0, 14); CH.pick = $('cstate').value; CH.coursePick = $('ccourse').value; CH.bgPick = CH.bg;
     if (!CH.resume) { CH.course = CH.coursePick === 'rand' ? COURSES[(Math.random() * COURSES.length) | 0][0] : CH.coursePick; CH.bgRoll = CH.bg === 'rand' ? BACKGROUNDS[(Math.random() * BACKGROUNDS.length) | 0][0] : CH.bg; }
     if (!CH.resume) CH.state = window.__state || (CH.pick === 'rand' ? STATES[(Math.random() * STATES.length) | 0].id : CH.pick);
     try { localStorage.setItem('nysc3d.corper', JSON.stringify(CH)); } catch (e) { }

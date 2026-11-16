@@ -83,3 +83,18 @@ without losing progress, set `MOVE_TO_DOMAIN=https://kopalife.com.ng` in Vercel 
 `/game/config.js` then forwards visitors of the vercel.app address to the same page on the main domain and carries
 their game data (`nysc*` keys only) in the link; the main domain keeps whichever save has more progress.
 Do not use Vercel's own domain redirect for the vercel.app address, because a server redirect cannot carry saves.
+
+## Security
+
+- **Supabase**: run `supabase/security_2026_11.sql` once on an existing project (fresh projects: `supabase_schema.sql` already includes it).
+  Anonymous sign-ins and email sign-ups stay **off**; the game uses no accounts. The website reaches data only through functions,
+  which check input and rate-limit per network. The admin key is stored bcrypt-hashed; 8 wrong keys lock a network out for 15 minutes.
+  Set or change it with:
+  `insert into public.app_secrets (name, value) values ('admin_key', extensions.crypt('A-LONG-RANDOM-KEY', extensions.gen_salt('bf', 10))) on conflict (name) do update set value = excluded.value;`
+- **Headers**: `next.config.mjs` sends a Content-Security-Policy per page type (inline scripts allowed only by SHA-256 hash,
+  computed at build), plus nosniff, Referrer-Policy, Permissions-Policy and frame protection.
+- **No CDN code**: supabase-js is pinned in package.json and copied into `public/game3d/vendor/` at build.
+- **Online chat**: messages to everyone are public; private messages are end-to-end encrypted (ECDH P-256 + AES-GCM),
+  and a player's id is the hash of their public key. Phone numbers and links are hidden. Reports go to the admin page.
+- **Saves** are treated as untrusted input; the save move from vercel.app only accepts data when the visitor arrives from our own old address.
+- Report vulnerabilities through GitHub private vulnerability reporting (see `/.well-known/security.txt`).

@@ -1,0 +1,5 @@
+Contact: https://github.com/Auspicious14/nysc-survival/security/advisories/new
+Expires: 2027-11-16T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://kopalife.com.ng/.well-known/security.txt
+Policy: https://kopalife.com.ng/privacy#contact

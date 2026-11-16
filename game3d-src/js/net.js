@@ -30,7 +30,8 @@ async function loadScript(src) {
   await new Promise((ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('load ' + src)); document.head.appendChild(s); });
 }
 async function supabaseNet(C) {
-  if (!window.supabase) await loadScript(C.supabaseLib || 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js');
+  // supabase-js is served from this site (copied from the pinned npm package at build time), never from a CDN.
+  if (!window.supabase) await loadScript(new URL('vendor/supabase.js', document.baseURI).href);
   const sb = window.supabase.createClient(C.supabaseUrl, C.supabaseAnonKey, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 20 } } });
   const net = pipeNet('supabase', name => {
     const ch = sb.channel('nysc3d:' + name, { config: { broadcast: { self: false, ack: false } } });
@@ -93,6 +94,7 @@ export function statsClient() {
   return {
     ping: (state, lga, area) => { const b = { p_uid: pid, p_state: state, p_lga: lga || '', p_area: area || '', p_new_session: first }; first = false; return rpc('track_player', b); },
     stats: state => rpc('public_stats', { p_state: state }),
+    report: (target, name, text, room) => rpc('report_player', { p_uid: pid, p_target: String(target).slice(0, 40), p_name: name, p_text: text, p_room: String(room || '').slice(0, 80) }),
     survey: (state, lga, again, wants) => fetch(`${C.supabaseUrl}/rest/v1/rpc/submit_survey`, { method: 'POST', headers: H, body: JSON.stringify({ p_uid: pid, p_state: state, p_lga: lga || '', p_again: again, p_wants: wants }) }).then(r => r.ok).catch(() => false),
   };
 }
