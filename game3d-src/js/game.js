@@ -1384,7 +1384,7 @@ function interactables() {
   if (ST.ch === 3) return L.concat(yInteractables());
   if (ST.ch === 2) return cdsInteractables();
   if (ST.done) L.push(...ppaInteractables());
-  if (ST.phase >= 1 && !ST.done) L.push({ x: LGA.x, z: -12.4, label: CQ.on ? 'Ask about the queue' : 'Join the clearance queue', act: clearance });
+  if (ST.phase >= 1 && !ST.done) L.push({ x: LGA.x, z: -12.4, pri: true, label: CQ.on ? 'Ask about the queue' : 'Join the clearance queue', act: clearance });
   return L;
 }
 function buy(what) {
@@ -1455,7 +1455,7 @@ function cqStart(onDone) {
   CQ.me = CQ.serving + Math.round(clamp(pf.queue * 2 + 8, 10, 40));
   ST.mins = Math.max(ST.mins || 0, 8 * 60 + 30); CQ.ring.visible = CQ.desk.visible = true; CQ.desk.visible = false;
   toast(`A man with a file: "You are number ${CQ.me}. Stand inside that line, don't go far o."`, 3600);
-  ST.target = { x: CQ_SPOT.x, z: CQ_SPOT.z, label: 'Your spot in the queue' }; $('arrow').style.display = 'block';
+  ST.target = { x: CQ_SPOT.x, z: CQ_SPOT.z, label: 'Your spot in the queue' }; $('arrow').style.display = 'block'; setObj(`Clearance queue: you are #${CQ.me}. Stand on your green spot until they call you`);
   chat(GRP(), 'LGI said nobody should leave the premises. Names will be called ONCE.', 'off');
   $('cq').hidden = false; cqHud();
 }
@@ -1479,7 +1479,7 @@ function cqUpdate(dt) {
     if (CQ.paused > 0) CQ.paused -= dt;
     else { CQ.tick = (CQ.tick || 0) + dt * (inLine || CQ.hold > 0 ? 1 : 0.6); if (CQ.tick > 2.3) { CQ.tick = 0; CQ.serving++; ST.mins += 3; } }
     if (CQ.serving >= CQ.me) {
-      if (inLine || CQ.hold > 0) { CQ.stage = 'desk'; CQ.desk.visible = true; ST.target = { x: CQ_DESK.x, z: CQ_DESK.z, label: 'Thumbprint desk' }; toast(`"Number ${CQ.me}! Number ${CQ.me}!" That's you. Go to the desk! 🏃🏾`, 3600); speak(`Number ${CQ.me}! Number ${CQ.me}!`, false, true, 'Clearance officer'); beep(); }
+      if (inLine || CQ.hold > 0) { CQ.stage = 'desk'; CQ.desk.visible = true; ST.target = { x: CQ_DESK.x, z: CQ_DESK.z, label: 'Thumbprint desk' }; setObj('They called your number! Go to the thumbprint desk (yellow ring)'); toast(`"Number ${CQ.me}! Number ${CQ.me}!" That's you. Go to the desk! 🏃🏾`, 3600); speak(`Number ${CQ.me}! Number ${CQ.me}!`, false, true, 'Clearance officer'); beep(); }
       else { CQ.me = CQ.serving + 4 + ((Math.random() * 4) | 0); toast(`They called your number while you were away! Back of the line: #${CQ.me}. Omo. 😭`, 3800); ST.stress = clamp(ST.stress + 8, 0, 100); }
     }
     // things happen in the queue
@@ -2295,7 +2295,7 @@ function yInteractables() {
   if (Y.kind === 'Mon' && !Y.signed) { const sp = PKIND() === 'school' ? { x: SCH.x + 15, z: -24 } : WORK[PKIND()].spots.sign; L.push({ x: sp.x, z: sp.z, label: 'Sign the staff attendance book', act: ySignPPA }); }
   if (Y.kind === 'Mon' && Y.signed && !Y.done) for (const j of (Y.jobs || [])) { const J = PPA_JOBS[j]; L.push({ x: J.at().x, z: J.at().z, label: J.label, act: J.act }); }
   if (Y.kind === 'Thu' && !Y.signed && Math.hypot(P.x - (LGA.x + 9), P.z + 14) < 12) L.push({ x: LGA.x + 9, z: -12.4, label: Y.cdsOff ? 'Ask the security man about CDS' : 'Sign the CDS register', act: ySignCDS });
-  if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, label: CQ.on ? 'Ask about the queue' : 'Join the clearance queue', act: yClearance });
+  if (Y.kind === 'Clr' && !Y.done) L.push({ x: LGA.x, z: -12.4, pri: true, label: CQ.on ? 'Ask about the queue' : 'Join the clearance queue', act: yClearance });
   if (Y.kind === 'Pop' && !Y.done && Math.hypot(P.x - LGA.x, P.z - LGA.z) < 20) L.push({ x: LGA.x, z: -12.4, label: 'Take your place at the parade', act: yPOP });
   return L;
 }
@@ -3177,8 +3177,15 @@ function updatePeople(dt) {
 const bub = $('bubble'); let bubT = 0, bubI = 0;
 function updateUI(dt) {
   // nearest interactable
-  nearest = null; let best = 3.4;
-  if (player && !ST.riding) for (const it of interactables()) { const d = Math.hypot(it.x - player.o.position.x, it.z - player.o.position.z); if (d < best) { best = d; nearest = it; } }
+  nearest = null; let best = 3.4, pri = null, bp = 3.6; // a main-quest action (pri) wins over chatting with people standing next to it
+  if (player && !ST.riding) for (const it of interactables()) { const d = Math.hypot(it.x - player.o.position.x, it.z - player.o.position.z); if (it.pri && d < bp) { bp = d; pri = it; } if (d < best) { best = d; nearest = it; } }
+  if (pri) nearest = pri;
+  // arrived at the Secretariat for clearance: say what to do next and point at the desk
+  if (player && ST.target && ST.target.label === 'LGA Secretariat' && !CQ.on && Math.hypot(player.o.position.x - LGA.x, player.o.position.z - LGA.z) < 11) {
+    ST.target = { x: LGA.x, z: -12.4, label: 'Clearance desk' };
+    setObj(`You're at the Secretariat ✅ Walk to the clearance desk and ${TOUCH ? 'tap ✋ Interact' : 'press E'} to join the queue`);
+    toast('Clearance is inside. Go up to the desk to join the queue.', 3200);
+  }
   const pr = $('prompt'); if (nearest) { pr.style.display = 'block'; $('ptext').textContent = nearest.label; } else pr.style.display = 'none';
   // conductor bubble
   let cd = null, bd = 18; for (const n of NPC) if (n.bubble && player && !n.hidden) { const d = n.o.position.distanceTo(player.o.position); if (d < bd) { bd = d; cd = n; } } bubT -= dt; if (!cd) bub.style.display = 'none';
