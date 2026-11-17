@@ -1427,6 +1427,8 @@ function rideTo(dest, kind, label) {
   cine(kind === 'keke' ? 'KEKE NAPEP' : kind === 'own' ? 'YOUR CAR' : 'RIDE APP', `To ${label || 'your stop'} · ${kind === 'keke' ? '"Hold your bag well o."' : kind === 'own' ? 'AC on. Fuel light also on.' : 'The driver is playing Asake.'}`, () => {
     const v = kind === 'keke' ? keke() : car(); applyReal(v); v.kind = kind; v.ride = true; v.lane = lane; v.x = clamp(P.x - dir * 4, -HALF + 5, HALF - 5); v.v = 3; v.vmax = kind === 'keke' ? 10 : 13; v.stop = 0; v.goal = clamp(dest.x, -PLAY, PLAY);
     v.g.position.set(v.x, 0, LANES[lane].z); v.g.rotation.y = LANES[lane].dir > 0 ? 0 : Math.PI; scene.add(v.g); traffic.push(v); v.dest = dest; v.startX = v.x;
+    // you walk out to the roadside to get in (also takes you out of your room)
+    player.o.position.set(clamp(P.x, -PLAY, PLAY), 0.18, LANES[lane].z < 0 ? -8.6 : 8.6); camLook.set(v.x, 1.4, LANES[lane].z);
     ST.riding = v; player.o.visible = false; cam.yaw = LANES[lane].dir > 0 ? -Math.PI / 2 + 0.5 : Math.PI / 2 - 0.5; cam.pitch = 0.22;
   }, 1600);
 }
@@ -3122,7 +3124,10 @@ function updateTraffic(dt) {
       const v = vs[i], lead = vs[(i + 1) % vs.length];
       let gap = (lead.x - v.x) * L.dir; if (gap < 0) gap += HALF * 2; gap -= (lead.len + v.len) / 2;
       let target = v.vmax;
-      if (gap < 18) target = Math.min(target, Math.max(0, (gap - 2.5) * 0.8));
+      // your keke/car overtakes slow or stopped traffic (no waiting behind a danfo at the bus stop)
+      const passing = v.ride && lead !== v && gap < 12 && lead.v < v.vmax * 0.8;
+      v.ot = clamp((v.ot || 0) + (passing ? 2.5 : -1.2) * dt, 0, 1);
+      if (gap < 18 && !(v.ride && (passing || v.ot > 0.05))) target = Math.min(target, Math.max(0, (gap - 2.5) * 0.8));
       // the player in the lane ahead
       if (player && !ST.riding) { const pd = (player.o.position.x - v.x) * L.dir; if (pd > 0 && pd < 14 && Math.abs(player.o.position.z - L.z) < 1.6) { target = Math.min(target, Math.max(0, (pd - 3.5) * 0.9)); if (pd < 11 && (v.honk || 0) <= 0) { horn(pd); v.honk = 2.5; } } }
       // danfo stops
@@ -3135,7 +3140,7 @@ function updateTraffic(dt) {
       v.v += clamp(target - v.v, -9 * dt, 3 * dt);
       v.x += v.v * dt * L.dir;
       if (v.x > HALF) { v.x -= HALF * 2; v.lastStop = null; } if (v.x < -HALF) { v.x += HALF * 2; v.lastStop = null; }
-      v.g.position.x = v.x; v.g.position.y = Math.sin(performance.now() / 90 + v.x) * 0.01 * Math.min(1, v.v);
+      v.g.position.x = v.x; if (v.ride) v.g.position.z = L.z - Math.sign(L.z || 1) * 1.9 * (v.ot || 0); v.g.position.y = Math.sin(performance.now() / 90 + v.x) * 0.01 * Math.min(1, v.v);
       for (const w of v.wheels) w.rotation.z -= v.v * dt / 0.36;
     }
   }
@@ -3227,7 +3232,7 @@ function updateCamera(dt) {
   camPos.y = Math.max(camPos.y, 0.6);
   camera.position.copy(camPos); camera.lookAt(camLook); sky.position.copy(camPos);
   { // keep the camera inside the room the player is in, so walls and roof stay put
-    const P = player.o.position; for (const R0 of ROOMS) if (P.x > R0.x0 && P.x < R0.x1 && P.z > R0.z0 && P.z < R0.z1) {
+    const P = player.o.position; if (!ST.riding) for (const R0 of ROOMS) if (P.x > R0.x0 && P.x < R0.x1 && P.z > R0.z0 && P.z < R0.z1) {
       camPos.x = clamp(camPos.x, R0.x0 + 0.3, R0.x1 - 0.3); camPos.z = clamp(camPos.z, R0.z0 + 0.3, R0.z1 - 0.3); camPos.y = clamp(camPos.y, 0.8, R0.h - 0.35);
       camera.position.copy(camPos); camera.lookAt(camLook); break; } }
   // shadow camera follows the player
